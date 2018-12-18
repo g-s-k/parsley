@@ -21,7 +21,7 @@ enum LispError {
 }
 
 fn is_atom_char(c: char) -> bool {
-    c.is_alphanumeric() || c == '-' || c == '_' || c == '*'
+    !c.is_whitespace() && !c.is_control() && c != '(' && c != ')'
 }
 
 fn find_closing_paren(s: &str) -> Option<usize> {
@@ -43,8 +43,51 @@ fn find_closing_paren(s: &str) -> Option<usize> {
 }
 
 #[derive(Debug)]
+enum Primitive {
+    Boolean(bool),
+    Character(char),
+    Number(f64),
+    String(String),
+    Symbol(String),
+    // Procedure(Box<Fn(SExp) -> SExp>),
+}
+
+impl FromStr for Primitive {
+    type Err = LispError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "#t" => return Ok(Primitive::Boolean(true)),
+            "#f" => return Ok(Primitive::Boolean(false)),
+            _ => (),
+        }
+
+        match s.parse::<f64>() {
+            Ok(num) => return Ok(Primitive::Number(num)),
+            _ => (),
+        }
+
+        if s.len() == 1 {
+            return Ok(Primitive::Character(s.chars().next().unwrap()));
+        }
+
+        if s.starts_with('"') && s.ends_with('"') {
+            return Ok(Primitive::String(
+                s.get(1..(s.len() - 1)).unwrap().to_string(),
+            ));
+        }
+
+        if s.chars().all(is_atom_char) {
+            return Ok(Primitive::Symbol(s.to_string()));
+        }
+
+        Err(LispError::SyntaxError { exp: s.to_string() })
+    }
+}
+
+#[derive(Debug)]
 enum SExp {
-    Atom(String),
+    Atom(Primitive),
     List(Vec<SExp>),
 }
 
@@ -56,7 +99,7 @@ impl FromStr for SExp {
 
         if code.chars().all(is_atom_char) {
             debug!("Matched atom: {}", code);
-            Ok(SExp::Atom(code))
+            Ok(SExp::Atom(code.parse::<Primitive>()?))
         } else if code.starts_with("(") && code.ends_with(")") {
             match find_closing_paren(&code) {
                 Some(idx) => {
@@ -99,7 +142,7 @@ impl FromStr for SExp {
                                 Some(idx3) => {
                                     debug!(
                                         "Matched atom in first position with length {} chars",
-                                        idx3 + 1
+                                        idx3
                                     );
                                     let (first, rest) = list_str.split_at(idx3);
                                     list_out.push(first.parse::<SExp>()?);
