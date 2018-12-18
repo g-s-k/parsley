@@ -1,0 +1,11 @@
+[package]
+name = "rsch"
+version = "0.1.0"
+authors = ["George Kaplan <george@georgekaplan.xyz>"]
+edition = "2018"
+
+[dependencies]
+failure = "*"
+failure_derive = "*"
+quicli = "0.4"
+structopt = "0.2"
