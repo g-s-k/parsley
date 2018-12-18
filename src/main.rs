@@ -330,4 +330,40 @@ mod tests {
             ]),
         );
     }
+
+    #[test]
+    fn eval_empty_list() {
+        assert_eq!(NULL.eval(), NULL);
+    }
+
+    #[test]
+    fn eval_atom() {
+        let sym = mk_sym("test");
+        assert_eq!(sym.clone().eval(), sym);
+    }
+
+    #[test]
+    fn eval_list_quote() {
+        let test_list = vec![mk_sym("quote"), Atom(Primitive::Boolean(false)), NULL];
+        assert_eq!(
+            List(test_list.clone()).eval(),
+            List(test_list[1..].to_vec())
+        );
+    }
+
+    #[test]
+    fn eval_null_test() {
+        assert_eq!(
+            List(vec![mk_sym("null?"), mk_sym("test")]).eval(),
+            Atom(Primitive::Boolean(false))
+        );
+        assert_eq!(
+            List(vec![mk_sym("null?"), NULL]).eval(),
+            Atom(Primitive::Boolean(true))
+        );
+        assert_eq!(
+            List(vec![mk_sym("null?"), List(vec![mk_sym("quote"), NULL])]).eval(),
+            Atom(Primitive::Boolean(false))
+        );
+    }
 }
