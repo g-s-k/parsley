@@ -9,7 +9,6 @@ use std::str::FromStr;
 use quicli::prelude::*;
 use structopt::StructOpt;
 
-#[allow(dead_code)]
 const NULL: SExp = SExp::List(Vec::new());
 
 #[derive(Debug, StructOpt)]
@@ -57,14 +56,13 @@ fn find_closing_delim(s: &str, d_plus: char, d_minus: char) -> Option<usize> {
     None
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 enum Primitive {
     Boolean(bool),
     Character(char),
     Number(f64),
     String(String),
     Symbol(String),
-    // Procedure(Box<Fn(SExp) -> SExp>),
 }
 
 impl FromStr for Primitive {
@@ -103,7 +101,7 @@ impl FromStr for Primitive {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 enum SExp {
     Atom(Primitive),
     List(Vec<SExp>),
@@ -190,6 +188,31 @@ impl FromStr for SExp {
     }
 }
 
+impl SExp {
+    fn eval(self) -> Self {
+        match self {
+            SExp::Atom(_) => self,
+            SExp::List(ref contents) if contents.len() == 0 => NULL,
+            SExp::List(contents) => {
+                SExp::List(contents.into_iter().map(SExp::eval).collect()).apply()
+            }
+        }
+    }
+
+    fn apply(self) -> Self {
+        match self {
+            SExp::Atom(_) => self,
+            SExp::List(ref contents) if contents.len() == 0 => NULL,
+            SExp::List(contents) => match contents[0] {
+                SExp::Atom(Primitive::Symbol(ref sym)) if sym == "quote" => {
+                    SExp::List(contents[1..].to_vec())
+                }
+                _ => SExp::List(contents),
+            },
+        }
+    }
+}
+
 fn main() -> CliResult {
     let args = Cli::from_args();
     args.verbosity.setup_env_logger("rsch")?;
@@ -198,7 +221,7 @@ fn main() -> CliResult {
 
     let code = read_file(&args.file)?;
     match code.parse::<SExp>() {
-        Ok(tree) => println!("{:?}", tree),
+        Ok(tree) => println!("{:?}", tree.eval()),
         Err(error) => error!("{}", error),
     };
 
