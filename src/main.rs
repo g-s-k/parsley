@@ -22,6 +22,13 @@ struct Cli {
 enum LispError {
     #[fail(display = "could not parse expression: {}", exp)]
     SyntaxError { exp: String },
+    #[fail(display = "procedure is not defined: {:?}", proc)]
+    UndefinedProcedure { proc: SExp },
+    #[fail(
+        display = "too many arguments provided: expected {}, got {}.",
+        n_args, right_num
+    )]
+    TooManyArguments { n_args: usize, right_num: usize },
 }
 
 fn is_atom_char(c: char) -> bool {
@@ -193,21 +200,38 @@ impl SExp {
         match self {
             SExp::Atom(_) => self,
             SExp::List(ref contents) if contents.len() == 0 => NULL,
-            SExp::List(contents) => {
-                SExp::List(contents.into_iter().map(SExp::eval).collect()).apply()
-            }
+            SExp::List(contents) => SExp::List(contents.into_iter().map(SExp::eval).collect())
+                .apply()
+                .unwrap(),
         }
     }
 
-    fn apply(self) -> Self {
+    fn apply(self) -> Result<Self, LispError> {
         match self {
-            SExp::Atom(_) => self,
-            SExp::List(ref contents) if contents.len() == 0 => NULL,
+            SExp::Atom(_) => Ok(self),
+            SExp::List(ref contents) if contents.len() == 0 => Ok(NULL),
             SExp::List(contents) => match contents[0] {
+                // quote procedure
                 SExp::Atom(Primitive::Symbol(ref sym)) if sym == "quote" => {
-                    SExp::List(contents[1..].to_vec())
+                    Ok(SExp::List(contents[1..].to_vec()))
                 }
-                _ => SExp::List(contents),
+                // null? procedure
+                SExp::Atom(Primitive::Symbol(ref sym)) if sym == "null?" => match contents.len() {
+                    1 => Ok(contents[0].clone()),
+                    2 => match contents[1] {
+                        SExp::List(ref contents) if contents.len() == 0 => {
+                            Ok(SExp::Atom(Primitive::Boolean(true)))
+                        }
+                        _ => Ok(SExp::Atom(Primitive::Boolean(false))),
+                    },
+                    n @ _ => Err(LispError::TooManyArguments {
+                        n_args: n - 1,
+                        right_num: 1,
+                    }),
+                },
+                _ => Err(LispError::UndefinedProcedure {
+                    proc: contents[0].clone(),
+                }),
             },
         }
     }
