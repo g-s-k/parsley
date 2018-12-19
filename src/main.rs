@@ -259,10 +259,36 @@ impl SExp {
             SExp::List(_) if self.is_null() => None,
             SExp::List(contents) => match &contents[0] {
                 SExp::Atom(Primitive::Symbol(sym)) => match sym.as_ref() {
-                    "define" | "cond" | "and" | "or" | "let" | "lambda" => {
+                    "define" | "cond" | "let" | "lambda" => {
                         // placeholder, will be gone once all are implemented
                         None
                     }
+                    "and" => match contents.len() {
+                        1 => Some(Ok(true.as_atom())),
+                        _ => {
+                            let mapped = contents.into_iter().skip(1).map(SExp::eval);
+                            match mapped.clone().find(|e| match e {
+                                Err(_) => true,
+                                Ok(atom) => *atom == false.as_atom(),
+                            }) {
+                                None => mapped.last(),
+                                thing @ Some(_) => thing,
+                            }
+                        }
+                    },
+                    "or" => match contents.len() {
+                        1 => Some(Ok(false.as_atom())),
+                        _ => {
+                            let mapped = contents.into_iter().skip(1).map(SExp::eval);
+                            match mapped.clone().find(|e| match e {
+                                Err(_) => true,
+                                Ok(atom) => *atom != false.as_atom(),
+                            }) {
+                                None => mapped.last(),
+                                thing @ Some(_) => thing,
+                            }
+                        }
+                    },
                     "if" => match contents.len() {
                         4 => {
                             if contents[1] == true.as_atom() {
@@ -596,6 +622,106 @@ mod tests {
             .eval()
             .unwrap(),
             sym_2
+        );
+    }
+
+    #[test]
+    fn eval_and() {
+        let and = || SExp::make_symbol("and");
+
+        assert_eq!(List(vec![and()]).eval().unwrap(), true.as_atom());
+
+        assert_eq!(
+            List(vec![and(), true.as_atom(), true.as_atom()])
+                .eval()
+                .unwrap(),
+            true.as_atom()
+        );
+
+        assert_eq!(
+            List(vec![and(), false.as_atom(), true.as_atom()])
+                .eval()
+                .unwrap(),
+            false.as_atom()
+        );
+
+        assert_eq!(
+            List(vec![and(), false.as_atom(), false.as_atom()])
+                .eval()
+                .unwrap(),
+            false.as_atom()
+        );
+
+        assert_eq!(
+            List(vec![and(), true.as_atom(), 3.0.as_atom()])
+                .eval()
+                .unwrap(),
+            3.0.as_atom()
+        );
+
+        assert_eq!(List(vec![and(), NULL]).eval().unwrap(), NULL);
+
+        assert_eq!(
+            List(vec![
+                and(),
+                'a'.as_atom(),
+                'b'.as_atom(),
+                false.as_atom(),
+                'c'.as_atom()
+            ])
+            .eval()
+            .unwrap(),
+            false.as_atom()
+        );
+    }
+
+    #[test]
+    fn eval_or() {
+        let or = || SExp::make_symbol("or");
+
+        assert_eq!(List(vec![or()]).eval().unwrap(), false.as_atom());
+
+        assert_eq!(
+            List(vec![or(), true.as_atom(), true.as_atom()])
+                .eval()
+                .unwrap(),
+            true.as_atom()
+        );
+
+        assert_eq!(
+            List(vec![or(), false.as_atom(), true.as_atom()])
+                .eval()
+                .unwrap(),
+            true.as_atom()
+        );
+
+        assert_eq!(
+            List(vec![or(), false.as_atom(), false.as_atom()])
+                .eval()
+                .unwrap(),
+            false.as_atom()
+        );
+
+        assert_eq!(
+            List(vec![or(), 3.0.as_atom(), true.as_atom()])
+                .eval()
+                .unwrap(),
+            3.0.as_atom()
+        );
+
+        assert_eq!(List(vec![or(), NULL]).eval().unwrap(), NULL);
+
+        assert_eq!(
+            List(vec![
+                or(),
+                false.as_atom(),
+                'a'.as_atom(),
+                'b'.as_atom(),
+                'c'.as_atom()
+            ])
+            .eval()
+            .unwrap(),
+            'a'.as_atom()
         );
     }
 }
