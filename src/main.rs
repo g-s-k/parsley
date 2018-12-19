@@ -11,8 +11,6 @@ use quicli::prelude::*;
 use structopt::StructOpt;
 
 const NULL: SExp = SExp::List(Vec::new());
-const TRUE: SExp = SExp::Atom(Primitive::Boolean(true));
-const FALSE: SExp = SExp::Atom(Primitive::Boolean(false));
 
 #[derive(Debug, StructOpt)]
 struct Cli {
@@ -316,13 +314,7 @@ impl SExp {
                     },
                     "null?" => match contents.len() {
                         1 => Ok(contents[0].clone()),
-                        2 => {
-                            if contents[1].is_null() {
-                                Ok(TRUE)
-                            } else {
-                                Ok(FALSE)
-                            }
-                        }
+                        2 => Ok(contents[1].is_null().as_atom()),
                         n @ _ => Err(LispError::TooManyArguments {
                             n_args: n - 1,
                             right_num: 1,
@@ -376,6 +368,34 @@ impl SExp {
     }
 }
 
+trait AsAtom {
+    fn as_atom(&self) -> SExp;
+}
+
+impl AsAtom for bool {
+    fn as_atom(&self) -> SExp {
+        SExp::Atom(Primitive::Boolean(*self))
+    }
+}
+
+impl AsAtom for char {
+    fn as_atom(&self) -> SExp {
+        SExp::Atom(Primitive::Character(*self))
+    }
+}
+
+impl AsAtom for f64 {
+    fn as_atom(&self) -> SExp {
+        SExp::Atom(Primitive::Number(*self))
+    }
+}
+
+impl AsAtom for str {
+    fn as_atom(&self) -> SExp {
+        SExp::Atom(Primitive::String(self.to_string()))
+    }
+}
+
 fn main() -> CliResult {
     let args = Cli::from_args();
     args.verbosity.setup_env_logger("rsch")?;
@@ -393,7 +413,7 @@ fn main() -> CliResult {
 
 #[cfg(test)]
 mod tests {
-    use super::SExp::{self, Atom, List};
+    use super::SExp::{self, List};
     use super::*;
 
     fn do_parse_and_assert(test_val: &str, expected_val: SExp) {
@@ -434,17 +454,17 @@ mod tests {
 
     #[test]
     fn parse_primitive_types() {
-        do_parse_and_assert("#f", FALSE);
-        do_parse_and_assert("#t", TRUE);
-        do_parse_and_assert("0", Atom(Primitive::Number(0_f64)));
-        do_parse_and_assert("2.0", Atom(Primitive::Number(2.0)));
-        do_parse_and_assert("inf", Atom(Primitive::Number(std::f64::INFINITY)));
-        do_parse_and_assert("-inf", Atom(Primitive::Number(std::f64::NEG_INFINITY)));
-        do_parse_and_assert("'c'", Atom(Primitive::Character('c')));
-        do_parse_and_assert("'''", Atom(Primitive::Character('\'')));
+        do_parse_and_assert("#f", false.as_atom());
+        do_parse_and_assert("#t", true.as_atom());
+        do_parse_and_assert("0", 0_f64.as_atom());
+        do_parse_and_assert("2.0", 2.0.as_atom());
+        do_parse_and_assert("inf", std::f64::INFINITY.as_atom());
+        do_parse_and_assert("-inf", std::f64::NEG_INFINITY.as_atom());
+        do_parse_and_assert("'c'", 'c'.as_atom());
+        do_parse_and_assert("'''", '\''.as_atom());
         do_parse_and_assert(
             r#""test string with spaces""#,
-            Atom(Primitive::String("test string with spaces".to_string())),
+            "test string with spaces".as_atom(),
         );
     }
 
@@ -453,15 +473,15 @@ mod tests {
         do_parse_and_assert(
             "(0 #f () 33.5 \"xyz\" '?' #t \"\" \"   \")",
             List(vec![
-                Atom(Primitive::Number(0_f64)),
-                FALSE,
+                0_f64.as_atom(),
+                false.as_atom(),
                 NULL,
-                Atom(Primitive::Number(33.5)),
-                Atom(Primitive::String("xyz".to_string())),
-                Atom(Primitive::Character('?')),
-                TRUE,
-                Atom(Primitive::String("".to_string())),
-                Atom(Primitive::String("   ".to_string())),
+                33.5.as_atom(),
+                "xyz".as_atom(),
+                '?'.as_atom(),
+                true.as_atom(),
+                "".as_atom(),
+                "   ".as_atom(),
             ]),
         );
     }
@@ -517,20 +537,27 @@ mod tests {
             List(vec![SExp::make_symbol("null?"), SExp::make_symbol("test")])
                 .eval()
                 .unwrap(),
-            FALSE
+            false.as_atom()
         );
         assert_eq!(
             List(vec![SExp::make_symbol("null?"), NULL]).eval().unwrap(),
-            TRUE
+            true.as_atom()
         );
         assert_eq!(
             List(vec![
                 SExp::make_symbol("null?"),
-                List(vec![SExp::make_symbol("quote"), List(vec![FALSE, NULL])])
+                List(vec![
+                    SExp::make_symbol("quote"),
+                    List(vec![false.as_atom(), NULL])
+                ])
             ])
             .eval()
             .unwrap(),
-            FALSE
+            false.as_atom()
         );
     }
+
+    // #[test]
+    // fn eval_if() {
+    // }
 }
