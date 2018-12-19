@@ -198,13 +198,16 @@ impl FromStr for SExp {
 }
 
 impl SExp {
-    fn eval(self) -> Self {
+    fn eval(self) -> Result<Self, LispError> {
         match self {
-            SExp::Atom(_) => self,
-            SExp::List(ref contents) if contents.len() == 0 => NULL,
-            SExp::List(contents) => SExp::List(contents.into_iter().map(SExp::eval).collect())
-                .apply()
-                .unwrap(),
+            SExp::Atom(_) => Ok(self),
+            SExp::List(ref contents) if contents.len() == 0 => Ok(NULL),
+            SExp::List(contents) => {
+                match contents.into_iter().map(SExp::eval).collect() {
+                    Ok(list) => SExp::List(list).apply(),
+                    Err(err) => Err(err)
+                }
+            }
         }
     }
 
@@ -245,7 +248,7 @@ fn main() -> CliResult {
 
     let code = read_file(&args.file)?;
     match code.parse::<SExp>() {
-        Ok(tree) => println!("{:?}", tree.eval()),
+        Ok(tree) => println!("{:?}", tree.eval().unwrap()),
         Err(error) => error!("{}", error),
     };
 
@@ -333,30 +336,30 @@ mod tests {
 
     #[test]
     fn eval_empty_list() {
-        assert_eq!(NULL.eval(), NULL);
+        assert_eq!(NULL.eval().unwrap(), NULL);
     }
 
     #[test]
     fn eval_atom() {
         let sym = mk_sym("test");
-        assert_eq!(sym.clone().eval(), sym);
+        assert_eq!(sym.clone().eval().unwrap(), sym);
     }
 
     #[test]
     fn eval_list_quote() {
         let test_list = vec![mk_sym("quote"), FALSE, NULL];
         assert_eq!(
-            List(test_list.clone()).eval(),
+            List(test_list.clone()).eval().unwrap(),
             List(test_list[1..].to_vec())
         );
     }
 
     #[test]
     fn eval_null_test() {
-        assert_eq!(List(vec![mk_sym("null?"), mk_sym("test")]).eval(), FALSE);
-        assert_eq!(List(vec![mk_sym("null?"), NULL]).eval(), TRUE);
+        assert_eq!(List(vec![mk_sym("null?"), mk_sym("test")]).eval().unwrap(), FALSE);
+        assert_eq!(List(vec![mk_sym("null?"), NULL]).eval().unwrap(), TRUE);
         assert_eq!(
-            List(vec![mk_sym("null?"), List(vec![mk_sym("quote"), NULL])]).eval(),
+            List(vec![mk_sym("null?"), List(vec![mk_sym("quote"), NULL])]).eval().unwrap(),
             FALSE
         );
     }
