@@ -82,7 +82,7 @@ enum Primitive {
 impl fmt::Display for Primitive {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Primitive::Boolean(b) => write!(f, "{}", b),
+            Primitive::Boolean(b) => write!(f, "{}", if *b { "#t" } else { "#f" }),
             Primitive::Character(c) => write!(f, "'{}'", c),
             Primitive::Number(n) => write!(f, "{}", n),
             Primitive::String(s) => write!(f, "\"{}\"", s),
@@ -234,10 +234,43 @@ impl SExp {
     fn eval(self) -> Result<Self, LispError> {
         match self {
             SExp::Atom(_) => Ok(self),
-            SExp::List(ref contents) if contents.len() == 0 => Ok(NULL),
-            SExp::List(contents) => match contents.into_iter().map(SExp::eval).collect() {
-                Ok(list) => SExp::List(list).apply(),
-                Err(err) => Err(err),
+            SExp::List(_) if self.is_null() => Ok(NULL),
+            SExp::List(contents) => {
+                // handle special functions
+                if let Some(result) = SExp::List(contents.clone()).eval_special_form() {
+                    result
+                } else {
+                    // handle everything else
+                    match contents.into_iter().map(SExp::eval).collect() {
+                        Ok(list) => SExp::List(list).apply(),
+                        Err(err) => Err(err),
+                    }
+                }
+            }
+        }
+    }
+
+    fn eval_special_form(self) -> Option<Result<Self, LispError>> {
+        match self {
+            SExp::Atom(_) => None,
+            SExp::List(_) if self.is_null() => None,
+            SExp::List(contents) => match &contents[0] {
+                SExp::Atom(Primitive::Symbol(sym)) => match sym.as_ref() {
+                    "define" | "if" | "cond" | "and" | "or" | "let" | "lambda" => {
+                        // placeholder, will be gone once all are implemented
+                        None
+                    },
+                    "quote" => match contents.len() {
+                        1 => Some(Ok(contents[0].clone())),
+                        2 => Some(Ok(contents[1].clone())),
+                        n @ _ => Some(Err(LispError::TooManyArguments {
+                            n_args: n - 1,
+                            right_num: 1,
+                        })),
+                    },
+                    _ => None,
+                },
+                _ => None,
             },
         }
     }
@@ -272,13 +305,9 @@ impl SExp {
                             right_num: 1,
                         }),
                     },
-                    "quote" => match contents.len() {
+                    "list" => match contents.len() {
                         1 => Ok(contents[0].clone()),
-                        2 => Ok(contents[1].clone()),
-                        n @ _ => Err(LispError::TooManyArguments {
-                            n_args: n - 1,
-                            right_num: 1,
-                        }),
+                        _ => Ok(SExp::List(contents[1..].to_vec())),
                     },
                     "null?" => match contents.len() {
                         1 => Ok(contents[0].clone()),
@@ -449,6 +478,12 @@ mod tests {
         assert_eq!(
             List(test_list.clone()).eval().unwrap(),
             test_list[1].clone()
+        );
+
+        let test_list_2 = vec![mk_sym("quote"), List(vec![mk_sym("abc"), mk_sym("xyz")])];
+        assert_eq!(
+            List(test_list_2.clone()).eval().unwrap(),
+            test_list_2[1].clone()
         );
     }
 
