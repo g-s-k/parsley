@@ -781,6 +781,17 @@ mod tests {
         assert_eq!(
             List(vec![
                 cond(),
+                List(vec![false.as_atom(), 'b'.as_atom()]),
+                List(vec![else_(), 'a'.as_atom()])
+            ])
+                .eval()
+                .unwrap(),
+            'a'.as_atom()
+        );
+
+       assert_eq!(
+            List(vec![
+                cond(),
                 List(vec![false.as_atom(), 'c'.as_atom()]),
                 List(vec![true.as_atom(), 'b'.as_atom()]),
                 List(vec![true.as_atom(), 'b'.as_atom()]),
