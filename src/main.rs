@@ -10,6 +10,8 @@ use quicli::prelude::*;
 use structopt::StructOpt;
 
 const NULL: SExp = SExp::List(Vec::new());
+const TRUE: SExp = SExp::Atom(Primitive::Boolean(true));
+const FALSE: SExp = SExp::Atom(Primitive::Boolean(false));
 
 #[derive(Debug, StructOpt)]
 struct Cli {
@@ -219,10 +221,8 @@ impl SExp {
                 SExp::Atom(Primitive::Symbol(ref sym)) if sym == "null?" => match contents.len() {
                     1 => Ok(contents[0].clone()),
                     2 => match contents[1] {
-                        SExp::List(ref contents) if contents.len() == 0 => {
-                            Ok(SExp::Atom(Primitive::Boolean(true)))
-                        }
-                        _ => Ok(SExp::Atom(Primitive::Boolean(false))),
+                        SExp::List(ref contents) if contents.len() == 0 => Ok(TRUE),
+                        _ => Ok(FALSE),
                     },
                     n @ _ => Err(LispError::TooManyArguments {
                         n_args: n - 1,
@@ -299,8 +299,8 @@ mod tests {
 
     #[test]
     fn parse_primitive_types() {
-        do_parse_and_assert("#f", Atom(Primitive::Boolean(false)));
-        do_parse_and_assert("#t", Atom(Primitive::Boolean(true)));
+        do_parse_and_assert("#f", FALSE);
+        do_parse_and_assert("#t", TRUE);
         do_parse_and_assert("0", Atom(Primitive::Number(0_f64)));
         do_parse_and_assert("2.0", Atom(Primitive::Number(2.0)));
         do_parse_and_assert("inf", Atom(Primitive::Number(std::f64::INFINITY)));
@@ -319,12 +319,12 @@ mod tests {
             "(0 #f () 33.5 \"xyz\" '?' #t \"\" \"   \")",
             List(vec![
                 Atom(Primitive::Number(0_f64)),
-                Atom(Primitive::Boolean(false)),
+                FALSE,
                 NULL,
                 Atom(Primitive::Number(33.5)),
                 Atom(Primitive::String("xyz".to_string())),
                 Atom(Primitive::Character('?')),
-                Atom(Primitive::Boolean(true)),
+                TRUE,
                 Atom(Primitive::String("".to_string())),
                 Atom(Primitive::String("   ".to_string())),
             ]),
@@ -344,7 +344,7 @@ mod tests {
 
     #[test]
     fn eval_list_quote() {
-        let test_list = vec![mk_sym("quote"), Atom(Primitive::Boolean(false)), NULL];
+        let test_list = vec![mk_sym("quote"), FALSE, NULL];
         assert_eq!(
             List(test_list.clone()).eval(),
             List(test_list[1..].to_vec())
@@ -353,17 +353,11 @@ mod tests {
 
     #[test]
     fn eval_null_test() {
-        assert_eq!(
-            List(vec![mk_sym("null?"), mk_sym("test")]).eval(),
-            Atom(Primitive::Boolean(false))
-        );
-        assert_eq!(
-            List(vec![mk_sym("null?"), NULL]).eval(),
-            Atom(Primitive::Boolean(true))
-        );
+        assert_eq!(List(vec![mk_sym("null?"), mk_sym("test")]).eval(), FALSE);
+        assert_eq!(List(vec![mk_sym("null?"), NULL]).eval(), TRUE);
         assert_eq!(
             List(vec![mk_sym("null?"), List(vec![mk_sym("quote"), NULL])]).eval(),
-            Atom(Primitive::Boolean(false))
+            FALSE
         );
     }
 }
