@@ -259,10 +259,23 @@ impl SExp {
             SExp::List(_) if self.is_null() => None,
             SExp::List(contents) => match &contents[0] {
                 SExp::Atom(Primitive::Symbol(sym)) => match sym.as_ref() {
-                    "define" | "if" | "cond" | "and" | "or" | "let" | "lambda" => {
+                    "define" | "cond" | "and" | "or" | "let" | "lambda" => {
                         // placeholder, will be gone once all are implemented
                         None
                     }
+                    "if" => match contents.len() {
+                        4 => {
+                            if contents[1] == true.as_atom() {
+                                Some(contents[2].clone().eval())
+                            } else {
+                                Some(contents[3].clone().eval())
+                            }
+                        }
+                        n @ _ => Some(Err(LispError::TooManyArguments {
+                            n_args: n - 1,
+                            right_num: 3,
+                        })),
+                    },
                     "quote" => match contents.len() {
                         1 => Some(Ok(contents[0].clone())),
                         2 => Some(Ok(contents[1].clone())),
@@ -557,7 +570,32 @@ mod tests {
         );
     }
 
-    // #[test]
-    // fn eval_if() {
-    // }
+    #[test]
+    fn eval_if() {
+        let sym_1 = SExp::make_symbol("one");
+        let sym_2 = SExp::make_symbol("two");
+        assert_eq!(
+            List(vec![
+                SExp::make_symbol("if"),
+                true.as_atom(),
+                sym_1.clone(),
+                sym_2.clone()
+            ])
+            .eval()
+            .unwrap(),
+            sym_1
+        );
+
+        assert_eq!(
+            List(vec![
+                SExp::make_symbol("if"),
+                false.as_atom(),
+                sym_1.clone(),
+                sym_2.clone()
+            ])
+            .eval()
+            .unwrap(),
+            sym_2
+        );
+    }
 }
