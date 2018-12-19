@@ -158,6 +158,11 @@ impl FromStr for SExp {
         if code.chars().all(is_atom_char) {
             debug!("Matched atom: {}", code);
             Ok(SExp::Atom(code.parse::<Primitive>()?))
+        } else if code.starts_with("'(") && code.ends_with(')') {
+            Ok(SExp::List(vec![
+                SExp::make_symbol("quote"),
+                code.get(1..).unwrap().parse::<SExp>()?,
+            ]))
         } else if code.starts_with('(') && code.ends_with(')') {
             match find_closing_delim(&code, '(', ')') {
                 Some(idx) => {
@@ -259,7 +264,7 @@ impl SExp {
                     "define" | "if" | "cond" | "and" | "or" | "let" | "lambda" => {
                         // placeholder, will be gone once all are implemented
                         None
-                    },
+                    }
                     "quote" => match contents.len() {
                         1 => Some(Ok(contents[0].clone())),
                         2 => Some(Ok(contents[1].clone())),
@@ -324,7 +329,7 @@ impl SExp {
                         }),
                     },
                     s @ _ => Err(LispError::UndefinedProcedure {
-                        proc: SExp::Atom(Primitive::Symbol(s.to_string())),
+                        proc: SExp::make_symbol(s),
                     }),
                 },
                 _ => Ok(SExp::List(contents.clone())),
@@ -365,6 +370,10 @@ impl SExp {
             }
         }
     }
+
+    fn make_symbol(sym: &str) -> Self {
+        SExp::Atom(Primitive::Symbol(sym.to_string()))
+    }
 }
 
 fn main() -> CliResult {
@@ -384,16 +393,12 @@ fn main() -> CliResult {
 
 #[cfg(test)]
 mod tests {
-    use super::SExp::{Atom, List};
+    use super::SExp::{self, Atom, List};
     use super::*;
 
     fn do_parse_and_assert(test_val: &str, expected_val: SExp) {
         let test_parsed = test_val.parse::<SExp>().unwrap();
         assert_eq!(test_parsed, expected_val);
-    }
-
-    fn mk_sym(s: &str) -> SExp {
-        Atom(Primitive::Symbol(s.to_string()))
     }
 
     #[test]
@@ -408,7 +413,7 @@ mod tests {
 
     #[test]
     fn parse_atom() {
-        do_parse_and_assert("hello", mk_sym("hello"));
+        do_parse_and_assert("hello", SExp::make_symbol("hello"));
     }
 
     #[test]
@@ -416,13 +421,13 @@ mod tests {
         do_parse_and_assert(
             "(a bc de fgh ijk l mnop)",
             List(vec![
-                mk_sym("a"),
-                mk_sym("bc"),
-                mk_sym("de"),
-                mk_sym("fgh"),
-                mk_sym("ijk"),
-                mk_sym("l"),
-                mk_sym("mnop"),
+                SExp::make_symbol("a"),
+                SExp::make_symbol("bc"),
+                SExp::make_symbol("de"),
+                SExp::make_symbol("fgh"),
+                SExp::make_symbol("ijk"),
+                SExp::make_symbol("l"),
+                SExp::make_symbol("mnop"),
             ]),
         );
     }
@@ -462,25 +467,44 @@ mod tests {
     }
 
     #[test]
+    fn parse_quote_syntax() {
+        do_parse_and_assert(
+            "'(a b c d)",
+            List(vec![
+                SExp::make_symbol("quote"),
+                List(vec![
+                    SExp::make_symbol("a"),
+                    SExp::make_symbol("b"),
+                    SExp::make_symbol("c"),
+                    SExp::make_symbol("d"),
+                ]),
+            ]),
+        );
+    }
+
+    #[test]
     fn eval_empty_list() {
         assert_eq!(NULL.eval().unwrap(), NULL);
     }
 
     #[test]
     fn eval_atom() {
-        let sym = mk_sym("test");
+        let sym = SExp::make_symbol("test");
         assert_eq!(sym.clone().eval().unwrap(), sym);
     }
 
     #[test]
     fn eval_list_quote() {
-        let test_list = vec![mk_sym("quote"), NULL];
+        let test_list = vec![SExp::make_symbol("quote"), NULL];
         assert_eq!(
             List(test_list.clone()).eval().unwrap(),
             test_list[1].clone()
         );
 
-        let test_list_2 = vec![mk_sym("quote"), List(vec![mk_sym("abc"), mk_sym("xyz")])];
+        let test_list_2 = vec![
+            SExp::make_symbol("quote"),
+            List(vec![SExp::make_symbol("abc"), SExp::make_symbol("xyz")]),
+        ];
         assert_eq!(
             List(test_list_2.clone()).eval().unwrap(),
             test_list_2[1].clone()
@@ -490,14 +514,19 @@ mod tests {
     #[test]
     fn eval_null_test() {
         assert_eq!(
-            List(vec![mk_sym("null?"), mk_sym("test")]).eval().unwrap(),
+            List(vec![SExp::make_symbol("null?"), SExp::make_symbol("test")])
+                .eval()
+                .unwrap(),
             FALSE
         );
-        assert_eq!(List(vec![mk_sym("null?"), NULL]).eval().unwrap(), TRUE);
+        assert_eq!(
+            List(vec![SExp::make_symbol("null?"), NULL]).eval().unwrap(),
+            TRUE
+        );
         assert_eq!(
             List(vec![
-                mk_sym("null?"),
-                List(vec![mk_sym("quote"), List(vec![FALSE, NULL])])
+                SExp::make_symbol("null?"),
+                List(vec![SExp::make_symbol("quote"), List(vec![FALSE, NULL])])
             ])
             .eval()
             .unwrap(),
