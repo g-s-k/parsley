@@ -310,6 +310,16 @@ impl SExp {
                         // placeholder, will be gone once all are implemented
                         None
                     }
+                    "begin" => match contents.len() {
+                        1 => Some(Err(LispError::NoArgumentsProvided {
+                            symbol: "begin".to_string(),
+                        })),
+                        _ => contents
+                            .into_iter()
+                            .skip(1)
+                            .map(|e| e.eval(ctx.clone()))
+                            .last(),
+                    },
                     "define" => match contents.len() {
                         1 => Some(Err(LispError::NoArgumentsProvided {
                             symbol: "define".to_string(),
@@ -333,10 +343,7 @@ impl SExp {
                     "cond" => match contents.len() {
                         1 => Some(Ok(SExp::Atom(Primitive::Void))),
                         _ => {
-                            let mapped = contents
-                                .into_iter()
-                                .skip(1)
-                                .map(|e| SExp::eval(e, ctx.clone()));
+                            let mapped = contents.into_iter().skip(1).map(|e| e.eval(ctx.clone()));
                             match mapped.clone().find(|e| match e {
                                 Err(_) => true,
                                 Ok(SExp::List(list)) if list[0] != false.as_atom() => true,
@@ -345,7 +352,7 @@ impl SExp {
                                 None => mapped.last(),
                                 Some(thing) => match thing {
                                     Ok(SExp::List(vals)) => Some(Ok(vals[1].clone())),
-                                    stuff @ _ => Some(stuff),
+                                    _ => None,
                                 },
                             }
                         }
@@ -360,10 +367,7 @@ impl SExp {
                     "and" => match contents.len() {
                         1 => Some(Ok(true.as_atom())),
                         _ => {
-                            let mapped = contents
-                                .into_iter()
-                                .skip(1)
-                                .map(|e| SExp::eval(e, ctx.clone()));
+                            let mapped = contents.into_iter().skip(1).map(|e| e.eval(ctx.clone()));
                             match mapped.clone().find(|e| match e {
                                 Err(_) => true,
                                 Ok(atom) => *atom == false.as_atom(),
@@ -376,10 +380,7 @@ impl SExp {
                     "or" => match contents.len() {
                         1 => Some(Ok(false.as_atom())),
                         _ => {
-                            let mapped = contents
-                                .into_iter()
-                                .skip(1)
-                                .map(|e| SExp::eval(e, ctx.clone()));
+                            let mapped = contents.into_iter().skip(1).map(|e| e.eval(ctx.clone()));
                             match mapped.clone().find(|e| match e {
                                 Err(_) => true,
                                 Ok(atom) => *atom != false.as_atom(),
@@ -652,10 +653,12 @@ mod tests {
 
     #[test]
     fn eval_atom() {
-        let ctx = Context::new();
+        let ctx = Context::new;
+        let sym = || SExp::make_symbol("test");
+        let quote = || SExp::make_symbol("quote");
 
-        let sym = SExp::make_symbol("test");
-        assert_eq!(sym.clone().eval(ctx).unwrap(), sym);
+        assert!(sym().eval(ctx()).is_err());
+        assert_eq!(List(vec![quote(), sym()]).eval(ctx()).unwrap(), sym())
     }
 
     #[test]
@@ -681,22 +684,21 @@ mod tests {
     #[test]
     fn eval_null_test() {
         let ctx = Context::new;
+        let null = || SExp::make_symbol("null?");
 
         assert_eq!(
-            List(vec![SExp::make_symbol("null?"), SExp::make_symbol("test")])
+            List(vec![null(), SExp::make_symbol("test")])
                 .eval(ctx())
                 .unwrap(),
             false.as_atom()
         );
         assert_eq!(
-            List(vec![SExp::make_symbol("null?"), NULL])
-                .eval(ctx())
-                .unwrap(),
+            List(vec![null(), NULL]).eval(ctx()).unwrap(),
             true.as_atom()
         );
         assert_eq!(
             List(vec![
-                SExp::make_symbol("null?"),
+                null(),
                 List(vec![
                     SExp::make_symbol("quote"),
                     List(vec![false.as_atom(), NULL])
@@ -711,31 +713,31 @@ mod tests {
     #[test]
     fn eval_if() {
         let ctx = Context::new;
+        let sym_1 = || "one".as_atom();
+        let sym_2 = || "two".as_atom();
 
-        let sym_1 = SExp::make_symbol("one");
-        let sym_2 = SExp::make_symbol("two");
         assert_eq!(
             List(vec![
                 SExp::make_symbol("if"),
                 true.as_atom(),
-                sym_1.clone(),
-                sym_2.clone()
+                sym_1(),
+                sym_2()
             ])
             .eval(ctx())
             .unwrap(),
-            sym_1
+            sym_1()
         );
 
         assert_eq!(
             List(vec![
                 SExp::make_symbol("if"),
                 false.as_atom(),
-                sym_1.clone(),
-                sym_2.clone()
+                sym_1(),
+                sym_2()
             ])
             .eval(ctx())
             .unwrap(),
-            sym_2
+            sym_2()
         );
     }
 
@@ -887,12 +889,39 @@ mod tests {
                 cond(),
                 List(vec![false.as_atom(), 'c'.as_atom()]),
                 List(vec![true.as_atom(), 'b'.as_atom()]),
-                List(vec![true.as_atom(), 'b'.as_atom()]),
+                List(vec![true.as_atom(), 'd'.as_atom()]),
                 List(vec![else_(), 'a'.as_atom()])
             ])
             .eval(ctx())
             .unwrap(),
             'b'.as_atom()
         );
+        assert_eq!(
+            List(vec![
+                cond(),
+                List(vec![false.as_atom(), 'c'.as_atom()]),
+                List(vec![false.as_atom(), 'b'.as_atom()]),
+                List(vec![false.as_atom(), 'd'.as_atom()]),
+                List(vec![else_(), 'a'.as_atom()])
+            ])
+                .eval(ctx())
+                .unwrap(),
+            'a'.as_atom()
+        );
+    }
+
+    #[test]
+    fn eval_begin() {
+        let ctx = Context::new;
+        let begin = || SExp::make_symbol("begin");
+
+        assert!(List(vec![begin()]).eval(ctx()).is_err());
+
+        assert_eq!(
+            List(vec![begin(), 0_f64.as_atom(), 1_f64.as_atom()])
+                .eval(ctx())
+                .unwrap(),
+            1_f64.as_atom()
+        )
     }
 }
