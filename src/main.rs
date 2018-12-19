@@ -4,6 +4,7 @@ extern crate failure_derive;
 extern crate quicli;
 extern crate structopt;
 
+use std::fmt;
 use std::str::FromStr;
 
 use quicli::prelude::*;
@@ -24,13 +25,17 @@ struct Cli {
 enum LispError {
     #[fail(display = "could not parse expression: {}", exp)]
     SyntaxError { exp: String },
-    #[fail(display = "procedure is not defined: {:?}", proc)]
+    #[fail(display = "procedure is not defined: {}", proc)]
     UndefinedProcedure { proc: SExp },
     #[fail(
         display = "too many arguments provided: expected {}, got {}.",
-        n_args, right_num
+        right_num, n_args
     )]
     TooManyArguments { n_args: usize, right_num: usize },
+    #[fail(display = "Expected a list, got {}.", atom)]
+    NotAList { atom: SExp },
+    #[fail(display = "Expected a pair, got the null list.")]
+    NullList,
 }
 
 fn is_atom_char(c: char) -> bool {
@@ -74,6 +79,18 @@ enum Primitive {
     Symbol(String),
 }
 
+impl fmt::Display for Primitive {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Primitive::Boolean(b) => write!(f, "{}", b),
+            Primitive::Character(c) => write!(f, "'{}'", c),
+            Primitive::Number(n) => write!(f, "{}", n),
+            Primitive::String(s) => write!(f, "\"{}\"", s),
+            Primitive::Symbol(s) => write!(f, "{}", s),
+        }
+    }
+}
+
 impl FromStr for Primitive {
     type Err = LispError;
 
@@ -114,6 +131,22 @@ impl FromStr for Primitive {
 enum SExp {
     Atom(Primitive),
     List(Vec<SExp>),
+}
+
+impl fmt::Display for SExp {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            SExp::Atom(a) => write!(f, "{}", a),
+            SExp::List(v) => write!(
+                f,
+                "({})",
+                v.iter()
+                    .map(|e| format!("{}", e))
+                    .collect::<Vec<String>>()
+                    .join(" ")
+            ),
+        }
+    }
 }
 
 impl FromStr for SExp {
@@ -202,40 +235,105 @@ impl SExp {
         match self {
             SExp::Atom(_) => Ok(self),
             SExp::List(ref contents) if contents.len() == 0 => Ok(NULL),
-            SExp::List(contents) => {
-                match contents.into_iter().map(SExp::eval).collect() {
-                    Ok(list) => SExp::List(list).apply(),
-                    Err(err) => Err(err)
-                }
-            }
+            SExp::List(contents) => match contents.into_iter().map(SExp::eval).collect() {
+                Ok(list) => SExp::List(list).apply(),
+                Err(err) => Err(err),
+            },
         }
     }
 
     fn apply(self) -> Result<Self, LispError> {
         match self {
             SExp::Atom(_) => Ok(self),
-            SExp::List(ref contents) if contents.len() == 0 => Ok(NULL),
-            SExp::List(contents) => match contents[0] {
-                // quote procedure
-                SExp::Atom(Primitive::Symbol(ref sym)) if sym == "quote" => {
-                    Ok(SExp::List(contents[1..].to_vec()))
-                }
-                // null? procedure
-                SExp::Atom(Primitive::Symbol(ref sym)) if sym == "null?" => match contents.len() {
-                    1 => Ok(contents[0].clone()),
-                    2 => match contents[1] {
-                        SExp::List(ref contents) if contents.len() == 0 => Ok(TRUE),
-                        _ => Ok(FALSE),
+            SExp::List(_) if self.is_null() => Ok(NULL),
+            SExp::List(contents) => match &contents[0] {
+                SExp::Atom(Primitive::Symbol(sym)) => match sym.as_ref() {
+                    "car" => match contents.len() {
+                        1 => Ok(contents[0].clone()),
+                        2 => contents[1].car(),
+                        n @ _ => Err(LispError::TooManyArguments {
+                            n_args: n - 1,
+                            right_num: 1,
+                        }),
                     },
-                    n @ _ => Err(LispError::TooManyArguments {
-                        n_args: n - 1,
-                        right_num: 1,
+                    "cdr" => match contents.len() {
+                        1 => Ok(contents[0].clone()),
+                        2 => contents[1].cdr(),
+                        n @ _ => Err(LispError::TooManyArguments {
+                            n_args: n - 1,
+                            right_num: 1,
+                        }),
+                    },
+                    "cons" => match contents.len() {
+                        1 => Ok(contents[0].clone()),
+                        3 => Ok(SExp::cons(contents[1].clone(), contents[2].clone())),
+                        n @ _ => Err(LispError::TooManyArguments {
+                            n_args: n - 1,
+                            right_num: 1,
+                        }),
+                    },
+                    "quote" => match contents.len() {
+                        1 => Ok(contents[0].clone()),
+                        2 => Ok(contents[1].clone()),
+                        n @ _ => Err(LispError::TooManyArguments {
+                            n_args: n - 1,
+                            right_num: 1,
+                        }),
+                    },
+                    "null?" => match contents.len() {
+                        1 => Ok(contents[0].clone()),
+                        2 => {
+                            if contents[1].is_null() {
+                                Ok(TRUE)
+                            } else {
+                                Ok(FALSE)
+                            }
+                        }
+                        n @ _ => Err(LispError::TooManyArguments {
+                            n_args: n - 1,
+                            right_num: 1,
+                        }),
+                    },
+                    s @ _ => Err(LispError::UndefinedProcedure {
+                        proc: SExp::Atom(Primitive::Symbol(s.to_string())),
                     }),
                 },
-                _ => Err(LispError::UndefinedProcedure {
-                    proc: contents[0].clone(),
-                }),
+                _ => Ok(SExp::List(contents.clone())),
             },
+        }
+    }
+
+    fn is_null(&self) -> bool {
+        match self {
+            SExp::List(ref contents) if contents.len() == 0 => true,
+            _ => false,
+        }
+    }
+
+    fn car(&self) -> Result<SExp, LispError> {
+        match self {
+            atom @ SExp::Atom(_) => Err(LispError::NotAList { atom: atom.clone() }),
+            SExp::List(_) if self.is_null() => Err(LispError::NullList),
+            SExp::List(contents) => Ok(contents[0].clone()),
+        }
+    }
+
+    fn cdr(&self) -> Result<SExp, LispError> {
+        match self {
+            atom @ SExp::Atom(_) => Err(LispError::NotAList { atom: atom.clone() }),
+            SExp::List(_) if self.is_null() => Err(LispError::NullList),
+            SExp::List(contents) => Ok(SExp::List(contents[1..].to_vec())),
+        }
+    }
+
+    fn cons(exp1: Self, exp2: Self) -> Self {
+        match exp2 {
+            SExp::Atom(_) => SExp::List(vec![exp1, exp2]),
+            SExp::List(mut contents) => {
+                let mut new_contents = vec![exp1];
+                new_contents.append(&mut contents);
+                SExp::List(new_contents)
+            }
         }
     }
 }
@@ -248,7 +346,7 @@ fn main() -> CliResult {
 
     let code = read_file(&args.file)?;
     match code.parse::<SExp>() {
-        Ok(tree) => println!("{:?}", tree.eval().unwrap()),
+        Ok(tree) => println!("{}", tree.eval().unwrap()),
         Err(error) => error!("{}", error),
     };
 
@@ -347,19 +445,27 @@ mod tests {
 
     #[test]
     fn eval_list_quote() {
-        let test_list = vec![mk_sym("quote"), FALSE, NULL];
+        let test_list = vec![mk_sym("quote"), NULL];
         assert_eq!(
             List(test_list.clone()).eval().unwrap(),
-            List(test_list[1..].to_vec())
+            test_list[1].clone()
         );
     }
 
     #[test]
     fn eval_null_test() {
-        assert_eq!(List(vec![mk_sym("null?"), mk_sym("test")]).eval().unwrap(), FALSE);
+        assert_eq!(
+            List(vec![mk_sym("null?"), mk_sym("test")]).eval().unwrap(),
+            FALSE
+        );
         assert_eq!(List(vec![mk_sym("null?"), NULL]).eval().unwrap(), TRUE);
         assert_eq!(
-            List(vec![mk_sym("null?"), List(vec![mk_sym("quote"), NULL])]).eval().unwrap(),
+            List(vec![
+                mk_sym("null?"),
+                List(vec![mk_sym("quote"), List(vec![FALSE, NULL])])
+            ])
+            .eval()
+            .unwrap(),
             FALSE
         );
     }
