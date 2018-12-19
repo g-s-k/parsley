@@ -70,6 +70,8 @@ fn find_closing_delim(s: &str, d_plus: char, d_minus: char) -> Option<usize> {
 
 #[derive(Debug, PartialEq, Clone)]
 enum Primitive {
+    Void,
+    Undefined,
     Boolean(bool),
     Character(char),
     Number(f64),
@@ -80,11 +82,13 @@ enum Primitive {
 impl fmt::Display for Primitive {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
+            Primitive::Void => write!(f, "#<void>"),
+            Primitive::Undefined => write!(f, "#<undefined>"),
             Primitive::Boolean(b) => write!(f, "{}", if *b { "#t" } else { "#f" }),
             Primitive::Character(c) => write!(f, "'{}'", c),
             Primitive::Number(n) => write!(f, "{}", n),
             Primitive::String(s) => write!(f, "\"{}\"", s),
-            Primitive::Symbol(s) => write!(f, "{}", s),
+            Primitive::Symbol(s) => write!(f, "'{}", s),
         }
     }
 }
@@ -259,10 +263,34 @@ impl SExp {
             SExp::List(_) if self.is_null() => None,
             SExp::List(contents) => match &contents[0] {
                 SExp::Atom(Primitive::Symbol(sym)) => match sym.as_ref() {
-                    "define" | "cond" | "let" | "lambda" => {
+                    "define" | "let" | "lambda" => {
                         // placeholder, will be gone once all are implemented
                         None
                     }
+                    "cond" => match contents.len() {
+                        1 => Some(Ok(SExp::Atom(Primitive::Void))),
+                        _ => {
+                            let mapped = contents.into_iter().skip(1).map(SExp::eval);
+                            match mapped.clone().find(|e| match e {
+                                Err(_) => true,
+                                Ok(SExp::List(list)) if list[0] != false.as_atom() => true,
+                                _ => false,
+                            }) {
+                                None => mapped.last(),
+                                Some(thing) => match thing {
+                                    Ok(SExp::List(vals)) => Some(Ok(vals[1].clone())),
+                                    stuff @ _ => Some(stuff),
+                                },
+                            }
+                        }
+                    },
+                    "else" => match contents.len() {
+                        2 => Some(Ok(contents[1].clone())),
+                        n @ _ => Some(Err(LispError::TooManyArguments {
+                            n_args: n - 1,
+                            right_num: 1,
+                        })),
+                    },
                     "and" => match contents.len() {
                         1 => Some(Ok(true.as_atom())),
                         _ => {
@@ -452,7 +480,7 @@ fn main() -> CliResult {
 
 #[cfg(test)]
 mod tests {
-    use super::SExp::{self, List};
+    use super::SExp::{self, Atom, List};
     use super::*;
 
     fn do_parse_and_assert(test_val: &str, expected_val: SExp) {
@@ -722,6 +750,45 @@ mod tests {
             .eval()
             .unwrap(),
             'a'.as_atom()
+        );
+    }
+
+    #[test]
+    fn eval_cond() {
+        let cond = || SExp::make_symbol("cond");
+        let else_ = || SExp::make_symbol("else");
+
+        assert_eq!(List(vec![cond()]).eval().unwrap(), Atom(Primitive::Void));
+
+        assert_eq!(
+            List(vec![cond(), List(vec![else_(), 'a'.as_atom()])])
+                .eval()
+                .unwrap(),
+            'a'.as_atom()
+        );
+
+        assert_eq!(
+            List(vec![
+                cond(),
+                List(vec![true.as_atom(), 'b'.as_atom()]),
+                List(vec![else_(), 'a'.as_atom()])
+            ])
+            .eval()
+            .unwrap(),
+            'b'.as_atom()
+        );
+
+        assert_eq!(
+            List(vec![
+                cond(),
+                List(vec![false.as_atom(), 'c'.as_atom()]),
+                List(vec![true.as_atom(), 'b'.as_atom()]),
+                List(vec![true.as_atom(), 'b'.as_atom()]),
+                List(vec![else_(), 'a'.as_atom()])
+            ])
+            .eval()
+            .unwrap(),
+            'b'.as_atom()
         );
     }
 }
