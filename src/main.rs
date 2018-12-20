@@ -358,7 +358,7 @@ impl FromStr for SExp {
 }
 
 impl SExp {
-    fn eval(self, mut ctx: Context) -> Result<Self, LispError> {
+    fn eval(self, ctx: &mut Context) -> Result<Self, LispError> {
         match self {
             SExp::Atom(Primitive::Symbol(sym)) => match ctx.get(&sym) {
                 None => Err(LispError::UndefinedSymbol { sym }),
@@ -368,18 +368,14 @@ impl SExp {
             SExp::List(_) if self.is_null() => Ok(NULL),
             SExp::List(contents) => {
                 // handle special functions
-                if let Some(result) = SExp::List(contents.clone()).eval_special_form(&mut ctx) {
+                if let Some(result) = SExp::List(contents.clone()).eval_special_form(ctx) {
                     debug!("Special form finished evaluating.");
                     result
                 } else {
                     // handle everything else
                     debug!("Evaluating normal list.");
-                    match contents
-                        .into_iter()
-                        .map(|e| SExp::eval(e, ctx.clone()))
-                        .collect()
-                    {
-                        Ok(list) => SExp::List(list).apply(&ctx),
+                    match contents.into_iter().map(|e| e.eval(ctx)).collect() {
+                        Ok(list) => SExp::List(list).apply(ctx),
                         Err(err) => Err(err),
                     }
                 }
@@ -432,11 +428,7 @@ impl SExp {
                         })),
                         _ => {
                             debug!("Evaluating \"begin\" sequence.");
-                            contents
-                                .into_iter()
-                                .skip(1)
-                                .map(|e| e.eval(ctx.clone()))
-                                .last()
+                            contents.into_iter().skip(1).map(|e| e.eval(ctx)).last()
                         }
                     },
                     "define" => match contents.len() {
@@ -455,7 +447,8 @@ impl SExp {
                                     Some(Ok(contents[2].clone()))
                                 } else {
                                     Some(Err(LispError::TooManyArguments {
-                                        n_args: n_args - 1, right_num: 2
+                                        n_args: n_args - 1,
+                                        right_num: 2,
                                     }))
                                 }
                             }
@@ -471,11 +464,11 @@ impl SExp {
                                     }
                                     ctx.define(&sym, SExp::List(exprs));
                                     Some(Ok(SExp::Atom(Primitive::Undefined)))
-                                },
+                                }
                                 exp @ _ => Some(Err(LispError::SyntaxError {
                                     exp: exp.to_string(),
                                 })),
-                            }
+                            },
                             exp @ _ => Some(Err(LispError::SyntaxError {
                                 exp: exp.to_string(),
                             })),
@@ -497,11 +490,11 @@ impl SExp {
                                 match vals.iter().find_map(|e| match e {
                                     SExp::List(kv) if kv.len() == 2 => match &kv[0] {
                                         SExp::Atom(Primitive::Symbol(key)) => {
-                                            match kv[1].clone().eval(ctx.clone()) {
+                                            match kv[1].clone().eval(ctx) {
                                                 Ok(val) => {
                                                     new_ctx.define(key, val);
                                                     None
-                                                },
+                                                }
                                                 Err(stuff) => Some(Err(LispError::SyntaxError {
                                                     exp: stuff.to_string(),
                                                 })),
@@ -518,7 +511,7 @@ impl SExp {
                                     None => contents
                                         .into_iter()
                                         .skip(2)
-                                        .map(|e| e.eval(new_ctx.clone()))
+                                        .map(|e| e.eval(&mut new_ctx))
                                         .last(),
                                     stuff @ _ => stuff,
                                 }
@@ -532,38 +525,69 @@ impl SExp {
                         1 => Some(Ok(SExp::Atom(Primitive::Void))),
                         _ => {
                             debug!("Evaluating conditional form.");
-                            let mapped = contents.into_iter().skip(1).map(|e| e.eval(ctx.clone()));
-                            match mapped.clone().find(|e| match e {
-                                Err(_) => true,
-                                Ok(SExp::List(list)) if list[0] != false.as_atom() => true,
-                                _ => false,
-                            }) {
-                                None => mapped.last(),
-                                Some(thing) => match thing {
-                                    Ok(SExp::List(vals)) => Some(Ok(vals[1].clone())),
-                                    _ => None,
-                                },
+                            let false_ = false.as_atom();
+                            let else_ = SExp::make_symbol("else");
+
+                            match contents
+                                .into_iter()
+                                .skip(1)
+                                .map(|expr| match expr {
+                                    SExp::List(pair) => {
+                                        if pair.len() == 2 {
+                                            if pair[0] == else_ {
+                                                Some(pair[1].clone().eval(ctx))
+                                            } else {
+                                                match pair[0].clone().eval(ctx) {
+                                                    Ok(condition) => {
+                                                        if condition == false_ {
+                                                            None
+                                                        } else {
+                                                            Some(pair[1].clone().eval(ctx))
+                                                        }
+                                                    }
+                                                    err @ _ => Some(err),
+                                                }
+                                            }
+                                        } else {
+                                            Some(Err(LispError::SyntaxError {
+                                                exp: format!("{:?}", pair),
+                                            }))
+                                        }
+                                    }
+                                    other @ _ => Some(Err(LispError::SyntaxError {
+                                        exp: other.to_string(),
+                                    })),
+                                })
+                                .skip_while(Option::is_none)
+                                .next()
+                            {
+                                Some(stuff) => stuff,
+                                None => Some(Err(LispError::SyntaxError {
+                                    exp: "malformed 'cond' statement".to_string(),
+                                })),
                             }
                         }
                     },
-                    "else" => match contents.len() {
-                        2 => Some(Ok(contents[1].clone())),
-                        n @ _ => Some(Err(LispError::TooManyArguments {
-                            n_args: n - 1,
-                            right_num: 1,
-                        })),
-                    },
                     "and" => match contents.len() {
                         1 => Some(Ok(true.as_atom())),
-                        _ => {
+                        n @ _ => {
                             debug!("Evaluating 'and' expression.");
-                            let mapped = contents.into_iter().skip(1).map(|e| e.eval(ctx.clone()));
-                            match mapped.clone().find(|e| match e {
-                                Err(_) => true,
-                                Ok(atom) => *atom == false.as_atom(),
-                            }) {
-                                None => mapped.last(),
-                                thing @ Some(_) => thing,
+                            let false_ = false.as_atom();
+                            let mut good_stuff = contents
+                                .into_iter()
+                                .skip(1)
+                                .map(|expr| expr.eval(ctx))
+                                .take_while(|element| match element {
+                                    Err(_) => false,
+                                    Ok(ref atom) if *atom == false_ => false,
+                                    _ => true,
+                                })
+                                .collect::<Vec<_>>();
+
+                            if good_stuff.len() == n - 1 {
+                                good_stuff.pop()
+                            } else {
+                                Some(Ok(false_))
                             }
                         }
                     },
@@ -571,13 +595,15 @@ impl SExp {
                         1 => Some(Ok(false.as_atom())),
                         _ => {
                             debug!("Evaluating 'or' expression.");
-                            let mapped = contents.into_iter().skip(1).map(|e| e.eval(ctx.clone()));
-                            match mapped.clone().find(|e| match e {
-                                Err(_) => true,
-                                Ok(atom) => *atom != false.as_atom(),
+                            let false_ = false.as_atom();
+                            match contents.into_iter().skip(1).find_map(|expr| {
+                                match expr.eval(ctx) {
+                                    Ok(ref atom) if *atom == false_ => None,
+                                    thing @ _ => Some(thing),
+                                }
                             }) {
-                                None => mapped.last(),
-                                thing @ Some(_) => thing,
+                                None => Some(Ok(false_)),
+                                thing @ _ => thing,
                             }
                         }
                     },
@@ -585,9 +611,9 @@ impl SExp {
                         4 => {
                             debug!("Evaluating 'if' expression.");
                             if contents[1] == true.as_atom() {
-                                Some(contents[2].clone().eval(ctx.clone()))
+                                Some(contents[2].clone().eval(ctx))
                             } else {
-                                Some(contents[3].clone().eval(ctx.clone()))
+                                Some(contents[3].clone().eval(ctx))
                             }
                         }
                         n @ _ => Some(Err(LispError::TooManyArguments {
@@ -609,7 +635,7 @@ impl SExp {
         }
     }
 
-    fn apply(self, ctx: &Context) -> Result<Self, LispError> {
+    fn apply(self, ctx: &mut Context) -> Result<Self, LispError> {
         match self {
             SExp::Atom(_) => Ok(self),
             SExp::List(_) if self.is_null() => Ok(NULL),
@@ -655,8 +681,8 @@ impl SExp {
                 },
                 SExp::Atom(Primitive::Procedure(proc)) => {
                     debug!("Applying a procedure.");
-                    proc(contents[1..].to_vec()).eval(ctx.clone())
-                },
+                    proc(contents[1..].to_vec()).eval(ctx)
+                }
                 _ => Ok(SExp::List(contents.clone())),
             },
         }
@@ -737,7 +763,7 @@ fn main() -> CliResult {
     let args = Cli::from_args();
     args.verbosity.setup_env_logger("rsch")?;
 
-    let base_context = Context::new();
+    let mut base_context = Context::new();
 
     info!("Reading source from {}", args.file);
     let code = read_file(&args.file)?;
@@ -746,7 +772,7 @@ fn main() -> CliResult {
     match code.parse::<SExp>() {
         Ok(tree) => {
             info!("Evaluating.");
-            println!("{}", tree.eval(base_context).unwrap());
+            println!("{}", tree.eval(&mut base_context).unwrap());
         }
         Err(error) => error!("{}", error),
     };
@@ -847,28 +873,29 @@ mod tests {
 
     #[test]
     fn eval_empty_list() {
-        let ctx = Context::new();
+        let mut ctx = Context::new();
 
-        assert_eq!(NULL.eval(ctx).unwrap(), NULL);
+        assert_eq!(NULL.eval(&mut ctx).unwrap(), NULL);
     }
 
     #[test]
     fn eval_atom() {
-        let ctx = Context::new;
         let sym = || SExp::make_symbol("test");
         let quote = || SExp::make_symbol("quote");
 
-        assert!(sym().eval(ctx()).is_err());
-        assert_eq!(List(vec![quote(), sym()]).eval(ctx()).unwrap(), sym())
+        let mut ctx = Context::new();
+        assert!(sym().eval(&mut ctx).is_err());
+
+        let mut ctx = Context::new();
+        assert_eq!(List(vec![quote(), sym()]).eval(&mut ctx).unwrap(), sym())
     }
 
     #[test]
     fn eval_list_quote() {
-        let ctx = Context::new;
-
         let test_list = vec![SExp::make_symbol("quote"), NULL];
+        let mut ctx = Context::new();
         assert_eq!(
-            List(test_list.clone()).eval(ctx()).unwrap(),
+            List(test_list.clone()).eval(&mut ctx).unwrap(),
             test_list[1].clone()
         );
 
@@ -876,27 +903,32 @@ mod tests {
             SExp::make_symbol("quote"),
             List(vec![SExp::make_symbol("abc"), SExp::make_symbol("xyz")]),
         ];
+        let mut ctx = Context::new();
         assert_eq!(
-            List(test_list_2.clone()).eval(ctx()).unwrap(),
+            List(test_list_2.clone()).eval(&mut ctx).unwrap(),
             test_list_2[1].clone()
         );
     }
 
     #[test]
     fn eval_null_test() {
-        let ctx = Context::new;
         let null = || SExp::make_symbol("null?");
 
+        let mut ctx = Context::new();
         assert_eq!(
             List(vec![null(), SExp::make_symbol("test")])
-                .eval(ctx())
+                .eval(&mut ctx)
                 .unwrap(),
             false.as_atom()
         );
+
+        let mut ctx = Context::new();
         assert_eq!(
-            List(vec![null(), NULL]).eval(ctx()).unwrap(),
+            List(vec![null(), NULL]).eval(&mut ctx).unwrap(),
             true.as_atom()
         );
+
+        let mut ctx = Context::new();
         assert_eq!(
             List(vec![
                 null(),
@@ -905,7 +937,7 @@ mod tests {
                     List(vec![false.as_atom(), NULL])
                 ])
             ])
-            .eval(ctx())
+            .eval(&mut ctx)
             .unwrap(),
             false.as_atom()
         );
@@ -913,10 +945,10 @@ mod tests {
 
     #[test]
     fn eval_if() {
-        let ctx = Context::new;
         let sym_1 = || "one".as_atom();
         let sym_2 = || "two".as_atom();
 
+        let mut ctx = Context::new();
         assert_eq!(
             List(vec![
                 SExp::make_symbol("if"),
@@ -924,11 +956,12 @@ mod tests {
                 sym_1(),
                 sym_2()
             ])
-            .eval(ctx())
+            .eval(&mut ctx)
             .unwrap(),
             sym_1()
         );
 
+        let mut ctx = Context::new();
         assert_eq!(
             List(vec![
                 SExp::make_symbol("if"),
@@ -936,7 +969,7 @@ mod tests {
                 sym_1(),
                 sym_2()
             ])
-            .eval(ctx())
+            .eval(&mut ctx)
             .unwrap(),
             sym_2()
         );
@@ -944,42 +977,47 @@ mod tests {
 
     #[test]
     fn eval_and() {
-        let ctx = Context::new;
-
         let and = || SExp::make_symbol("and");
 
-        assert_eq!(List(vec![and()]).eval(ctx()).unwrap(), true.as_atom());
+        let mut ctx = Context::new();
+        assert_eq!(List(vec![and()]).eval(&mut ctx).unwrap(), true.as_atom());
 
+        let mut ctx = Context::new();
         assert_eq!(
             List(vec![and(), true.as_atom(), true.as_atom()])
-                .eval(ctx())
+                .eval(&mut ctx)
                 .unwrap(),
             true.as_atom()
         );
 
+        let mut ctx = Context::new();
         assert_eq!(
             List(vec![and(), false.as_atom(), true.as_atom()])
-                .eval(ctx())
+                .eval(&mut ctx)
                 .unwrap(),
             false.as_atom()
         );
 
+        let mut ctx = Context::new();
         assert_eq!(
             List(vec![and(), false.as_atom(), false.as_atom()])
-                .eval(ctx())
+                .eval(&mut ctx)
                 .unwrap(),
             false.as_atom()
         );
 
+        let mut ctx = Context::new();
         assert_eq!(
             List(vec![and(), true.as_atom(), 3.0.as_atom()])
-                .eval(ctx())
+                .eval(&mut ctx)
                 .unwrap(),
             3.0.as_atom()
         );
 
-        assert_eq!(List(vec![and(), NULL]).eval(ctx()).unwrap(), NULL);
+        let mut ctx = Context::new();
+        assert_eq!(List(vec![and(), NULL]).eval(&mut ctx).unwrap(), NULL);
 
+        let mut ctx = Context::new();
         assert_eq!(
             List(vec![
                 and(),
@@ -988,7 +1026,7 @@ mod tests {
                 false.as_atom(),
                 'c'.as_atom()
             ])
-            .eval(ctx())
+            .eval(&mut ctx)
             .unwrap(),
             false.as_atom()
         );
@@ -996,41 +1034,47 @@ mod tests {
 
     #[test]
     fn eval_or() {
-        let ctx = Context::new;
         let or = || SExp::make_symbol("or");
 
-        assert_eq!(List(vec![or()]).eval(ctx()).unwrap(), false.as_atom());
+        let mut ctx = Context::new();
+        assert_eq!(List(vec![or()]).eval(&mut ctx).unwrap(), false.as_atom());
 
+        let mut ctx = Context::new();
         assert_eq!(
             List(vec![or(), true.as_atom(), true.as_atom()])
-                .eval(ctx())
+                .eval(&mut ctx)
                 .unwrap(),
             true.as_atom()
         );
 
+        let mut ctx = Context::new();
         assert_eq!(
             List(vec![or(), false.as_atom(), true.as_atom()])
-                .eval(ctx())
+                .eval(&mut ctx)
                 .unwrap(),
             true.as_atom()
         );
 
+        let mut ctx = Context::new();
         assert_eq!(
             List(vec![or(), false.as_atom(), false.as_atom()])
-                .eval(ctx())
+                .eval(&mut ctx)
                 .unwrap(),
             false.as_atom()
         );
 
+        let mut ctx = Context::new();
         assert_eq!(
             List(vec![or(), 3.0.as_atom(), true.as_atom()])
-                .eval(ctx())
+                .eval(&mut ctx)
                 .unwrap(),
             3.0.as_atom()
         );
 
-        assert_eq!(List(vec![or(), NULL]).eval(ctx()).unwrap(), NULL);
+        let mut ctx = Context::new();
+        assert_eq!(List(vec![or(), NULL]).eval(&mut ctx).unwrap(), NULL);
 
+        let mut ctx = Context::new();
         assert_eq!(
             List(vec![
                 or(),
@@ -1039,7 +1083,7 @@ mod tests {
                 'b'.as_atom(),
                 'c'.as_atom()
             ])
-            .eval(ctx())
+            .eval(&mut ctx)
             .unwrap(),
             'a'.as_atom()
         );
@@ -1047,44 +1091,48 @@ mod tests {
 
     #[test]
     fn eval_cond() {
-        let ctx = Context::new;
         let cond = || SExp::make_symbol("cond");
         let else_ = || SExp::make_symbol("else");
 
+        let mut ctx = Context::new();
         assert_eq!(
-            List(vec![cond()]).eval(ctx()).unwrap(),
+            List(vec![cond()]).eval(&mut ctx).unwrap(),
             Atom(Primitive::Void)
         );
 
+        let mut ctx = Context::new();
         assert_eq!(
             List(vec![cond(), List(vec![else_(), 'a'.as_atom()])])
-                .eval(ctx())
+                .eval(&mut ctx)
                 .unwrap(),
             'a'.as_atom()
         );
 
+        let mut ctx = Context::new();
         assert_eq!(
             List(vec![
                 cond(),
                 List(vec![true.as_atom(), 'b'.as_atom()]),
                 List(vec![else_(), 'a'.as_atom()])
             ])
-            .eval(ctx())
+            .eval(&mut ctx)
             .unwrap(),
             'b'.as_atom()
         );
 
+        let mut ctx = Context::new();
         assert_eq!(
             List(vec![
                 cond(),
                 List(vec![false.as_atom(), 'b'.as_atom()]),
                 List(vec![else_(), 'a'.as_atom()])
             ])
-            .eval(ctx())
+            .eval(&mut ctx)
             .unwrap(),
             'a'.as_atom()
         );
 
+        let mut ctx = Context::new();
         assert_eq!(
             List(vec![
                 cond(),
@@ -1093,10 +1141,12 @@ mod tests {
                 List(vec![true.as_atom(), 'd'.as_atom()]),
                 List(vec![else_(), 'a'.as_atom()])
             ])
-            .eval(ctx())
+            .eval(&mut ctx)
             .unwrap(),
             'b'.as_atom()
         );
+
+        let mut ctx = Context::new();
         assert_eq!(
             List(vec![
                 cond(),
@@ -1105,7 +1155,7 @@ mod tests {
                 List(vec![false.as_atom(), 'd'.as_atom()]),
                 List(vec![else_(), 'a'.as_atom()])
             ])
-            .eval(ctx())
+            .eval(&mut ctx)
             .unwrap(),
             'a'.as_atom()
         );
@@ -1113,14 +1163,15 @@ mod tests {
 
     #[test]
     fn eval_begin() {
-        let ctx = Context::new;
         let begin = || SExp::make_symbol("begin");
 
-        assert!(List(vec![begin()]).eval(ctx()).is_err());
+        let mut ctx = Context::new();
+        assert!(List(vec![begin()]).eval(&mut ctx).is_err());
 
+        let mut ctx = Context::new();
         assert_eq!(
             List(vec![begin(), 0_f64.as_atom(), 1_f64.as_atom()])
-                .eval(ctx())
+                .eval(&mut ctx)
                 .unwrap(),
             1_f64.as_atom()
         )
@@ -1128,25 +1179,29 @@ mod tests {
 
     #[test]
     fn eval_let() {
-        let ctx = Context::new;
         let x = || SExp::make_symbol("x");
         let y = || SExp::make_symbol("y");
         let let_ = || SExp::make_symbol("let");
 
-        assert!(List(vec![let_()]).eval(ctx()).is_err());
-        assert!(List(vec![let_(), List(vec![])]).eval(ctx()).is_err());
+        let mut ctx = Context::new();
+        assert!(List(vec![let_()]).eval(&mut ctx).is_err());
 
+        let mut ctx = Context::new();
+        assert!(List(vec![let_(), List(vec![])]).eval(&mut ctx).is_err());
+
+        let mut ctx = Context::new();
         assert_eq!(
             List(vec![
                 let_(),
                 List(vec![List(vec![x(), 3_f64.as_atom()])]),
                 x()
             ])
-            .eval(ctx())
+            .eval(&mut ctx)
             .unwrap(),
             3_f64.as_atom()
         );
 
+        let mut ctx = Context::new();
         assert_eq!(
             List(vec![
                 let_(),
@@ -1157,7 +1212,7 @@ mod tests {
                 x(),
                 y()
             ])
-            .eval(ctx())
+            .eval(&mut ctx)
             .unwrap(),
             5_f64.as_atom()
         );
