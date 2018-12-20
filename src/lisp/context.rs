@@ -47,23 +47,19 @@ impl Context {
             "eq?",
             Atom(Procedure(Rc::new(|v| Ok((v[0] == v[1]).as_atom())))),
         );
-
         ret.define(
             "null?",
             Atom(Procedure(Rc::new(|v| Ok(v[0].is_null().as_atom())))),
         );
-
+        ret.define("null", NULL);
         ret.define(
             "cons",
             Atom(Procedure(Rc::new(|v| {
                 Ok(SExp::cons(v[0].to_owned(), v[1].to_owned()))
             }))),
         );
-
         ret.define("car", Atom(Procedure(Rc::new(|v| v[0].car()))));
-
         ret.define("cdr", Atom(Procedure(Rc::new(|v| v[0].cdr()))));
-
         ret.define(
             "+",
             Atom(Procedure(Rc::new(|v| {
@@ -79,7 +75,21 @@ impl Context {
                 })
             }))),
         );
-
+        ret.define(
+            "-",
+            Atom(Procedure(Rc::new(|v| {
+                v.iter().skip(1).fold(Ok(v[0].clone()), |a, e| match e {
+                    Atom(Number(n)) => {
+                        if let Ok(Atom(Number(na))) = a {
+                            Ok(Atom(Number(na - n)))
+                        } else {
+                            a
+                        }
+                    }
+                    _ => Err(errors::LispError::TypeError),
+                })
+            }))),
+        );
         ret.define(
             "*",
             Atom(Procedure(Rc::new(|v| {
@@ -87,6 +97,21 @@ impl Context {
                     Atom(Number(n)) => {
                         if let Ok(Atom(Number(na))) = a {
                             Ok(Atom(Number(n * na)))
+                        } else {
+                            a
+                        }
+                    }
+                    _ => Err(errors::LispError::TypeError),
+                })
+            }))),
+        );
+        ret.define(
+            "/",
+            Atom(Procedure(Rc::new(|v| {
+                v.iter().skip(1).fold(Ok(v[0].clone()), |a, e| match e {
+                    Atom(Number(n)) => {
+                        if let Ok(Atom(Number(na))) = a {
+                            Ok(Atom(Number(na / n)))
                         } else {
                             a
                         }

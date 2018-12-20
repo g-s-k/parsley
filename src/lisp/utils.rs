@@ -3,8 +3,16 @@ pub fn is_atom_char(c: char) -> bool {
 }
 
 pub fn is_symbol_char(c: char) -> bool {
-    is_atom_char(c)
-        && (c.is_alphanumeric() || c == '-' || c == '_' || c == '?' || c == '*' || c == '+')
+    (c.is_alphanumeric()
+        || c == '-'
+        || c == '_'
+        || c == '?'
+        || c == '*'
+        || c == '+'
+        || c == '/'
+        || c == '='
+        || c == '<'
+        || c == '>')
 }
 
 pub fn find_closing_delim(s: &str, d_plus: char, d_minus: char) -> Option<usize> {
