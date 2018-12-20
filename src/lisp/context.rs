@@ -53,6 +53,13 @@ impl Context {
             Atom(Procedure(Rc::new(|v| v[0].is_null().as_atom()))),
         );
 
+        ret.define(
+            "cons",
+            Atom(Procedure(Rc::new(|v| {
+                SExp::cons(v[0].to_owned(), v[1].to_owned())
+            }))),
+        );
+
         ret
     }
 }
