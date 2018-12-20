@@ -1,8 +1,10 @@
 use std::fmt;
+use std::rc::Rc;
 use std::str::FromStr;
 
 use super::*;
 
+#[derive(Clone)]
 pub enum Primitive {
     Void,
     Undefined,
@@ -11,22 +13,7 @@ pub enum Primitive {
     Number(f64),
     String(String),
     Symbol(String),
-    Procedure(Box<dyn Fn(Vec<SExp>) -> SExp>),
-}
-
-impl Clone for Primitive {
-    fn clone(&self) -> Self {
-        match self {
-            Primitive::Void => Primitive::Void,
-            Primitive::Undefined => Primitive::Undefined,
-            Primitive::Boolean(b) => Primitive::Boolean(*b),
-            Primitive::Character(c) => Primitive::Character(*c),
-            Primitive::Number(n) => Primitive::Number(*n),
-            Primitive::String(s) => Primitive::String(s.to_string()),
-            Primitive::Symbol(s) => Primitive::Symbol(s.to_string()),
-            Primitive::Procedure(_) => Primitive::Procedure(Box::new(|_| NULL)),
-        }
-    }
+    Procedure(Rc<dyn Fn(&[SExp]) -> SExp>),
 }
 
 impl PartialEq for Primitive {
@@ -96,7 +83,7 @@ impl fmt::Debug for Primitive {
             Primitive::Number(n) => write!(f, "{}", n),
             Primitive::String(s) => write!(f, "\"{}\"", s),
             Primitive::Symbol(s) => write!(f, "'{}", s),
-            Primitive::Procedure(_) => write!(f, "#<procedure>"),
+            Primitive::Procedure(_) => write!(f, "#<native code>"),
         }
     }
 }
@@ -111,7 +98,7 @@ impl fmt::Display for Primitive {
             Primitive::Number(n) => write!(f, "{}", n),
             Primitive::String(s) => write!(f, "\"{}\"", s),
             Primitive::Symbol(s) => write!(f, "'{}", s),
-            Primitive::Procedure(_) => write!(f, "#<procedure>"),
+            Primitive::Procedure(_) => write!(f, "#<native code>"),
         }
     }
 }

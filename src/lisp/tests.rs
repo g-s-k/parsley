@@ -132,21 +132,24 @@ fn eval_list_quote() {
 fn eval_null_test() {
     let null = || SExp::make_symbol("null?");
 
-    let mut ctx = Context::new();
+    let mut ctx = Context::base();
     assert_eq!(
-        List(vec![null(), SExp::make_symbol("test")])
-            .eval(&mut ctx)
-            .unwrap(),
+        List(vec![
+            null(),
+            List(vec![SExp::make_symbol("quote"), SExp::make_symbol("test")])
+        ])
+        .eval(&mut ctx)
+        .unwrap(),
         false.as_atom()
     );
 
-    let mut ctx = Context::new();
+    let mut ctx = Context::base();
     assert_eq!(
         List(vec![null(), NULL]).eval(&mut ctx).unwrap(),
         true.as_atom()
     );
 
-    let mut ctx = Context::new();
+    let mut ctx = Context::base();
     assert_eq!(
         List(vec![
             null(),

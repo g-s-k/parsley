@@ -22,7 +22,7 @@ fn main() -> CliResult {
     let args = Cli::from_args();
     args.verbosity.setup_env_logger("rsch")?;
 
-    let mut base_context = Context::new();
+    let mut base_context = Context::base();
 
     info!("Reading source from {}", args.file);
     let code = read_file(&args.file)?;

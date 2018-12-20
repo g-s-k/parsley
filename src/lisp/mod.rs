@@ -1,4 +1,5 @@
 use std::fmt;
+use std::rc::Rc;
 use std::str::FromStr;
 
 use quicli::prelude::*;
@@ -26,7 +27,7 @@ impl fmt::Display for SExp {
             SExp::Atom(a) => write!(f, "{}", a),
             SExp::List(v) => write!(
                 f,
-                "({})",
+                "'({})",
                 v.iter()
                     .map(|e| format!("{}", e))
                     .collect::<Vec<String>>()
@@ -166,21 +167,19 @@ impl SExp {
                             SExp::List(params) => {
                                 debug!("Creating procedure with {} parameters.", params.len());
                                 let params_ = params.to_owned();
-                                Some(Ok(SExp::Atom(Primitive::Procedure(Box::new(
-                                    move |args| {
-                                        let mut elems = vec![SExp::make_symbol("let")];
-                                        let bound_params = params_
-                                            .iter()
-                                            .zip(args.into_iter())
-                                            .map(|p| SExp::List(vec![p.0.clone(), p.1.clone()]))
-                                            .collect::<Vec<_>>();
-                                        elems.push(SExp::List(bound_params));
-                                        for expr in contents.clone().into_iter().skip(2) {
-                                            elems.push(expr);
-                                        }
-                                        SExp::List(elems)
-                                    },
-                                )))))
+                                Some(Ok(SExp::Atom(Primitive::Procedure(Rc::new(move |args| {
+                                    let mut elems = vec![SExp::make_symbol("let")];
+                                    let bound_params = params_
+                                        .iter()
+                                        .zip(args.into_iter())
+                                        .map(|p| SExp::List(vec![p.0.clone(), p.1.clone()]))
+                                        .collect::<Vec<_>>();
+                                    elems.push(SExp::List(bound_params));
+                                    for expr in contents.clone().into_iter().skip(2) {
+                                        elems.push(expr);
+                                    }
+                                    SExp::List(elems)
+                                })))))
                             }
                             expr @ _ => Some(Err(errors::LispError::SyntaxError {
                                 exp: expr.to_string(),
@@ -424,48 +423,16 @@ impl SExp {
             SExp::Atom(_) => Ok(self),
             SExp::List(_) if self.is_null() => Ok(NULL),
             SExp::List(contents) => match &contents[0] {
-                SExp::Atom(Primitive::Symbol(sym)) => match sym.as_ref() {
-                    "car" => match contents.len() {
-                        1 => Ok(contents[0].clone()),
-                        2 => contents[1].car(),
-                        n @ _ => Err(errors::LispError::TooManyArguments {
-                            n_args: n - 1,
-                            right_num: 1,
-                        }),
-                    },
-                    "cdr" => match contents.len() {
-                        1 => Ok(contents[0].clone()),
-                        2 => contents[1].cdr(),
-                        n @ _ => Err(errors::LispError::TooManyArguments {
-                            n_args: n - 1,
-                            right_num: 1,
-                        }),
-                    },
-                    "cons" => match contents.len() {
-                        1 => Ok(contents[0].clone()),
-                        3 => Ok(SExp::cons(contents[1].clone(), contents[2].clone())),
-                        n @ _ => Err(errors::LispError::TooManyArguments {
-                            n_args: n - 1,
-                            right_num: 1,
-                        }),
-                    },
-                    "list" => match contents.len() {
-                        1 => Ok(contents[0].clone()),
-                        _ => Ok(SExp::List(contents[1..].to_vec())),
-                    },
-                    "null?" => match contents.len() {
-                        1 => Ok(contents[0].clone()),
-                        2 => Ok(contents[1].is_null().as_atom()),
-                        n @ _ => Err(errors::LispError::TooManyArguments {
-                            n_args: n - 1,
-                            right_num: 1,
-                        }),
-                    },
-                    s @ _ => Err(errors::LispError::UndefinedSymbol { sym: s.to_string() }),
-                },
                 SExp::Atom(Primitive::Procedure(proc)) => {
                     debug!("Applying a procedure.");
-                    proc(contents[1..].to_vec()).eval(ctx)
+                    proc(&contents[1..]).eval(ctx)
+                }
+                l @ SExp::List(_) => {
+                    let mut new_contents = vec![l.to_owned().eval(ctx)?];
+                    for element in &contents[1..] {
+                        new_contents.push(element.to_owned());
+                    }
+                    SExp::List(new_contents).eval(ctx)
                 }
                 _ => Ok(SExp::List(contents.clone())),
             },
