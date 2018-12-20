@@ -1,5 +1,6 @@
 #![cfg(test)]
 
+use super::as_atom::AsAtom;
 use super::SExp::{self, Atom, List};
 use super::*;
 

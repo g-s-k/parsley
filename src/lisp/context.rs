@@ -1,9 +1,10 @@
 use std::collections::HashMap;
 use std::rc::Rc;
 
+use super::as_atom::AsAtom;
 use super::Primitive::{Number, Procedure};
-use super::SExp::Atom;
-use super::*;
+use super::SExp::{self, Atom};
+use super::{LispError, NULL};
 
 #[derive(Debug, Clone)]
 pub struct Context(Vec<HashMap<String, SExp>>);
@@ -72,7 +73,7 @@ impl Context {
                             a
                         }
                     }
-                    _ => Err(errors::LispError::TypeError),
+                    _ => Err(LispError::TypeError),
                 })
             }))),
         );
@@ -87,7 +88,7 @@ impl Context {
                             a
                         }
                     }
-                    _ => Err(errors::LispError::TypeError),
+                    _ => Err(LispError::TypeError),
                 })
             }))),
         );
@@ -102,7 +103,7 @@ impl Context {
                             a
                         }
                     }
-                    _ => Err(errors::LispError::TypeError),
+                    _ => Err(LispError::TypeError),
                 })
             }))),
         );
@@ -117,7 +118,7 @@ impl Context {
                             a
                         }
                     }
-                    _ => Err(errors::LispError::TypeError),
+                    _ => Err(LispError::TypeError),
                 })
             }))),
         );

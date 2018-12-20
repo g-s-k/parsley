@@ -4,7 +4,8 @@ use std::str::FromStr;
 
 use quicli::prelude::*;
 
-use super::*;
+use super::as_atom::AsAtom;
+use super::{utils, Context, LispError, LispResult, Primitive, NULL};
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum SExp {

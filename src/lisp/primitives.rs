@@ -2,7 +2,7 @@ use std::fmt;
 use std::rc::Rc;
 use std::str::FromStr;
 
-use super::*;
+use super::{utils, LispError, LispResult, SExp};
 
 #[derive(Clone)]
 pub enum Primitive {
@@ -104,7 +104,7 @@ impl fmt::Display for Primitive {
 }
 
 impl FromStr for Primitive {
-    type Err = errors::LispError;
+    type Err = LispError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
@@ -134,6 +134,6 @@ impl FromStr for Primitive {
             return Ok(Primitive::Symbol(s.to_string()));
         }
 
-        Err(errors::LispError::SyntaxError { exp: s.to_string() })
+        Err(LispError::SyntaxError { exp: s.to_string() })
     }
 }

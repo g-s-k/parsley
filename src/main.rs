@@ -12,7 +12,7 @@ use quicli::prelude::*;
 use structopt::StructOpt;
 
 mod lisp;
-use self::lisp::{Context, SExp};
+use self::lisp::Context;
 mod repl;
 
 #[derive(Debug, StructOpt)]
@@ -47,7 +47,7 @@ fn main() -> CliResult {
 
     if !code.is_empty() {
         info!("Parsing source code.");
-        match code.parse::<SExp>() {
+        match lisp::parse(&code) {
             Ok(tree) => {
                 info!("Evaluating.");
                 println!("{}", tree.eval(&mut base_context).unwrap());
