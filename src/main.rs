@@ -102,13 +102,14 @@ fn find_closing_delim(s: &str, d_plus: char, d_minus: char) -> Option<usize> {
 
 enum Primitive {
     Void,
+    #[allow(dead_code)]
     Undefined,
     Boolean(bool),
     Character(char),
     Number(f64),
     String(String),
     Symbol(String),
-    Procedure(Box<dyn Fn(SExp) -> SExp>),
+    Procedure(Box<dyn Fn(Vec<SExp>) -> SExp>),
 }
 
 impl Clone for Primitive {
@@ -129,14 +130,56 @@ impl Clone for Primitive {
 impl PartialEq for Primitive {
     fn eq(&self, other: &Self) -> bool {
         match self {
-            Primitive::Void => if let Primitive::Void = other { true } else { false },
-            Primitive::Undefined => if let Primitive::Undefined = other { true } else { false },
-            Primitive::Boolean(b1) => if let Primitive::Boolean(b2) = other { b1 == b2 } else { false },
-            Primitive::Character(c1) => if let Primitive::Character(c2) = other { c1 == c2 } else { false },
-            Primitive::Number(n1) => if let Primitive::Number(n2) = other { n1 == n2 } else { false },
-            Primitive::String(s1) => if let Primitive::String(s2) = other { s1 == s2 } else { false },
-            Primitive::Symbol(s1) => if let Primitive::Symbol(s2) = other { s1 == s2 } else { false },
-            Primitive::Procedure(_) => false
+            Primitive::Void => {
+                if let Primitive::Void = other {
+                    true
+                } else {
+                    false
+                }
+            }
+            Primitive::Undefined => {
+                if let Primitive::Undefined = other {
+                    true
+                } else {
+                    false
+                }
+            }
+            Primitive::Boolean(b1) => {
+                if let Primitive::Boolean(b2) = other {
+                    b1 == b2
+                } else {
+                    false
+                }
+            }
+            Primitive::Character(c1) => {
+                if let Primitive::Character(c2) = other {
+                    c1 == c2
+                } else {
+                    false
+                }
+            }
+            Primitive::Number(n1) => {
+                if let Primitive::Number(n2) = other {
+                    n1 == n2
+                } else {
+                    false
+                }
+            }
+            Primitive::String(s1) => {
+                if let Primitive::String(s2) = other {
+                    s1 == s2
+                } else {
+                    false
+                }
+            }
+            Primitive::Symbol(s1) => {
+                if let Primitive::Symbol(s2) = other {
+                    s1 == s2
+                } else {
+                    false
+                }
+            }
+            Primitive::Procedure(_) => false,
         }
     }
 }
@@ -319,9 +362,7 @@ impl SExp {
     fn eval(self, mut ctx: Context) -> Result<Self, LispError> {
         match self {
             SExp::Atom(Primitive::Symbol(sym)) => match ctx.get(&sym) {
-                None => Err(LispError::UndefinedSymbol {
-                    sym,
-                }),
+                None => Err(LispError::UndefinedSymbol { sym }),
                 Some(exp) => Ok(exp),
             },
             SExp::Atom(_) => Ok(self),
@@ -329,9 +370,11 @@ impl SExp {
             SExp::List(contents) => {
                 // handle special functions
                 if let Some(result) = SExp::List(contents.clone()).eval_special_form(&mut ctx) {
+                    debug!("Special form finished evaluating.");
                     result
                 } else {
                     // handle everything else
+                    debug!("Evaluating normal list.");
                     match contents
                         .into_iter()
                         .map(|e| SExp::eval(e, ctx.clone()))
@@ -351,19 +394,51 @@ impl SExp {
             SExp::List(_) if self.is_null() => None,
             SExp::List(contents) => match &contents[0] {
                 SExp::Atom(Primitive::Symbol(sym)) => match sym.as_ref() {
-                    "lambda" => {
-                        // placeholder, will be gone once all are implemented
-                        None
-                    }
+                    "lambda" => match contents.len() {
+                        1 => Some(Err(LispError::NoArgumentsProvided {
+                            symbol: "lambda".to_string(),
+                        })),
+                        2 => Some(Err(LispError::TooManyArguments {
+                            n_args: 1,
+                            right_num: 2,
+                        })),
+                        _ => match contents[1].clone() {
+                            SExp::List(params) => {
+                                debug!("Creating procedure with {} parameters.", params.len());
+                                let params_ = params.to_owned();
+                                Some(Ok(SExp::Atom(Primitive::Procedure(Box::new(
+                                    move |args| {
+                                        let mut elems = vec![SExp::make_symbol("let")];
+                                        let bound_params = params_
+                                            .iter()
+                                            .zip(args.into_iter())
+                                            .map(|p| SExp::List(vec![p.0.clone(), p.1.clone()]))
+                                            .collect::<Vec<_>>();
+                                        elems.push(SExp::List(bound_params));
+                                        for expr in contents.clone().into_iter().skip(2) {
+                                            elems.push(expr);
+                                        }
+                                        SExp::List(elems)
+                                    },
+                                )))))
+                            }
+                            expr @ _ => Some(Err(LispError::SyntaxError {
+                                exp: expr.to_string(),
+                            })),
+                        },
+                    },
                     "begin" => match contents.len() {
                         1 => Some(Err(LispError::NoArgumentsProvided {
                             symbol: "begin".to_string(),
                         })),
-                        _ => contents
-                            .into_iter()
-                            .skip(1)
-                            .map(|e| e.eval(ctx.clone()))
-                            .last(),
+                        _ => {
+                            debug!("Evaluating \"begin\" sequence.");
+                            contents
+                                .into_iter()
+                                .skip(1)
+                                .map(|e| e.eval(ctx.clone()))
+                                .last()
+                        }
                     },
                     "define" => match contents.len() {
                         1 => Some(Err(LispError::NoArgumentsProvided {
@@ -375,6 +450,7 @@ impl SExp {
                         })),
                         3 => match &contents[1] {
                             SExp::Atom(Primitive::Symbol(sym)) => {
+                                debug!("Defining a quanitity with symbol {}", &sym);
                                 ctx.define(&sym, contents[2].clone());
                                 Some(Ok(contents[2].clone()))
                             }
@@ -383,7 +459,10 @@ impl SExp {
                             })),
                         },
                         // need to implement functions
-                        _ => None,
+                        _ => {
+                            error!("Functional form of \"define\" detected. This feature is not yet implemented.");
+                            None
+                        }
                     },
                     "let" => match contents.len() {
                         1 => Some(Err(LispError::NoArgumentsProvided {
@@ -395,12 +474,20 @@ impl SExp {
                         })),
                         _ => match &contents[1] {
                             SExp::List(vals) => {
+                                debug!("Creating a local binding.");
                                 let mut new_ctx = ctx.push();
                                 match vals.iter().find_map(|e| match e {
                                     SExp::List(kv) if kv.len() == 2 => match &kv[0] {
                                         SExp::Atom(Primitive::Symbol(key)) => {
-                                            new_ctx.define(key, kv[1].clone());
-                                            None
+                                            match kv[1].clone().eval(ctx.clone()) {
+                                                Ok(val) => {
+                                                    new_ctx.define(key, val);
+                                                    None
+                                                },
+                                                Err(stuff) => Some(Err(LispError::SyntaxError {
+                                                    exp: stuff.to_string(),
+                                                })),
+                                            }
                                         }
                                         stuff @ _ => Some(Err(LispError::SyntaxError {
                                             exp: stuff.to_string(),
@@ -426,6 +513,7 @@ impl SExp {
                     "cond" => match contents.len() {
                         1 => Some(Ok(SExp::Atom(Primitive::Void))),
                         _ => {
+                            debug!("Evaluating conditional form.");
                             let mapped = contents.into_iter().skip(1).map(|e| e.eval(ctx.clone()));
                             match mapped.clone().find(|e| match e {
                                 Err(_) => true,
@@ -450,6 +538,7 @@ impl SExp {
                     "and" => match contents.len() {
                         1 => Some(Ok(true.as_atom())),
                         _ => {
+                            debug!("Evaluating 'and' expression.");
                             let mapped = contents.into_iter().skip(1).map(|e| e.eval(ctx.clone()));
                             match mapped.clone().find(|e| match e {
                                 Err(_) => true,
@@ -463,6 +552,7 @@ impl SExp {
                     "or" => match contents.len() {
                         1 => Some(Ok(false.as_atom())),
                         _ => {
+                            debug!("Evaluating 'or' expression.");
                             let mapped = contents.into_iter().skip(1).map(|e| e.eval(ctx.clone()));
                             match mapped.clone().find(|e| match e {
                                 Err(_) => true,
@@ -475,6 +565,7 @@ impl SExp {
                     },
                     "if" => match contents.len() {
                         4 => {
+                            debug!("Evaluating 'if' expression.");
                             if contents[1] == true.as_atom() {
                                 Some(contents[2].clone().eval(ctx.clone()))
                             } else {
@@ -487,7 +578,6 @@ impl SExp {
                         })),
                     },
                     "quote" => match contents.len() {
-                        1 => Some(Ok(contents[0].clone())),
                         2 => Some(Ok(contents[1].clone())),
                         n @ _ => Some(Err(LispError::TooManyArguments {
                             n_args: n - 1,
@@ -543,9 +633,11 @@ impl SExp {
                             right_num: 1,
                         }),
                     },
-                    s @ _ => Err(LispError::UndefinedSymbol {
-                        sym: s.to_string(),
-                    }),
+                    s @ _ => Err(LispError::UndefinedSymbol { sym: s.to_string() }),
+                },
+                SExp::Atom(Primitive::Procedure(proc)) => {
+                    debug!("Applying a procedure.");
+                    proc(contents[1..].to_vec()).eval(ctx.clone())
                 },
                 _ => Ok(SExp::List(contents.clone())),
             },
@@ -561,7 +653,9 @@ impl SExp {
 
     fn car(&self) -> Result<SExp, LispError> {
         match self {
-            atom @ SExp::Atom(_) => Err(LispError::NotAList { atom: atom.to_string() }),
+            atom @ SExp::Atom(_) => Err(LispError::NotAList {
+                atom: atom.to_string(),
+            }),
             SExp::List(_) if self.is_null() => Err(LispError::NullList),
             SExp::List(contents) => Ok(contents[0].clone()),
         }
@@ -569,7 +663,9 @@ impl SExp {
 
     fn cdr(&self) -> Result<SExp, LispError> {
         match self {
-            atom @ SExp::Atom(_) => Err(LispError::NotAList { atom: atom.to_string() }),
+            atom @ SExp::Atom(_) => Err(LispError::NotAList {
+                atom: atom.to_string(),
+            }),
             SExp::List(_) if self.is_null() => Err(LispError::NullList),
             SExp::List(contents) => Ok(SExp::List(contents[1..].to_vec())),
         }
@@ -626,10 +722,14 @@ fn main() -> CliResult {
     let base_context = Context::new();
 
     info!("Reading source from {}", args.file);
-
     let code = read_file(&args.file)?;
+
+    info!("Parsing source code.");
     match code.parse::<SExp>() {
-        Ok(tree) => println!("{}", tree.eval(base_context).unwrap()),
+        Ok(tree) => {
+            info!("Evaluating.");
+            println!("{}", tree.eval(base_context).unwrap());
+        }
         Err(error) => error!("{}", error),
     };
 
