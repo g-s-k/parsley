@@ -24,6 +24,15 @@ impl Context {
         }
     }
 
+    pub fn set(&mut self, key: &str, value: SExp) {
+        for frame in self.0.iter_mut().rev() {
+            if frame.contains_key(key) {
+                frame.insert(key.to_string(), value);
+                break;
+            }
+        }
+    }
+
     pub fn define(&mut self, key: &str, value: SExp) {
         let num_frames = self.0.len();
         self.0[num_frames - 1].insert(key.to_string(), value);

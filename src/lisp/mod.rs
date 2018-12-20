@@ -238,7 +238,24 @@ impl SExp {
                                 exp: exp.to_string(),
                             })),
                         },
-                        // need to implement functions
+                    },
+                    "set!" => match contents.len() {
+                        1 => Some(Err(errors::LispError::NoArgumentsProvided {
+                            symbol: "set!".to_string(),
+                        })),
+                        3 => match &contents[1] {
+                            SExp::Atom(Primitive::Symbol(sym)) => {
+                                ctx.set(&sym, contents[2].to_owned());
+                                Some(Ok(SExp::Atom(Primitive::Undefined)))
+                            }
+                            other @ _ => Some(Err(errors::LispError::SyntaxError {
+                                exp: other.to_string(),
+                            })),
+                        },
+                        n @ _ => Some(Err(errors::LispError::TooManyArguments {
+                            n_args: n - 1,
+                            right_num: 2,
+                        })),
                     },
                     "let" => match contents.len() {
                         1 => Some(Err(errors::LispError::NoArgumentsProvided {
