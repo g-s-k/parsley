@@ -45,7 +45,10 @@ impl FromStr for SExp {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let code = s.trim().to_owned();
 
-        if code.starts_with('\'') && code.chars().skip(1).all(utils::is_symbol_char) {
+        if code.starts_with('\'')
+            && code.len() > 1
+            && code.chars().skip(1).all(utils::is_symbol_char)
+        {
             debug!("Matched quoted symbol: {}", code);
             Ok(SExp::List(vec![
                 SExp::make_symbol("quote"),
@@ -103,7 +106,7 @@ impl FromStr for SExp {
                             }
 
                             match list_str.find(|c| !utils::is_atom_char(c)) {
-                                Some(idx3) => {
+                                Some(idx3) if idx3 > 1 => {
                                     debug!(
                                         "Matched atom in first position with length {} chars",
                                         idx3
@@ -112,7 +115,7 @@ impl FromStr for SExp {
                                     list_out.push(first.parse::<SExp>()?);
                                     list_str = rest.trim().to_string();
                                 }
-                                None => {
+                                _ => {
                                     list_out.push(list_str.parse::<SExp>()?);
                                     break;
                                 }
@@ -139,7 +142,7 @@ impl SExp {
                 Some(exp) => Ok(exp),
             },
             SExp::Atom(_) => Ok(self),
-            SExp::List(_) if self.is_null() => Ok(NULL),
+            SExp::List(_) if self.is_null() => Err(errors::LispError::NullList),
             SExp::List(contents) => {
                 // handle special functions
                 if let Some(result) = SExp::List(contents.clone()).eval_special_form(ctx) {
