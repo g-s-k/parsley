@@ -106,7 +106,7 @@ impl FromStr for SExp {
                             }
 
                             match list_str.find(|c| !utils::is_atom_char(c)) {
-                                Some(idx3) if idx3 > 1 => {
+                                Some(idx3) if &list_str[..idx3] != "'" => {
                                     debug!(
                                         "Matched atom in first position with length {} chars",
                                         idx3
