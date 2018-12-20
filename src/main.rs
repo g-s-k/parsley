@@ -25,7 +25,7 @@ enum LispError {
     #[fail(display = "could not parse expression: {}", exp)]
     SyntaxError { exp: String },
     #[fail(display = "symbol is not defined: {}", sym)]
-    UndefinedSymbol { sym: SExp },
+    UndefinedSymbol { sym: String },
     #[fail(
         display = "too many arguments provided: expected {}, got {}.",
         right_num, n_args
@@ -34,7 +34,7 @@ enum LispError {
     #[fail(display = "{} expects at least one argument.", symbol)]
     NoArgumentsProvided { symbol: String },
     #[fail(display = "Expected a list, got {}.", atom)]
-    NotAList { atom: SExp },
+    NotAList { atom: String },
     #[fail(display = "Expected a pair, got the null list.")]
     NullList,
 }
@@ -100,7 +100,6 @@ fn find_closing_delim(s: &str, d_plus: char, d_minus: char) -> Option<usize> {
     None
 }
 
-#[derive(Debug, PartialEq, Clone)]
 enum Primitive {
     Void,
     Undefined,
@@ -109,6 +108,52 @@ enum Primitive {
     Number(f64),
     String(String),
     Symbol(String),
+    Procedure(Box<dyn Fn(SExp) -> SExp>),
+}
+
+impl Clone for Primitive {
+    fn clone(&self) -> Self {
+        match self {
+            Primitive::Void => Primitive::Void,
+            Primitive::Undefined => Primitive::Undefined,
+            Primitive::Boolean(b) => Primitive::Boolean(*b),
+            Primitive::Character(c) => Primitive::Character(*c),
+            Primitive::Number(n) => Primitive::Number(*n),
+            Primitive::String(s) => Primitive::String(s.to_string()),
+            Primitive::Symbol(s) => Primitive::Symbol(s.to_string()),
+            Primitive::Procedure(_) => Primitive::Procedure(Box::new(|_| NULL)),
+        }
+    }
+}
+
+impl PartialEq for Primitive {
+    fn eq(&self, other: &Self) -> bool {
+        match self {
+            Primitive::Void => if let Primitive::Void = other { true } else { false },
+            Primitive::Undefined => if let Primitive::Undefined = other { true } else { false },
+            Primitive::Boolean(b1) => if let Primitive::Boolean(b2) = other { b1 == b2 } else { false },
+            Primitive::Character(c1) => if let Primitive::Character(c2) = other { c1 == c2 } else { false },
+            Primitive::Number(n1) => if let Primitive::Number(n2) = other { n1 == n2 } else { false },
+            Primitive::String(s1) => if let Primitive::String(s2) = other { s1 == s2 } else { false },
+            Primitive::Symbol(s1) => if let Primitive::Symbol(s2) = other { s1 == s2 } else { false },
+            Primitive::Procedure(_) => false
+        }
+    }
+}
+
+impl fmt::Debug for Primitive {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Primitive::Void => write!(f, "#<void>"),
+            Primitive::Undefined => write!(f, "#<undefined>"),
+            Primitive::Boolean(b) => write!(f, "<boolean {}>", b),
+            Primitive::Character(c) => write!(f, "'{}'", c),
+            Primitive::Number(n) => write!(f, "{}", n),
+            Primitive::String(s) => write!(f, "\"{}\"", s),
+            Primitive::Symbol(s) => write!(f, "'{}", s),
+            Primitive::Procedure(_) => write!(f, "#<procedure>"),
+        }
+    }
 }
 
 impl fmt::Display for Primitive {
@@ -121,6 +166,7 @@ impl fmt::Display for Primitive {
             Primitive::Number(n) => write!(f, "{}", n),
             Primitive::String(s) => write!(f, "\"{}\"", s),
             Primitive::Symbol(s) => write!(f, "'{}", s),
+            Primitive::Procedure(_) => write!(f, "#<procedure>"),
         }
     }
 }
@@ -274,7 +320,7 @@ impl SExp {
         match self {
             SExp::Atom(Primitive::Symbol(sym)) => match ctx.get(&sym) {
                 None => Err(LispError::UndefinedSymbol {
-                    sym: SExp::make_symbol(&sym),
+                    sym,
                 }),
                 Some(exp) => Ok(exp),
             },
@@ -498,7 +544,7 @@ impl SExp {
                         }),
                     },
                     s @ _ => Err(LispError::UndefinedSymbol {
-                        sym: SExp::make_symbol(s),
+                        sym: s.to_string(),
                     }),
                 },
                 _ => Ok(SExp::List(contents.clone())),
@@ -515,7 +561,7 @@ impl SExp {
 
     fn car(&self) -> Result<SExp, LispError> {
         match self {
-            atom @ SExp::Atom(_) => Err(LispError::NotAList { atom: atom.clone() }),
+            atom @ SExp::Atom(_) => Err(LispError::NotAList { atom: atom.to_string() }),
             SExp::List(_) if self.is_null() => Err(LispError::NullList),
             SExp::List(contents) => Ok(contents[0].clone()),
         }
@@ -523,7 +569,7 @@ impl SExp {
 
     fn cdr(&self) -> Result<SExp, LispError> {
         match self {
-            atom @ SExp::Atom(_) => Err(LispError::NotAList { atom: atom.clone() }),
+            atom @ SExp::Atom(_) => Err(LispError::NotAList { atom: atom.to_string() }),
             SExp::List(_) if self.is_null() => Err(LispError::NullList),
             SExp::List(contents) => Ok(SExp::List(contents[1..].to_vec())),
         }
