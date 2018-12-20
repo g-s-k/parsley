@@ -88,7 +88,13 @@ fn parse_quote_syntax() {
         ]),
     );
 
-    do_parse_and_assert("'potato", SExp::make_symbol("potato"));
+    do_parse_and_assert(
+        "'potato",
+        List(vec![
+            SExp::make_symbol("quote"),
+            SExp::make_symbol("potato"),
+        ]),
+    );
 }
 
 #[test]

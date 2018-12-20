@@ -177,7 +177,7 @@ impl SExp {
                                     let mut elems = vec![SExp::make_symbol("let")];
                                     let bound_params = params_
                                         .iter()
-                                        .zip(args.into_iter())
+                                        .zip(args.iter())
                                         .map(|p| SExp::List(vec![p.0.clone(), p.1.clone()]))
                                         .collect::<Vec<_>>();
                                     elems.push(SExp::List(bound_params));
@@ -187,7 +187,7 @@ impl SExp {
                                     SExp::List(elems)
                                 })))))
                             }
-                            expr @ _ => Some(Err(errors::LispError::SyntaxError {
+                            expr => Some(Err(errors::LispError::SyntaxError {
                                 exp: expr.to_string(),
                             })),
                         },
@@ -209,7 +209,7 @@ impl SExp {
                             n_args: 1,
                             right_num: 2,
                         })),
-                        n_args @ _ => match &contents[1] {
+                        n_args => match &contents[1] {
                             SExp::Atom(Primitive::Symbol(sym)) => {
                                 if n_args == 3 {
                                     debug!("Defining a quanitity with symbol {}", &sym);
@@ -222,24 +222,24 @@ impl SExp {
                                     }))
                                 }
                             }
-                            SExp::List(signature) if signature.len() != 0 => match &signature[0] {
+                            SExp::List(signature) if !signature.is_empty() => match &signature[0] {
                                 SExp::Atom(Primitive::Symbol(sym)) => {
                                     debug!("Defining a function with \"define\" syntax.");
                                     let mut exprs = vec![
                                         SExp::make_symbol("lambda"),
                                         SExp::List(signature[1..].to_vec()),
                                     ];
-                                    for expr in contents[2..].into_iter() {
+                                    for expr in contents[2..].iter() {
                                         exprs.push(expr.to_owned());
                                     }
                                     ctx.define(&sym, SExp::List(exprs));
                                     Some(Ok(SExp::Atom(Primitive::Undefined)))
                                 }
-                                exp @ _ => Some(Err(errors::LispError::SyntaxError {
+                                exp => Some(Err(errors::LispError::SyntaxError {
                                     exp: exp.to_string(),
                                 })),
                             },
-                            exp @ _ => Some(Err(errors::LispError::SyntaxError {
+                            exp => Some(Err(errors::LispError::SyntaxError {
                                 exp: exp.to_string(),
                             })),
                         },
@@ -253,11 +253,11 @@ impl SExp {
                                 ctx.set(&sym, contents[2].to_owned());
                                 Some(Ok(SExp::Atom(Primitive::Undefined)))
                             }
-                            other @ _ => Some(Err(errors::LispError::SyntaxError {
+                            other => Some(Err(errors::LispError::SyntaxError {
                                 exp: other.to_string(),
                             })),
                         },
-                        n @ _ => Some(Err(errors::LispError::TooManyArguments {
+                        n => Some(Err(errors::LispError::TooManyArguments {
                             n_args: n - 1,
                             right_num: 2,
                         })),
@@ -289,11 +289,11 @@ impl SExp {
                                                 }
                                             }
                                         }
-                                        stuff @ _ => Some(Err(errors::LispError::SyntaxError {
+                                        stuff => Some(Err(errors::LispError::SyntaxError {
                                             exp: stuff.to_string(),
                                         })),
                                     },
-                                    stuff @ _ => Some(Err(errors::LispError::SyntaxError {
+                                    stuff => Some(Err(errors::LispError::SyntaxError {
                                         exp: stuff.to_string(),
                                     })),
                                 }) {
@@ -302,10 +302,10 @@ impl SExp {
                                         .skip(2)
                                         .map(|e| e.eval(&mut new_ctx))
                                         .last(),
-                                    stuff @ _ => stuff,
+                                    stuff => stuff,
                                 }
                             }
-                            stuff @ _ => Some(Err(errors::LispError::SyntaxError {
+                            stuff => Some(Err(errors::LispError::SyntaxError {
                                 exp: stuff.to_string(),
                             })),
                         },
@@ -334,7 +334,7 @@ impl SExp {
                                                             Some(pair[1].clone().eval(ctx))
                                                         }
                                                     }
-                                                    err @ _ => Some(err),
+                                                    err => Some(err),
                                                 }
                                             }
                                         } else {
@@ -343,7 +343,7 @@ impl SExp {
                                             }))
                                         }
                                     }
-                                    other @ _ => Some(Err(errors::LispError::SyntaxError {
+                                    other => Some(Err(errors::LispError::SyntaxError {
                                         exp: other.to_string(),
                                     })),
                                 })
@@ -359,7 +359,7 @@ impl SExp {
                     },
                     "and" => match contents.len() {
                         1 => Some(Ok(true.as_atom())),
-                        n @ _ => {
+                        n => {
                             debug!("Evaluating 'and' expression.");
                             let false_ = false.as_atom();
                             let mut good_stuff = contents
@@ -388,11 +388,11 @@ impl SExp {
                             match contents.into_iter().skip(1).find_map(|expr| {
                                 match expr.eval(ctx) {
                                     Ok(ref atom) if *atom == false_ => None,
-                                    thing @ _ => Some(thing),
+                                    thing => Some(thing),
                                 }
                             }) {
                                 None => Some(Ok(false_)),
-                                thing @ _ => thing,
+                                thing => thing,
                             }
                         }
                     },
@@ -405,14 +405,14 @@ impl SExp {
                                 Some(contents[3].clone().eval(ctx))
                             }
                         }
-                        n @ _ => Some(Err(errors::LispError::TooManyArguments {
+                        n => Some(Err(errors::LispError::TooManyArguments {
                             n_args: n - 1,
                             right_num: 3,
                         })),
                     },
                     "quote" => match contents.len() {
                         2 => Some(Ok(contents[1].clone())),
-                        n @ _ => Some(Err(errors::LispError::TooManyArguments {
+                        n => Some(Err(errors::LispError::TooManyArguments {
                             n_args: n - 1,
                             right_num: 1,
                         })),
@@ -447,7 +447,7 @@ impl SExp {
 
     fn is_null(&self) -> bool {
         match self {
-            SExp::List(ref contents) if contents.len() == 0 => true,
+            SExp::List(ref contents) if contents.is_empty() => true,
             _ => false,
         }
     }

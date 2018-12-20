@@ -113,13 +113,12 @@ impl FromStr for Primitive {
             _ => (),
         }
 
-        match s.parse::<f64>() {
-            Ok(num) => return Ok(Primitive::Number(num)),
-            _ => (),
+        if let Ok(num) = s.parse::<f64>() {
+            return Ok(Primitive::Number(num));
         }
 
-        if s.len() == 3 && s.starts_with("'") && s.ends_with("'") {
-            return Ok(Primitive::Character(s.chars().skip(1).next().unwrap()));
+        if s.len() == 3 && s.starts_with('\'') && s.ends_with('\'') {
+            return Ok(Primitive::Character(s.chars().nth(1).unwrap()));
         }
 
         if s.starts_with('"') && s.ends_with('"') {
