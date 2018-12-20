@@ -1,4 +1,4 @@
-# rsch
+# Pathetic, Abysmal Rusty Scheme Engine
 
 what if scheme...but rust
 
