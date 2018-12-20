@@ -48,7 +48,6 @@ impl Context {
         Context(vec![defs])
     }
 
-    #[allow(dead_code)]
     fn push(&self) -> Self {
         let mut copy = self.clone();
         copy.0.push(HashMap::new());
@@ -306,7 +305,7 @@ impl SExp {
             SExp::List(_) if self.is_null() => None,
             SExp::List(contents) => match &contents[0] {
                 SExp::Atom(Primitive::Symbol(sym)) => match sym.as_ref() {
-                    "let" | "lambda" => {
+                    "lambda" => {
                         // placeholder, will be gone once all are implemented
                         None
                     }
@@ -339,6 +338,44 @@ impl SExp {
                         },
                         // need to implement functions
                         _ => None,
+                    },
+                    "let" => match contents.len() {
+                        1 => Some(Err(LispError::NoArgumentsProvided {
+                            symbol: "let".to_string(),
+                        })),
+                        2 => Some(Err(LispError::TooManyArguments {
+                            n_args: 1,
+                            right_num: 2,
+                        })),
+                        _ => match &contents[1] {
+                            SExp::List(vals) => {
+                                let mut new_ctx = ctx.push();
+                                match vals.iter().find_map(|e| match e {
+                                    SExp::List(kv) if kv.len() == 2 => match &kv[0] {
+                                        SExp::Atom(Primitive::Symbol(key)) => {
+                                            new_ctx.define(key, kv[1].clone());
+                                            None
+                                        }
+                                        stuff @ _ => Some(Err(LispError::SyntaxError {
+                                            exp: stuff.to_string(),
+                                        })),
+                                    },
+                                    stuff @ _ => Some(Err(LispError::SyntaxError {
+                                        exp: stuff.to_string(),
+                                    })),
+                                }) {
+                                    None => contents
+                                        .into_iter()
+                                        .skip(2)
+                                        .map(|e| e.eval(new_ctx.clone()))
+                                        .last(),
+                                    stuff @ _ => stuff,
+                                }
+                            }
+                            stuff @ _ => Some(Err(LispError::SyntaxError {
+                                exp: stuff.to_string(),
+                            })),
+                        },
                     },
                     "cond" => match contents.len() {
                         1 => Some(Ok(SExp::Atom(Primitive::Void))),
@@ -904,8 +941,8 @@ mod tests {
                 List(vec![false.as_atom(), 'd'.as_atom()]),
                 List(vec![else_(), 'a'.as_atom()])
             ])
-                .eval(ctx())
-                .unwrap(),
+            .eval(ctx())
+            .unwrap(),
             'a'.as_atom()
         );
     }
@@ -923,5 +960,42 @@ mod tests {
                 .unwrap(),
             1_f64.as_atom()
         )
+    }
+
+    #[test]
+    fn eval_let() {
+        let ctx = Context::new;
+        let x = || SExp::make_symbol("x");
+        let y = || SExp::make_symbol("y");
+        let let_ = || SExp::make_symbol("let");
+
+        assert!(List(vec![let_()]).eval(ctx()).is_err());
+        assert!(List(vec![let_(), List(vec![])]).eval(ctx()).is_err());
+
+        assert_eq!(
+            List(vec![
+                let_(),
+                List(vec![List(vec![x(), 3_f64.as_atom()])]),
+                x()
+            ])
+            .eval(ctx())
+            .unwrap(),
+            3_f64.as_atom()
+        );
+
+        assert_eq!(
+            List(vec![
+                let_(),
+                List(vec![
+                    List(vec![x(), 3_f64.as_atom()]),
+                    List(vec![y(), 5_f64.as_atom()])
+                ]),
+                x(),
+                y()
+            ])
+            .eval(ctx())
+            .unwrap(),
+            5_f64.as_atom()
+        );
     }
 }
