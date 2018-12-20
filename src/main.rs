@@ -38,4 +38,3 @@ fn main() -> CliResult {
 
     Ok(())
 }
-

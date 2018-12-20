@@ -155,8 +155,8 @@ fn eval_null_test() {
                 List(vec![false.as_atom(), NULL])
             ])
         ])
-            .eval(&mut ctx)
-            .unwrap(),
+        .eval(&mut ctx)
+        .unwrap(),
         false.as_atom()
     );
 }
@@ -174,8 +174,8 @@ fn eval_if() {
             sym_1(),
             sym_2()
         ])
-            .eval(&mut ctx)
-            .unwrap(),
+        .eval(&mut ctx)
+        .unwrap(),
         sym_1()
     );
 
@@ -187,8 +187,8 @@ fn eval_if() {
             sym_1(),
             sym_2()
         ])
-            .eval(&mut ctx)
-            .unwrap(),
+        .eval(&mut ctx)
+        .unwrap(),
         sym_2()
     );
 }
@@ -244,8 +244,8 @@ fn eval_and() {
             false.as_atom(),
             'c'.as_atom()
         ])
-            .eval(&mut ctx)
-            .unwrap(),
+        .eval(&mut ctx)
+        .unwrap(),
         false.as_atom()
     );
 }
@@ -301,8 +301,8 @@ fn eval_or() {
             'b'.as_atom(),
             'c'.as_atom()
         ])
-            .eval(&mut ctx)
-            .unwrap(),
+        .eval(&mut ctx)
+        .unwrap(),
         'a'.as_atom()
     );
 }
@@ -333,8 +333,8 @@ fn eval_cond() {
             List(vec![true.as_atom(), 'b'.as_atom()]),
             List(vec![else_(), 'a'.as_atom()])
         ])
-            .eval(&mut ctx)
-            .unwrap(),
+        .eval(&mut ctx)
+        .unwrap(),
         'b'.as_atom()
     );
 
@@ -345,8 +345,8 @@ fn eval_cond() {
             List(vec![false.as_atom(), 'b'.as_atom()]),
             List(vec![else_(), 'a'.as_atom()])
         ])
-            .eval(&mut ctx)
-            .unwrap(),
+        .eval(&mut ctx)
+        .unwrap(),
         'a'.as_atom()
     );
 
@@ -359,8 +359,8 @@ fn eval_cond() {
             List(vec![true.as_atom(), 'd'.as_atom()]),
             List(vec![else_(), 'a'.as_atom()])
         ])
-            .eval(&mut ctx)
-            .unwrap(),
+        .eval(&mut ctx)
+        .unwrap(),
         'b'.as_atom()
     );
 
@@ -373,8 +373,8 @@ fn eval_cond() {
             List(vec![false.as_atom(), 'd'.as_atom()]),
             List(vec![else_(), 'a'.as_atom()])
         ])
-            .eval(&mut ctx)
-            .unwrap(),
+        .eval(&mut ctx)
+        .unwrap(),
         'a'.as_atom()
     );
 }
@@ -414,8 +414,8 @@ fn eval_let() {
             List(vec![List(vec![x(), 3_f64.as_atom()])]),
             x()
         ])
-            .eval(&mut ctx)
-            .unwrap(),
+        .eval(&mut ctx)
+        .unwrap(),
         3_f64.as_atom()
     );
 
@@ -430,8 +430,8 @@ fn eval_let() {
             x(),
             y()
         ])
-            .eval(&mut ctx)
-            .unwrap(),
+        .eval(&mut ctx)
+        .unwrap(),
         5_f64.as_atom()
     );
 }

@@ -260,9 +260,11 @@ impl SExp {
                                                     new_ctx.define(key, val);
                                                     None
                                                 }
-                                                Err(stuff) => Some(Err(errors::LispError::SyntaxError {
-                                                    exp: stuff.to_string(),
-                                                })),
+                                                Err(stuff) => {
+                                                    Some(Err(errors::LispError::SyntaxError {
+                                                        exp: stuff.to_string(),
+                                                    }))
+                                                }
                                             }
                                         }
                                         stuff @ _ => Some(Err(errors::LispError::SyntaxError {
