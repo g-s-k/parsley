@@ -1,9 +1,3 @@
-use std::fmt;
-use std::rc::Rc;
-use std::str::FromStr;
-
-use quicli::prelude::*;
-
 mod as_atom;
 mod context;
 mod errors;

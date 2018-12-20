@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::rc::Rc;
 
 use super::Primitive::{Number, Procedure};
 use super::SExp::Atom;
