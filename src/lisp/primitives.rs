@@ -13,7 +13,7 @@ pub enum Primitive {
     Number(f64),
     String(String),
     Symbol(String),
-    Procedure(Rc<dyn Fn(&[SExp], &mut Context) -> LispResult>),
+    Procedure(Rc<dyn Fn(&[SExp]) -> LispResult>),
 }
 
 impl PartialEq for Primitive {

@@ -45,20 +45,24 @@ impl Context {
 
         ret.define(
             "eq?",
-            Atom(Procedure(Rc::new(|v, _c| Ok((v[0] == v[1]).as_atom())))),
+            Atom(Procedure(Rc::new(|v| Ok((v[0] == v[1]).as_atom())))),
         );
 
         ret.define(
             "null?",
-            Atom(Procedure(Rc::new(|v, _c| Ok(v[0].is_null().as_atom())))),
+            Atom(Procedure(Rc::new(|v| Ok(v[0].is_null().as_atom())))),
         );
 
         ret.define(
             "cons",
-            Atom(Procedure(Rc::new(|v, _c| {
+            Atom(Procedure(Rc::new(|v| {
                 Ok(SExp::cons(v[0].to_owned(), v[1].to_owned()))
             }))),
         );
+
+        ret.define("car", Atom(Procedure(Rc::new(|v| v[0].car()))));
+
+        ret.define("cdr", Atom(Procedure(Rc::new(|v| v[0].cdr()))));
 
         ret
     }
