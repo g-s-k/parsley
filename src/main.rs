@@ -11,6 +11,8 @@ use std::str::FromStr;
 use quicli::prelude::*;
 use structopt::StructOpt;
 
+mod utils;
+
 const NULL: SExp = SExp::List(Vec::new());
 
 #[derive(Debug, StructOpt)]
@@ -66,38 +68,6 @@ impl Context {
         let num_frames = self.0.len();
         self.0[num_frames - 1].insert(key.to_string(), value);
     }
-}
-
-fn is_atom_char(c: char) -> bool {
-    !c.is_whitespace() && !c.is_control() && c != '(' && c != ')'
-}
-
-fn is_symbol_char(c: char) -> bool {
-    is_atom_char(c) && (c.is_alphanumeric() || c == '-' || c == '_' || c == '?' || c == '*')
-}
-
-fn find_closing_delim(s: &str, d_plus: char, d_minus: char) -> Option<usize> {
-    let mut depth = 0;
-
-    for (idx, c) in s.chars().enumerate() {
-        if d_plus == d_minus {
-            if c == d_plus {
-                depth = !depth;
-            }
-        } else {
-            match c {
-                x if x == d_plus => depth += 1,
-                x if x == d_minus => depth -= 1,
-                _ => (),
-            }
-        }
-
-        if depth == 0 {
-            return Some(idx);
-        }
-    }
-
-    None
 }
 
 enum Primitive {
@@ -233,7 +203,7 @@ impl FromStr for Primitive {
         }
 
         if s.starts_with('"') && s.ends_with('"') {
-            match find_closing_delim(s, '"', '"') {
+            match utils::find_closing_delim(s, '"', '"') {
                 Some(idx) if idx + 1 == s.len() => {
                     return Ok(Primitive::String(s.get(1..idx).unwrap().to_string()));
                 }
@@ -241,7 +211,7 @@ impl FromStr for Primitive {
             }
         }
 
-        if s.chars().all(is_symbol_char) {
+        if s.chars().all(utils::is_symbol_char) {
             return Ok(Primitive::Symbol(s.to_string()));
         }
 
@@ -277,7 +247,7 @@ impl FromStr for SExp {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let code = s.trim().to_owned();
 
-        if code.chars().all(is_atom_char) {
+        if code.chars().all(utils::is_atom_char) {
             debug!("Matched atom: {}", code);
             Ok(SExp::Atom(code.parse::<Primitive>()?))
         } else if code.starts_with("'(") && code.ends_with(')') {
@@ -286,7 +256,7 @@ impl FromStr for SExp {
                 code.get(1..).unwrap().parse::<SExp>()?,
             ]))
         } else if code.starts_with('(') && code.ends_with(')') {
-            match find_closing_delim(&code, '(', ')') {
+            match utils::find_closing_delim(&code, '(', ')') {
                 Some(idx) => {
                     debug!("Matched list with length {} chars", idx + 1);
                     let mut list_str = code.clone();
@@ -303,7 +273,7 @@ impl FromStr for SExp {
                         );
 
                         if list_str.starts_with('(') {
-                            match find_closing_delim(&list_str, '(', ')') {
+                            match utils::find_closing_delim(&list_str, '(', ')') {
                                 Some(idx2) => {
                                     if idx2 + 1 == list_str.len() {
                                         debug!("Whole string is a single list");
@@ -328,7 +298,7 @@ impl FromStr for SExp {
                                 break;
                             }
 
-                            match list_str.find(|c| !is_atom_char(c)) {
+                            match list_str.find(|c| !utils::is_atom_char(c)) {
                                 Some(idx3) => {
                                     debug!(
                                         "Matched atom in first position with length {} chars",
