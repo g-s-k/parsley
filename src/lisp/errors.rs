@@ -2,6 +2,8 @@
 pub enum LispError {
     #[fail(display = "could not parse expression: {}", exp)]
     SyntaxError { exp: String },
+    #[fail(display = "type error")]
+    TypeError,
     #[fail(display = "symbol is not defined: {}", sym)]
     UndefinedSymbol { sym: String },
     #[fail(

@@ -28,7 +28,6 @@ fn main() -> CliResult {
     info!("Creating base namespace.");
     let mut base_context = Context::base();
 
-
     let code = if let Some(f_name) = args.file {
         info!("Reading source from {:?}", f_name);
         read_file(&f_name)?

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use super::Primitive::Procedure;
+use super::Primitive::{Number, Procedure};
 use super::SExp::Atom;
 use super::*;
 
@@ -63,6 +63,38 @@ impl Context {
         ret.define("car", Atom(Procedure(Rc::new(|v| v[0].car()))));
 
         ret.define("cdr", Atom(Procedure(Rc::new(|v| v[0].cdr()))));
+
+        ret.define(
+            "+",
+            Atom(Procedure(Rc::new(|v| {
+                v.iter().fold(Ok(0_f64.as_atom()), |a, e| match e {
+                    Atom(Number(n)) => {
+                        if let Ok(Atom(Number(na))) = a {
+                            Ok(Atom(Number(n + na)))
+                        } else {
+                            a
+                        }
+                    }
+                    _ => Err(errors::LispError::TypeError),
+                })
+            }))),
+        );
+
+        ret.define(
+            "*",
+            Atom(Procedure(Rc::new(|v| {
+                v.iter().fold(Ok(1_f64.as_atom()), |a, e| match e {
+                    Atom(Number(n)) => {
+                        if let Ok(Atom(Number(na))) = a {
+                            Ok(Atom(Number(n * na)))
+                        } else {
+                            a
+                        }
+                    }
+                    _ => Err(errors::LispError::TypeError),
+                })
+            }))),
+        );
 
         ret
     }
