@@ -11,7 +11,7 @@ mod primitives;
 mod tests;
 mod utils;
 
-pub use self::as_atom::AsAtom;
+use self::as_atom::AsAtom;
 pub use self::context::Context;
 use self::primitives::Primitive;
 
