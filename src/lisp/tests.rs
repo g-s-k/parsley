@@ -87,6 +87,8 @@ fn parse_quote_syntax() {
             ]),
         ]),
     );
+
+    do_parse_and_assert("'potato", SExp::make_symbol("potato"));
 }
 
 #[test]

@@ -43,7 +43,13 @@ impl FromStr for SExp {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let code = s.trim().to_owned();
 
-        if code.chars().all(utils::is_atom_char) {
+        if code.starts_with('\'') && code.chars().skip(1).all(utils::is_symbol_char) {
+            debug!("Matched quoted symbol: {}", code);
+            Ok(SExp::List(vec![
+                SExp::make_symbol("quote"),
+                SExp::Atom(code[1..].parse::<Primitive>()?),
+            ]))
+        } else if code.chars().all(utils::is_atom_char) {
             debug!("Matched atom: {}", code);
             Ok(SExp::Atom(code.parse::<Primitive>()?))
         } else if code.starts_with("'(") && code.ends_with(')') {
