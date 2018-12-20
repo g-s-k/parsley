@@ -83,7 +83,7 @@ impl fmt::Debug for Primitive {
             Primitive::Number(n) => write!(f, "{}", n),
             Primitive::String(s) => write!(f, "\"{}\"", s),
             Primitive::Symbol(s) => write!(f, "'{}", s),
-            Primitive::Procedure(_) => write!(f, "#<native code>"),
+            Primitive::Procedure(_) => write!(f, "#<procedure>"),
         }
     }
 }
