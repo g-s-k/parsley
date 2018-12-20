@@ -102,7 +102,6 @@ fn find_closing_delim(s: &str, d_plus: char, d_minus: char) -> Option<usize> {
 
 enum Primitive {
     Void,
-    #[allow(dead_code)]
     Undefined,
     Boolean(bool),
     Character(char),
@@ -448,21 +447,40 @@ impl SExp {
                             n_args: 1,
                             right_num: 2,
                         })),
-                        3 => match &contents[1] {
+                        n_args @ _ => match &contents[1] {
                             SExp::Atom(Primitive::Symbol(sym)) => {
-                                debug!("Defining a quanitity with symbol {}", &sym);
-                                ctx.define(&sym, contents[2].clone());
-                                Some(Ok(contents[2].clone()))
+                                if n_args == 3 {
+                                    debug!("Defining a quanitity with symbol {}", &sym);
+                                    ctx.define(&sym, contents[2].clone());
+                                    Some(Ok(contents[2].clone()))
+                                } else {
+                                    Some(Err(LispError::TooManyArguments {
+                                        n_args: n_args - 1, right_num: 2
+                                    }))
+                                }
+                            }
+                            SExp::List(signature) if signature.len() != 0 => match &signature[0] {
+                                SExp::Atom(Primitive::Symbol(sym)) => {
+                                    debug!("Defining a function with \"define\" syntax.");
+                                    let mut exprs = vec![
+                                        SExp::make_symbol("lambda"),
+                                        SExp::List(signature[1..].to_vec()),
+                                    ];
+                                    for expr in contents[2..].into_iter() {
+                                        exprs.push(expr.to_owned());
+                                    }
+                                    ctx.define(&sym, SExp::List(exprs));
+                                    Some(Ok(SExp::Atom(Primitive::Undefined)))
+                                },
+                                exp @ _ => Some(Err(LispError::SyntaxError {
+                                    exp: exp.to_string(),
+                                })),
                             }
                             exp @ _ => Some(Err(LispError::SyntaxError {
                                 exp: exp.to_string(),
                             })),
                         },
                         // need to implement functions
-                        _ => {
-                            error!("Functional form of \"define\" detected. This feature is not yet implemented.");
-                            None
-                        }
                     },
                     "let" => match contents.len() {
                         1 => Some(Err(LispError::NoArgumentsProvided {
