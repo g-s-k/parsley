@@ -175,19 +175,21 @@ impl SExp {
                             SExp::List(params) => {
                                 debug!("Creating procedure with {} parameters.", params.len());
                                 let params_ = params.to_owned();
-                                Some(Ok(SExp::Atom(Primitive::Procedure(Rc::new(move |args| {
-                                    let mut elems = vec![SExp::make_symbol("let")];
-                                    let bound_params = params_
-                                        .iter()
-                                        .zip(args.iter())
-                                        .map(|p| SExp::List(vec![p.0.clone(), p.1.clone()]))
-                                        .collect::<Vec<_>>();
-                                    elems.push(SExp::List(bound_params));
-                                    for expr in contents.clone().into_iter().skip(2) {
-                                        elems.push(expr);
-                                    }
-                                    SExp::List(elems)
-                                })))))
+                                Some(Ok(SExp::Atom(Primitive::Procedure(Rc::new(
+                                    move |args, context| {
+                                        let mut elems = vec![SExp::make_symbol("let")];
+                                        let bound_params = params_
+                                            .iter()
+                                            .zip(args.iter())
+                                            .map(|p| SExp::List(vec![p.0.clone(), p.1.clone()]))
+                                            .collect::<Vec<_>>();
+                                        elems.push(SExp::List(bound_params));
+                                        for expr in contents.clone().into_iter().skip(2) {
+                                            elems.push(expr);
+                                        }
+                                        SExp::List(elems).eval(context)
+                                    },
+                                )))))
                             }
                             expr => Some(Err(errors::LispError::SyntaxError {
                                 exp: expr.to_string(),
@@ -457,7 +459,7 @@ impl SExp {
             SExp::List(contents) => match &contents[0] {
                 SExp::Atom(Primitive::Procedure(proc)) => {
                     debug!("Applying a procedure.");
-                    proc(&contents[1..]).eval(ctx)
+                    proc(&contents[1..], ctx)
                 }
                 l @ SExp::List(_) => {
                     let mut new_contents = vec![l.to_owned().eval(ctx)?];

@@ -45,18 +45,18 @@ impl Context {
 
         ret.define(
             "eq?",
-            Atom(Procedure(Rc::new(|v| (v[0] == v[1]).as_atom()))),
+            Atom(Procedure(Rc::new(|v, _c| Ok((v[0] == v[1]).as_atom())))),
         );
 
         ret.define(
             "null?",
-            Atom(Procedure(Rc::new(|v| v[0].is_null().as_atom()))),
+            Atom(Procedure(Rc::new(|v, _c| Ok(v[0].is_null().as_atom())))),
         );
 
         ret.define(
             "cons",
-            Atom(Procedure(Rc::new(|v| {
-                SExp::cons(v[0].to_owned(), v[1].to_owned())
+            Atom(Procedure(Rc::new(|v, _c| {
+                Ok(SExp::cons(v[0].to_owned(), v[1].to_owned()))
             }))),
         );
 
