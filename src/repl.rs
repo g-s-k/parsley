@@ -4,19 +4,25 @@ use quicli::prelude::*;
 
 use crate::lisp::{Context, SExp};
 
-const REPL_PROMPT: &'static str = "> ";
+const REPL_PROMPT: &str = "> ";
 
 pub fn repl(ctx: &mut Context) -> io::Result<usize> {
     info!("Initializing REPL.");
 
-    println!("\nWelcome to PARSE, an interactive Scheme interpreter.");
-    println!("Press <CTRL>-C or enter `.exit` to quit\n");
+    println!();
+    println!("'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()");
+    println!("'()          Welcome to PARSE, an interactive Scheme interpreter.          '()");
+    println!("'()          You are using version 0.1.0.                                  '()");
+    println!("'()          Press <CTRL>-C or enter `.exit` to quit.                      '()");
+    println!("'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()");
+    println!();
 
     let mut buffer = String::new();
 
+    io::stdout().flush()?;
     loop {
         // write prompt and ensure it actually prints
-        io::stdout().write(REPL_PROMPT.as_bytes())?;
+        io::stdout().write_all(REPL_PROMPT.as_bytes())?;
         io::stdout().flush()?;
 
         match io::stdin().read_line(&mut buffer) {
@@ -28,7 +34,7 @@ pub fn repl(ctx: &mut Context) -> io::Result<usize> {
 
                 // check for exit command
                 if buffer.trim() == ".exit" {
-                    break Ok(0)
+                    break Ok(0);
                 }
 
                 match buffer.parse::<SExp>() {

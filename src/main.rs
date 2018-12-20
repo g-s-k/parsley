@@ -27,7 +27,6 @@ struct Cli {
     verbosity: Verbosity,
 }
 
-
 fn main() -> CliResult {
     let args = Cli::from_args();
     args.verbosity.setup_env_logger("parse")?;
@@ -58,7 +57,9 @@ fn main() -> CliResult {
     }
 
     if code.is_empty() || args.force_interactive {
-        repl::repl(&mut base_context)?;
+        if let Err(error) = repl::repl(&mut base_context) {
+            error!("{}", error);
+        }
     }
 
     Ok(())
