@@ -15,6 +15,8 @@ use self::primitives::Primitive;
 
 const NULL: SExp = SExp::List(Vec::new());
 
+type LispResult = Result<SExp, errors::LispError>;
+
 #[derive(Debug, PartialEq, Clone)]
 pub enum SExp {
     Atom(Primitive),
@@ -130,7 +132,7 @@ impl FromStr for SExp {
 }
 
 impl SExp {
-    pub fn eval(self, ctx: &mut Context) -> Result<Self, errors::LispError> {
+    pub fn eval(self, ctx: &mut Context) -> LispResult {
         match self {
             SExp::Atom(Primitive::Symbol(sym)) => match ctx.get(&sym) {
                 None => Err(errors::LispError::UndefinedSymbol { sym }),
@@ -155,7 +157,7 @@ impl SExp {
         }
     }
 
-    fn eval_special_form(self, ctx: &mut Context) -> Option<Result<Self, errors::LispError>> {
+    fn eval_special_form(self, ctx: &mut Context) -> Option<LispResult> {
         match self {
             SExp::Atom(_) => None,
             SExp::List(_) if self.is_null() => None,
@@ -191,15 +193,6 @@ impl SExp {
                                 exp: expr.to_string(),
                             })),
                         },
-                    },
-                    "begin" => match contents.len() {
-                        1 => Some(Err(errors::LispError::NoArgumentsProvided {
-                            symbol: "begin".to_string(),
-                        })),
-                        _ => {
-                            debug!("Evaluating \"begin\" sequence.");
-                            contents.into_iter().skip(1).map(|e| e.eval(ctx)).last()
-                        }
                     },
                     "define" => match contents.len() {
                         1 => Some(Err(errors::LispError::NoArgumentsProvided {
@@ -357,66 +350,11 @@ impl SExp {
                             }
                         }
                     },
-                    "and" => match contents.len() {
-                        1 => Some(Ok(true.as_atom())),
-                        n => {
-                            debug!("Evaluating 'and' expression.");
-                            let false_ = false.as_atom();
-                            let mut good_stuff = contents
-                                .into_iter()
-                                .skip(1)
-                                .map(|expr| expr.eval(ctx))
-                                .take_while(|element| match element {
-                                    Err(_) => false,
-                                    Ok(ref atom) if *atom == false_ => false,
-                                    _ => true,
-                                })
-                                .collect::<Vec<_>>();
-
-                            if good_stuff.len() == n - 1 {
-                                good_stuff.pop()
-                            } else {
-                                Some(Ok(false_))
-                            }
-                        }
-                    },
-                    "or" => match contents.len() {
-                        1 => Some(Ok(false.as_atom())),
-                        _ => {
-                            debug!("Evaluating 'or' expression.");
-                            let false_ = false.as_atom();
-                            match contents.into_iter().skip(1).find_map(|expr| {
-                                match expr.eval(ctx) {
-                                    Ok(ref atom) if *atom == false_ => None,
-                                    thing => Some(thing),
-                                }
-                            }) {
-                                None => Some(Ok(false_)),
-                                thing => thing,
-                            }
-                        }
-                    },
-                    "if" => match contents.len() {
-                        4 => {
-                            debug!("Evaluating 'if' expression.");
-                            if contents[1] == true.as_atom() {
-                                Some(contents[2].clone().eval(ctx))
-                            } else {
-                                Some(contents[3].clone().eval(ctx))
-                            }
-                        }
-                        n => Some(Err(errors::LispError::TooManyArguments {
-                            n_args: n - 1,
-                            right_num: 3,
-                        })),
-                    },
-                    "quote" => match contents.len() {
-                        2 => Some(Ok(contents[1].clone())),
-                        n => Some(Err(errors::LispError::TooManyArguments {
-                            n_args: n - 1,
-                            right_num: 1,
-                        })),
-                    },
+                    "and" => Some(SExp::eval_and(&contents[1..], ctx)),
+                    "begin" => Some(SExp::eval_begin(&contents[1..], ctx)),
+                    "if" => Some(SExp::eval_if(&contents[1..], ctx)),
+                    "or" => Some(SExp::eval_or(&contents[1..], ctx)),
+                    "quote" => Some(SExp::eval_quote(&contents[1..])),
                     _ => None,
                 },
                 _ => None,
@@ -424,7 +362,95 @@ impl SExp {
         }
     }
 
-    fn apply(self, ctx: &mut Context) -> Result<Self, errors::LispError> {
+    fn eval_begin(c: &[Self], ctx: &mut Context) -> LispResult {
+        if c.is_empty() {
+            Err(errors::LispError::NoArgumentsProvided {
+                symbol: "begin".to_string(),
+            })
+        } else {
+            debug!("Evaluating \"begin\" sequence.");
+            match c.to_owned().into_iter().map(|e| e.eval(ctx)).last() {
+                Some(stuff) => stuff,
+                None => Err(errors::LispError::SyntaxError {
+                    exp: "something bad happened, idk".to_string(),
+                }),
+            }
+        }
+    }
+
+    fn eval_and(c: &[Self], ctx: &mut Context) -> LispResult {
+        match c.len() {
+            0 => Ok(true.as_atom()),
+            n => {
+                debug!("Evaluating 'and' expression.");
+                let false_ = false.as_atom();
+                let mut good_stuff = c
+                    .to_owned()
+                    .into_iter()
+                    .map(|expr| expr.eval(ctx))
+                    .take_while(|element| match element {
+                        Err(_) => false,
+                        Ok(ref atom) if *atom == false_ => false,
+                        _ => true,
+                    })
+                    .collect::<Vec<_>>();
+
+                if good_stuff.len() == n {
+                    good_stuff.pop().expect("oops")
+                } else {
+                    Ok(false_)
+                }
+            }
+        }
+    }
+
+    fn eval_or(c: &[Self], ctx: &mut Context) -> LispResult {
+        let false_ = false.as_atom();
+        if c.is_empty() {
+            Ok(false_)
+        } else {
+            debug!("Evaluating 'or' expression.");
+            match c
+                .to_owned()
+                .into_iter()
+                .find_map(|expr| match expr.eval(ctx) {
+                    Ok(ref atom) if *atom == false_ => None,
+                    thing => Some(thing),
+                }) {
+                Some(thing) => thing,
+                _ => Ok(false_),
+            }
+        }
+    }
+
+    fn eval_if(c: &[Self], ctx: &mut Context) -> LispResult {
+        match c.len() {
+            3 => {
+                debug!("Evaluating 'if' expression.");
+                if c[0] == true.as_atom() {
+                    c[1].to_owned().eval(ctx)
+                } else {
+                    c[2].to_owned().eval(ctx)
+                }
+            }
+            n_args => Err(errors::LispError::TooManyArguments {
+                n_args,
+                right_num: 1,
+            }),
+        }
+    }
+
+    fn eval_quote(c: &[Self]) -> LispResult {
+        match c.len() {
+            1 => Ok(c[0].to_owned()),
+            n_args => Err(errors::LispError::TooManyArguments {
+                n_args,
+                right_num: 1,
+            }),
+        }
+    }
+
+    fn apply(self, ctx: &mut Context) -> LispResult {
         match self {
             SExp::Atom(_) => Ok(self),
             SExp::List(_) if self.is_null() => Ok(NULL),
