@@ -3,6 +3,10 @@ name = "parsley"
 version = "0.1.0"
 authors = ["George Kaplan <george@georgekaplan.xyz>"]
 edition = "2018"
+description = "An implementation of Scheme"
+readme = "./README.md"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/g-s-k/parsley"
 
 [lib]
 name = "parsley"
@@ -13,7 +17,7 @@ name = "parsley"
 path = "src/main.rs"
 
 [dependencies]
-failure = "*"
-failure_derive = "*"
+failure = "0.1"
+failure_derive = "0.1"
 quicli = "0.4"
 structopt = "0.2"
