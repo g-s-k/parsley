@@ -1,5 +1,5 @@
 [package]
-name = "parse"
+name = "parsley"
 version = "0.1.0"
 authors = ["George Kaplan <george@georgekaplan.xyz>"]
 edition = "2018"

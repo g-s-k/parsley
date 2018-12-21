@@ -11,7 +11,7 @@ pub fn repl(ctx: &mut Context) -> io::Result<usize> {
 
     println!();
     println!("'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()");
-    println!("'()          Welcome to PARSE, an interactive Scheme interpreter.          '()");
+    println!("'()          Welcome to PARSLEY, an interactive Scheme interpreter.        '()");
     println!("'()          You are using version 0.1.0.                                  '()");
     println!("'()          Press <CTRL>-C or enter `.exit` to quit.                      '()");
     println!("'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()");

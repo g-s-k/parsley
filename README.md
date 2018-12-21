@@ -1,6 +1,6 @@
-# Pathetic, Abysmal Rusty Scheme Engine
+# parsley
 
-what if scheme...but rust
+what if scheme...but rust. still working on a backronym.
 
 ## helpful hints
 
