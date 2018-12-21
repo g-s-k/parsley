@@ -79,7 +79,7 @@ impl fmt::Debug for Primitive {
             Primitive::Void => write!(f, "#<void>"),
             Primitive::Undefined => write!(f, "#<undefined>"),
             Primitive::Boolean(b) => write!(f, "<boolean {}>", b),
-            Primitive::Character(c) => write!(f, "'{}'", c),
+            Primitive::Character(c) => write!(f, "#\\{}", c),
             Primitive::Number(n) => write!(f, "{}", n),
             Primitive::String(s) => write!(f, "\"{}\"", s),
             Primitive::Symbol(s) => write!(f, "'{}", s),
@@ -94,7 +94,7 @@ impl fmt::Display for Primitive {
             Primitive::Void => write!(f, "#<void>"),
             Primitive::Undefined => write!(f, "#<undefined>"),
             Primitive::Boolean(b) => write!(f, "{}", if *b { "#t" } else { "#f" }),
-            Primitive::Character(c) => write!(f, "'{}'", c),
+            Primitive::Character(c) => write!(f, "#\\{}", c),
             Primitive::Number(n) => write!(f, "{}", n),
             Primitive::String(s) => write!(f, "\"{}\"", s),
             Primitive::Symbol(s) => write!(f, "'{}", s),
@@ -117,8 +117,8 @@ impl FromStr for Primitive {
             return Ok(Primitive::Number(num));
         }
 
-        if s.len() == 3 && s.starts_with('\'') && s.ends_with('\'') {
-            return Ok(Primitive::Character(s.chars().nth(1).unwrap()));
+        if s.len() == 3 && s.starts_with("#\\") {
+            return Ok(Primitive::Character(s.chars().nth(2).unwrap()));
         }
 
         if s.starts_with('"') && s.ends_with('"') {

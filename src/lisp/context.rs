@@ -4,8 +4,8 @@ use std::rc::Rc;
 use quicli::prelude::*;
 
 use super::as_atom::AsAtom;
-use super::Primitive::{Number, Procedure, Undefined};
-use super::SExp::{self, Atom};
+use super::Primitive::{Character, Number, Procedure, String as LispString, Undefined};
+use super::SExp::{self, Atom, List};
 use super::{LispError, LispResult, NULL};
 
 /// Evaluation context for LISP expressions.
@@ -207,6 +207,20 @@ impl Context {
                     _ => Err(LispError::TypeError),
                 })
             }))),
+        );
+        ret.define(
+            "string->list",
+            Atom(Procedure(Rc::new(|v| match v.len() {
+                1 => match v[0] {
+                    Atom(LispString(ref s)) => {
+                        let mut elements = vec![SExp::make_symbol("quote")];
+                        elements.push(List(s.chars().map(|c| Atom(Character(c))).collect()));
+                        Ok(List(elements))
+                    }
+                    _ => Err(LispError::TypeError)
+                }
+                n_args => Err(LispError::TooManyArguments { n_args, right_num: 1 })
+            })))
         );
 
         ret
