@@ -1,6 +1,6 @@
+extern crate parsley;
 extern crate quicli;
 extern crate structopt;
-extern crate parsley;
 
 use std::io::{self, Read};
 use std::path::PathBuf;

@@ -1,3 +1,4 @@
+/// Multipurpose error type.
 #[derive(Debug, Fail)]
 pub enum LispError {
     #[fail(display = "could not parse expression: {}", exp)]
@@ -17,4 +18,6 @@ pub enum LispError {
     NotAList { atom: String },
     #[fail(display = "Expected a pair, got the null list.")]
     NullList,
+    #[fail(display = "{} is not a procedure.", exp)]
+    NotAProcedure { exp: String },
 }

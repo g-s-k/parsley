@@ -6,15 +6,25 @@ mod sexp;
 mod tests;
 mod utils;
 
+pub use self::as_atom::AsAtom;
 pub use self::context::Context;
-use self::errors::LispError;
+pub use self::errors::LispError;
 use self::primitives::Primitive;
-use self::sexp::SExp;
+pub use self::sexp::SExp;
 
-const NULL: SExp = SExp::List(Vec::new());
+/// The null list.
+pub const NULL: SExp = SExp::List(Vec::new());
 
-type LispResult = Result<SExp, LispError>;
+/// A shorthand Result type.
+pub type LispResult = Result<SExp, LispError>;
 
+/// Parse and validate LISP source.
+///
+/// # Example
+/// ```
+/// use parsley::{NULL, parse};
+/// assert_eq!(parse("()").unwrap(), NULL);
+/// ```
 pub fn parse(s: &str) -> LispResult {
     s.parse::<SExp>()
 }

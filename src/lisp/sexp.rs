@@ -7,6 +7,7 @@ use quicli::prelude::*;
 use super::as_atom::AsAtom;
 use super::{utils, Context, LispError, LispResult, Primitive, NULL};
 
+/// A parsed S-Expression.
 #[derive(Debug, PartialEq, Clone)]
 pub enum SExp {
     Atom(Primitive),
@@ -457,7 +458,9 @@ impl SExp {
                     }
                     SExp::List(new_contents).eval(ctx)
                 }
-                _ => Ok(SExp::List(contents.clone())),
+                _ => Err(LispError::NotAProcedure {
+                    exp: contents[0].to_string(),
+                }),
             },
         }
     }

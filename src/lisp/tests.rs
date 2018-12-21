@@ -100,7 +100,7 @@ fn parse_quote_syntax() {
 
 #[test]
 fn eval_empty_list() {
-    let mut ctx = Context::new();
+    let mut ctx = Context::default();
 
     assert_eq!(NULL.eval(&mut ctx).unwrap(), NULL);
 }
@@ -110,17 +110,17 @@ fn eval_atom() {
     let sym = || SExp::make_symbol("test");
     let quote = || SExp::make_symbol("quote");
 
-    let mut ctx = Context::new();
+    let mut ctx = Context::default();
     assert!(sym().eval(&mut ctx).is_err());
 
-    let mut ctx = Context::new();
+    let mut ctx = Context::default();
     assert_eq!(List(vec![quote(), sym()]).eval(&mut ctx).unwrap(), sym())
 }
 
 #[test]
 fn eval_list_quote() {
     let test_list = vec![SExp::make_symbol("quote"), NULL];
-    let mut ctx = Context::new();
+    let mut ctx = Context::default();
     assert_eq!(
         List(test_list.clone()).eval(&mut ctx).unwrap(),
         test_list[1].clone()
@@ -130,7 +130,7 @@ fn eval_list_quote() {
         SExp::make_symbol("quote"),
         List(vec![SExp::make_symbol("abc"), SExp::make_symbol("xyz")]),
     ];
-    let mut ctx = Context::new();
+    let mut ctx = Context::default();
     assert_eq!(
         List(test_list_2.clone()).eval(&mut ctx).unwrap(),
         test_list_2[1].clone()
@@ -178,7 +178,7 @@ fn eval_if() {
     let sym_1 = || "one".as_atom();
     let sym_2 = || "two".as_atom();
 
-    let mut ctx = Context::new();
+    let mut ctx = Context::default();
     assert_eq!(
         List(vec![
             SExp::make_symbol("if"),
@@ -191,7 +191,7 @@ fn eval_if() {
         sym_1()
     );
 
-    let mut ctx = Context::new();
+    let mut ctx = Context::default();
     assert_eq!(
         List(vec![
             SExp::make_symbol("if"),
@@ -209,10 +209,10 @@ fn eval_if() {
 fn eval_and() {
     let and = || SExp::make_symbol("and");
 
-    let mut ctx = Context::new();
+    let mut ctx = Context::default();
     assert_eq!(List(vec![and()]).eval(&mut ctx).unwrap(), true.as_atom());
 
-    let mut ctx = Context::new();
+    let mut ctx = Context::default();
     assert_eq!(
         List(vec![and(), true.as_atom(), true.as_atom()])
             .eval(&mut ctx)
@@ -220,7 +220,7 @@ fn eval_and() {
         true.as_atom()
     );
 
-    let mut ctx = Context::new();
+    let mut ctx = Context::default();
     assert_eq!(
         List(vec![and(), false.as_atom(), true.as_atom()])
             .eval(&mut ctx)
@@ -228,7 +228,7 @@ fn eval_and() {
         false.as_atom()
     );
 
-    let mut ctx = Context::new();
+    let mut ctx = Context::default();
     assert_eq!(
         List(vec![and(), false.as_atom(), false.as_atom()])
             .eval(&mut ctx)
@@ -236,7 +236,7 @@ fn eval_and() {
         false.as_atom()
     );
 
-    let mut ctx = Context::new();
+    let mut ctx = Context::default();
     assert_eq!(
         List(vec![and(), true.as_atom(), 3.0.as_atom()])
             .eval(&mut ctx)
@@ -244,10 +244,10 @@ fn eval_and() {
         3.0.as_atom()
     );
 
-    let mut ctx = Context::new();
+    let mut ctx = Context::default();
     assert_eq!(List(vec![and(), NULL]).eval(&mut ctx).unwrap(), NULL);
 
-    let mut ctx = Context::new();
+    let mut ctx = Context::default();
     assert_eq!(
         List(vec![
             and(),
@@ -266,10 +266,10 @@ fn eval_and() {
 fn eval_or() {
     let or = || SExp::make_symbol("or");
 
-    let mut ctx = Context::new();
+    let mut ctx = Context::default();
     assert_eq!(List(vec![or()]).eval(&mut ctx).unwrap(), false.as_atom());
 
-    let mut ctx = Context::new();
+    let mut ctx = Context::default();
     assert_eq!(
         List(vec![or(), true.as_atom(), true.as_atom()])
             .eval(&mut ctx)
@@ -277,7 +277,7 @@ fn eval_or() {
         true.as_atom()
     );
 
-    let mut ctx = Context::new();
+    let mut ctx = Context::default();
     assert_eq!(
         List(vec![or(), false.as_atom(), true.as_atom()])
             .eval(&mut ctx)
@@ -285,7 +285,7 @@ fn eval_or() {
         true.as_atom()
     );
 
-    let mut ctx = Context::new();
+    let mut ctx = Context::default();
     assert_eq!(
         List(vec![or(), false.as_atom(), false.as_atom()])
             .eval(&mut ctx)
@@ -293,7 +293,7 @@ fn eval_or() {
         false.as_atom()
     );
 
-    let mut ctx = Context::new();
+    let mut ctx = Context::default();
     assert_eq!(
         List(vec![or(), 3.0.as_atom(), true.as_atom()])
             .eval(&mut ctx)
@@ -301,10 +301,10 @@ fn eval_or() {
         3.0.as_atom()
     );
 
-    let mut ctx = Context::new();
+    let mut ctx = Context::default();
     assert_eq!(List(vec![or(), NULL]).eval(&mut ctx).unwrap(), NULL);
 
-    let mut ctx = Context::new();
+    let mut ctx = Context::default();
     assert_eq!(
         List(vec![
             or(),
@@ -324,13 +324,13 @@ fn eval_cond() {
     let cond = || SExp::make_symbol("cond");
     let else_ = || SExp::make_symbol("else");
 
-    let mut ctx = Context::new();
+    let mut ctx = Context::default();
     assert_eq!(
         List(vec![cond()]).eval(&mut ctx).unwrap(),
         Atom(Primitive::Void)
     );
 
-    let mut ctx = Context::new();
+    let mut ctx = Context::default();
     assert_eq!(
         List(vec![cond(), List(vec![else_(), 'a'.as_atom()])])
             .eval(&mut ctx)
@@ -338,7 +338,7 @@ fn eval_cond() {
         'a'.as_atom()
     );
 
-    let mut ctx = Context::new();
+    let mut ctx = Context::default();
     assert_eq!(
         List(vec![
             cond(),
@@ -350,7 +350,7 @@ fn eval_cond() {
         'b'.as_atom()
     );
 
-    let mut ctx = Context::new();
+    let mut ctx = Context::default();
     assert_eq!(
         List(vec![
             cond(),
@@ -362,7 +362,7 @@ fn eval_cond() {
         'a'.as_atom()
     );
 
-    let mut ctx = Context::new();
+    let mut ctx = Context::default();
     assert_eq!(
         List(vec![
             cond(),
@@ -376,7 +376,7 @@ fn eval_cond() {
         'b'.as_atom()
     );
 
-    let mut ctx = Context::new();
+    let mut ctx = Context::default();
     assert_eq!(
         List(vec![
             cond(),
@@ -395,10 +395,10 @@ fn eval_cond() {
 fn eval_begin() {
     let begin = || SExp::make_symbol("begin");
 
-    let mut ctx = Context::new();
+    let mut ctx = Context::default();
     assert!(List(vec![begin()]).eval(&mut ctx).is_err());
 
-    let mut ctx = Context::new();
+    let mut ctx = Context::default();
     assert_eq!(
         List(vec![begin(), 0_f64.as_atom(), 1_f64.as_atom()])
             .eval(&mut ctx)
@@ -413,13 +413,13 @@ fn eval_let() {
     let y = || SExp::make_symbol("y");
     let let_ = || SExp::make_symbol("let");
 
-    let mut ctx = Context::new();
+    let mut ctx = Context::default();
     assert!(List(vec![let_()]).eval(&mut ctx).is_err());
 
-    let mut ctx = Context::new();
+    let mut ctx = Context::default();
     assert!(List(vec![let_(), List(vec![])]).eval(&mut ctx).is_err());
 
-    let mut ctx = Context::new();
+    let mut ctx = Context::default();
     assert_eq!(
         List(vec![
             let_(),
@@ -431,7 +431,7 @@ fn eval_let() {
         3_f64.as_atom()
     );
 
-    let mut ctx = Context::new();
+    let mut ctx = Context::default();
     assert_eq!(
         List(vec![
             let_(),
