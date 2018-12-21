@@ -17,14 +17,3 @@ pub const NULL: SExp = SExp::List(Vec::new());
 
 /// A shorthand Result type.
 pub type LispResult = Result<SExp, LispError>;
-
-/// Parse and validate LISP source.
-///
-/// # Example
-/// ```
-/// use parsley::{NULL, parse};
-/// assert_eq!(parse("()").unwrap(), NULL);
-/// ```
-pub fn parse(s: &str) -> LispResult {
-    s.parse::<SExp>()
-}

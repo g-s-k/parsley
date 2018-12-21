@@ -2,7 +2,7 @@ use std::io::{self, Write};
 
 use quicli::prelude::*;
 
-use parsley::{self, Context};
+use parsley::{Context, SExp};
 
 const REPL_PROMPT: &str = "> ";
 const REPL_WELCOME: &str = r#"
@@ -39,7 +39,7 @@ pub fn repl(ctx: &mut Context) -> io::Result<usize> {
                     break Ok(0);
                 }
 
-                match parsley::parse(&buffer) {
+                match buffer.parse::<SExp>() {
                     Ok(tree) => match tree.eval(ctx) {
                         Ok(result) => println!("{}", result),
                         Err(error) => println!("{}", error),
