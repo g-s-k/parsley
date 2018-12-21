@@ -21,11 +21,9 @@
 //! );
 //!
 //! let expr = r#"
-//! (begin
-//!  (define (sqr x) (* x x))
-//!  (define (sum-of-squares x y) (+ (sqr x) (sqr y)))
-//!  (sum-of-squares 3 4)
-//!  )
+//! (define (sqr x) (* x x))
+//! (define (sum-of-squares x y) (+ (sqr x) (sqr y)))
+//! (sum-of-squares 3 4)
 //! "#;
 //! let value = "25";
 //! assert_eq!(

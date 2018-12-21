@@ -33,7 +33,25 @@ impl fmt::Display for SExp {
 impl FromStr for SExp {
     type Err = LispError;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+    fn from_str(s: &str) -> LispResult {
+        let trimmed_str = s.trim();
+
+        let mut fixed_str = trimmed_str.to_string();
+
+        if trimmed_str.starts_with('(') {
+            if let Some(idx) = utils::find_closing_delim(&trimmed_str, '(', ')') {
+                if idx + 1 < trimmed_str.len() {
+                    fixed_str = format!("(begin {})", trimmed_str)
+                }
+            }
+        }
+
+        SExp::parse_str(&fixed_str)
+    }
+}
+
+impl SExp {
+    fn parse_str(s: &str) -> LispResult {
         let code = s.trim().to_owned();
 
         if code.starts_with('\'')
@@ -51,7 +69,7 @@ impl FromStr for SExp {
         } else if code.starts_with("'(") && code.ends_with(')') {
             Ok(SExp::List(vec![
                 SExp::make_symbol("quote"),
-                code.get(1..).unwrap().parse::<SExp>()?,
+                SExp::parse_str(code.get(1..).unwrap())?,
             ]))
         } else if code.starts_with('(') && code.ends_with(')') {
             match utils::find_closing_delim(&code, '(', ')') {
@@ -75,12 +93,12 @@ impl FromStr for SExp {
                                 Some(idx2) => {
                                     if idx2 + 1 == list_str.len() {
                                         debug!("Whole string is a single list");
-                                        list_out.push(list_str.parse::<SExp>()?);
+                                        list_out.push(SExp::parse_str(&list_str)?);
                                         break;
                                     } else {
                                         debug!("Matched sub-list with length {} chars", idx2 + 1);
                                         let (before, after) = list_str.split_at(idx2 + 1);
-                                        list_out.push(before.parse::<SExp>()?);
+                                        list_out.push(SExp::parse_str(&before)?);
                                         list_str = after.trim().to_string();
                                     }
                                 }
@@ -103,11 +121,11 @@ impl FromStr for SExp {
                                         idx3
                                     );
                                     let (first, rest) = list_str.split_at(idx3);
-                                    list_out.push(first.parse::<SExp>()?);
+                                    list_out.push(SExp::parse_str(&first)?);
                                     list_str = rest.trim().to_string();
                                 }
                                 _ => {
-                                    list_out.push(list_str.parse::<SExp>()?);
+                                    list_out.push(SExp::parse_str(&list_str)?);
                                     break;
                                 }
                             }
@@ -123,9 +141,7 @@ impl FromStr for SExp {
             Ok(SExp::Atom(prim))
         }
     }
-}
 
-impl SExp {
     pub fn eval(self, ctx: &mut Context) -> LispResult {
         match self {
             SExp::Atom(Primitive::Symbol(sym)) => match ctx.get(&sym) {
