@@ -4,6 +4,14 @@ version = "0.1.0"
 authors = ["George Kaplan <george@georgekaplan.xyz>"]
 edition = "2018"
 
+[lib]
+name = "parsley"
+path = "src/lib.rs"
+
+[[bin]]
+name = "parsley"
+path = "src/main.rs"
+
 [dependencies]
 failure = "*"
 failure_derive = "*"

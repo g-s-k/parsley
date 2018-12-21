@@ -1,9 +1,6 @@
-#![feature(const_vec_new)]
-
-#[macro_use]
-extern crate failure_derive;
 extern crate quicli;
 extern crate structopt;
+extern crate parsley;
 
 use std::io::{self, Read};
 use std::path::PathBuf;
@@ -11,8 +8,7 @@ use std::path::PathBuf;
 use quicli::prelude::*;
 use structopt::StructOpt;
 
-mod lisp;
-use self::lisp::Context;
+use parsley::Context;
 mod repl;
 
 #[derive(Debug, StructOpt)]
@@ -47,7 +43,7 @@ fn main() -> CliResult {
 
     if !code.is_empty() {
         info!("Parsing source code.");
-        match lisp::parse(&code) {
+        match parsley::parse(&code) {
             Ok(tree) => {
                 info!("Evaluating.");
                 println!("{}", tree.eval(&mut base_context).unwrap());

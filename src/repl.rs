@@ -2,7 +2,7 @@ use std::io::{self, Write};
 
 use quicli::prelude::*;
 
-use crate::lisp::{self, Context};
+use parsley::{self, Context};
 
 const REPL_PROMPT: &str = "> ";
 
@@ -37,7 +37,7 @@ pub fn repl(ctx: &mut Context) -> io::Result<usize> {
                     break Ok(0);
                 }
 
-                match lisp::parse(&buffer) {
+                match parsley::parse(&buffer) {
                     Ok(tree) => match tree.eval(ctx) {
                         Ok(result) => println!("{}", result),
                         Err(error) => println!("{}", error),
