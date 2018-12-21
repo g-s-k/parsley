@@ -36,23 +36,22 @@ impl FromStr for SExp {
     fn from_str(s: &str) -> LispResult {
         let trimmed_str = s.trim();
 
-        let mut fixed_str = trimmed_str.to_string();
-
         if trimmed_str.starts_with('(') {
             if let Some(idx) = utils::find_closing_delim(&trimmed_str, '(', ')') {
                 if idx + 1 < trimmed_str.len() {
-                    fixed_str = format!("(begin {})", trimmed_str)
+                    let fixed_str = format!("(begin {})", trimmed_str);
+                    return SExp::parse_str(&fixed_str);
                 }
             }
         }
 
-        SExp::parse_str(&fixed_str)
+        SExp::parse_str(trimmed_str)
     }
 }
 
 impl SExp {
     fn parse_str(s: &str) -> LispResult {
-        let code = s.trim().to_owned();
+        let code = s.trim();
 
         if code.starts_with('\'')
             && code.len() > 1
@@ -79,7 +78,7 @@ impl SExp {
                     let mut list_out: Vec<SExp> = Vec::new();
 
                     if idx + 1 == code.len() {
-                        list_str = code.get(1..idx).unwrap().to_string();
+                        list_str = code.get(1..idx).unwrap();
                     }
 
                     while !list_str.is_empty() {
@@ -99,7 +98,7 @@ impl SExp {
                                         debug!("Matched sub-list with length {} chars", idx2 + 1);
                                         let (before, after) = list_str.split_at(idx2 + 1);
                                         list_out.push(SExp::parse_str(&before)?);
-                                        list_str = after.trim().to_string();
+                                        list_str = after.trim();
                                     }
                                 }
                                 None => {
@@ -122,7 +121,7 @@ impl SExp {
                                     );
                                     let (first, rest) = list_str.split_at(idx3);
                                     list_out.push(SExp::parse_str(&first)?);
-                                    list_str = rest.trim().to_string();
+                                    list_str = rest.trim();
                                 }
                                 _ => {
                                     list_out.push(SExp::parse_str(&list_str)?);
@@ -134,7 +133,9 @@ impl SExp {
 
                     Ok(SExp::List(list_out))
                 }
-                None => Err(LispError::SyntaxError { exp: code }),
+                None => Err(LispError::SyntaxError {
+                    exp: code.to_string(),
+                }),
             }
         } else {
             let prim = code.parse::<Primitive>()?;
