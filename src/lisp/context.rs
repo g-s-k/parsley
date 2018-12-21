@@ -217,10 +217,42 @@ impl Context {
                         elements.push(List(s.chars().map(|c| Atom(Character(c))).collect()));
                         Ok(List(elements))
                     }
-                    _ => Err(LispError::TypeError)
-                }
-                n_args => Err(LispError::TooManyArguments { n_args, right_num: 1 })
-            })))
+                    _ => Err(LispError::TypeError),
+                },
+                n_args => Err(LispError::TooManyArguments {
+                    n_args,
+                    right_num: 1,
+                }),
+            }))),
+        );
+        ret.define(
+            "list->string",
+            Atom(Procedure(Rc::new(|v| match v.len() {
+                1 => match v[0] {
+                    List(ref elems) => {
+                        match elems.iter().fold(Ok(String::new()), |s, e| match e {
+                            Atom(Character(ref c)) => {
+                                if let Ok(st) = s {
+                                    let mut stri = st;
+                                    stri.push(*c);
+                                    Ok(stri)
+                                } else {
+                                    s
+                                }
+                            }
+                            _ => Err(LispError::TypeError),
+                        }) {
+                            Ok(s) => Ok(Atom(LispString(s))),
+                            Err(err) => Err(err),
+                        }
+                    }
+                    _ => Err(LispError::TypeError),
+                },
+                n_args => Err(LispError::TooManyArguments {
+                    n_args,
+                    right_num: 1,
+                }),
+            }))),
         );
 
         ret
