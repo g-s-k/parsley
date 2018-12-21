@@ -78,7 +78,18 @@ impl Context {
         }
     }
 
-    /// Base context - defines a number
+    /// Base context - defines a number of useful functions and constants for
+    /// use in the runtime.
+    ///
+    /// # Example
+    /// ```
+    /// use parsley::{Context, NULL};
+    /// let ctx = Context::base();
+    /// assert_eq!(ctx.get("null").unwrap(), NULL);
+    /// println!("{}", ctx.get("null?").unwrap()); // "#<procedure>"
+    /// println!("{}", ctx.get("eq?").unwrap());   // "#<procedure>"
+    /// println!("{}", ctx.get("+").unwrap());     // "#<procedure>"
+    /// ```
     pub fn base() -> Self {
         let mut ret = Self::default();
 
