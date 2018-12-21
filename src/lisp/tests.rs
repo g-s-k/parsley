@@ -101,8 +101,15 @@ fn parse_quote_syntax() {
 #[test]
 fn eval_empty_list() {
     let mut ctx = Context::default();
+    assert!(NULL.eval(&mut ctx).is_err());
 
-    assert_eq!(NULL.eval(&mut ctx).unwrap(), NULL);
+    let mut ctx = Context::default();
+    assert_eq!(
+        List(vec![SExp::make_symbol("quote"), NULL])
+            .eval(&mut ctx)
+            .unwrap(),
+        NULL
+    );
 }
 
 #[test]
@@ -140,21 +147,21 @@ fn eval_list_quote() {
 #[test]
 fn eval_null_test() {
     let null = || SExp::make_symbol("null?");
+    let quote = || SExp::make_symbol("quote");
 
     let mut ctx = Context::base();
     assert_eq!(
-        List(vec![
-            null(),
-            List(vec![SExp::make_symbol("quote"), SExp::make_symbol("test")])
-        ])
-        .eval(&mut ctx)
-        .unwrap(),
+        List(vec![null(), List(vec![quote(), SExp::make_symbol("test")])])
+            .eval(&mut ctx)
+            .unwrap(),
         false.as_atom()
     );
 
     let mut ctx = Context::base();
     assert_eq!(
-        List(vec![null(), NULL]).eval(&mut ctx).unwrap(),
+        List(vec![null(), List(vec![quote(), NULL])])
+            .eval(&mut ctx)
+            .unwrap(),
         true.as_atom()
     );
 
@@ -162,10 +169,7 @@ fn eval_null_test() {
     assert_eq!(
         List(vec![
             null(),
-            List(vec![
-                SExp::make_symbol("quote"),
-                List(vec![false.as_atom(), NULL])
-            ])
+            List(vec![quote(), List(vec![false.as_atom(), NULL])])
         ])
         .eval(&mut ctx)
         .unwrap(),
@@ -245,7 +249,12 @@ fn eval_and() {
     );
 
     let mut ctx = Context::default();
-    assert_eq!(List(vec![and(), NULL]).eval(&mut ctx).unwrap(), NULL);
+    assert_eq!(
+        List(vec![and(), List(vec![SExp::make_symbol("quote"), NULL])])
+            .eval(&mut ctx)
+            .unwrap(),
+        NULL
+    );
 
     let mut ctx = Context::default();
     assert_eq!(
@@ -302,7 +311,12 @@ fn eval_or() {
     );
 
     let mut ctx = Context::default();
-    assert_eq!(List(vec![or(), NULL]).eval(&mut ctx).unwrap(), NULL);
+    assert_eq!(
+        List(vec![or(), List(vec![SExp::make_symbol("quote"), NULL])])
+            .eval(&mut ctx)
+            .unwrap(),
+        NULL
+    );
 
     let mut ctx = Context::default();
     assert_eq!(
