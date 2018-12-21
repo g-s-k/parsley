@@ -25,7 +25,7 @@ struct Cli {
 
 fn main() -> CliResult {
     let args = Cli::from_args();
-    args.verbosity.setup_env_logger("parse")?;
+    args.verbosity.setup_env_logger("parsley")?;
 
     info!("Creating base namespace.");
     let mut base_context = Context::base();

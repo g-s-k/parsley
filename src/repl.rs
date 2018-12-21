@@ -4,14 +4,15 @@ use quicli::prelude::*;
 
 use parsley::{Context, SExp};
 
+const LIB_VERSION: &str = env!("CARGO_PKG_VERSION");
+const REPL_WELCOME_BORDER: &str =
+    "'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()";
 const REPL_PROMPT: &str = "> ";
-const REPL_WELCOME: &str = r#"
-'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()
-'()          Welcome to PARSLEY, an interactive Scheme interpreter.        '()
-'()          You are using version 0.1.0.                                  '()
-'()          Press <CTRL>-C or enter `.exit` to quit.                      '()
-'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()'()
-
+const REPL_HELP: &str = r#"
+The following special commands are available:
+.help     display this message
+.clear    clear the global scope
+.exit     end interactive session
 "#;
 
 pub fn repl(ctx: &mut Context) -> io::Result<usize> {
@@ -19,12 +20,16 @@ pub fn repl(ctx: &mut Context) -> io::Result<usize> {
 
     let mut buffer = String::new();
 
-    io::stdout().write_all(REPL_WELCOME.as_bytes())?;
-    io::stdout().flush()?;
+    print!(
+        "\n{0}\n'(){1:^72}'()\n'(){2:^72}'()\n{0}\n\n",
+        REPL_WELCOME_BORDER,
+        format!("Welcome to PARSLEY v{}.", LIB_VERSION),
+        "Enter `.help` to list special commands."
+    );
 
     loop {
         // write prompt and ensure it actually prints
-        io::stdout().write_all(REPL_PROMPT.as_bytes())?;
+        print!("{}", REPL_PROMPT);
         io::stdout().flush()?;
 
         match io::stdin().read_line(&mut buffer) {
@@ -34,17 +39,22 @@ pub fn repl(ctx: &mut Context) -> io::Result<usize> {
                     continue;
                 }
 
-                // check for exit command
-                if buffer.trim() == ".exit" {
-                    break Ok(0);
-                }
-
-                match buffer.parse::<SExp>() {
-                    Ok(tree) => match tree.eval(ctx) {
-                        Ok(result) => println!("{}", result),
+                // check for special commands
+                match buffer.trim() {
+                    ".exit" => break Ok(0),
+                    ".clear" => {
+                        ctx.pop();
+                    }
+                    ".help" => {
+                        println!("{}", REPL_HELP);
+                    }
+                    other => match other.parse::<SExp>() {
+                        Ok(tree) => match tree.eval(ctx) {
+                            Ok(result) => println!("{}", result),
+                            Err(error) => println!("{}", error),
+                        },
                         Err(error) => println!("{}", error),
                     },
-                    Err(error) => println!("{}", error),
                 }
             }
             error => break error,

@@ -1,10 +1,12 @@
 use std::collections::HashMap;
 use std::rc::Rc;
 
+use quicli::prelude::*;
+
 use super::as_atom::AsAtom;
-use super::Primitive::{Number, Procedure};
+use super::Primitive::{Number, Procedure, Undefined};
 use super::SExp::{self, Atom};
-use super::{LispError, NULL};
+use super::{LispError, LispResult, NULL};
 
 /// Evaluation context for LISP expressions.
 ///
@@ -23,14 +25,41 @@ impl Default for Context {
 
 impl Context {
     /// Add a new, nested scope.
-    pub fn push(&self) -> Self {
-        let mut copy = self.clone();
-        copy.0.push(HashMap::new());
-        copy
+    ///
+    /// See [Context::pop](#method.pop) for a usage example.
+    pub fn push(&mut self) {
+        debug!("Creating a new scope.");
+        self.0.push(HashMap::new());
+    }
+
+    /// Remove the most recently added scope.
+    ///
+    /// If the stack height is 1, all definitions will be cleared, and the
+    /// global scope will be replaced with an empty one.
+    ///
+    /// # Example
+    /// ```
+    /// use parsley::{Context, NULL};
+    /// let mut ctx = Context::default();
+    /// assert_eq!(ctx.get("x"), None);
+    /// ctx.push();
+    /// ctx.define("x", NULL);
+    /// assert_eq!(ctx.get("x"), Some(NULL));
+    /// ctx.pop();
+    /// assert_eq!(ctx.get("x"), None);
+    /// ```
+    pub fn pop(&mut self) {
+        debug!("Leaving nested scope.");
+        self.0.pop();
+
+        if self.0.is_empty() {
+            self.push();
+        }
     }
 
     /// Create a new definition in the current scope.
     pub fn define(&mut self, key: &str, value: SExp) {
+        debug!("Binding the symbol {} to the value {}.", key, value);
         let num_frames = self.0.len();
         self.0[num_frames - 1].insert(key.to_string(), value);
     }
@@ -52,30 +81,39 @@ impl Context {
     /// assert_eq!(ctx.get("x"), Some(3_f64.as_atom()));
     /// ```
     pub fn get(&self, key: &str) -> Option<SExp> {
+        debug!("Retrieving a definition.");
         match self.0.iter().rev().find_map(|w| w.get(key)) {
             Some(exp) => Some(exp.clone()),
             _ => None,
         }
     }
 
-    /// Set an existing definition to a new value.
+    /// Re-bind an existing definition to a new value.
+    ///
+    /// Returns `Ok` if an existing definition was found and updated. Returns
+    /// `Err` if no definition exists.
     ///
     /// # Example
     /// ```
     /// use parsley::{Context, AsAtom};
     /// let mut ctx = Context::default();
-    /// ctx.define("x", 3_f64.as_atom());
-    /// assert_eq!(ctx.get("x"), Some(3_f64.as_atom()));
-    /// ctx.set("x", "potato".as_atom());
-    /// assert_eq!(ctx.get("x"), Some("potato".as_atom()));
+    /// assert!(ctx.set("x", false.as_atom()).is_err());    // Err, because x is not yet defined
+    /// ctx.define("x", 3_f64.as_atom());                   // define x
+    /// assert_eq!(ctx.get("x"), Some(3_f64.as_atom()));    // check that its value is 3
+    /// assert!(ctx.set("x", "potato".as_atom()).is_ok());  // Ok because x is now defined
+    /// assert_eq!(ctx.get("x"), Some("potato".as_atom())); // check that its value is now "potato"
     /// ```
-    pub fn set(&mut self, key: &str, value: SExp) {
+    pub fn set(&mut self, key: &str, value: SExp) -> LispResult {
+        debug!("Re-binding a symbol.");
         for frame in self.0.iter_mut().rev() {
             if frame.contains_key(key) {
                 frame.insert(key.to_string(), value);
-                break;
+                return Ok(Atom(Undefined));
             }
         }
+        Err(LispError::UndefinedSymbol {
+            sym: key.to_string(),
+        })
     }
 
     /// Base context - defines a number of useful functions and constants for

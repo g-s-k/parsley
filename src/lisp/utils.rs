@@ -7,6 +7,7 @@ pub fn is_symbol_char(c: char) -> bool {
         || c == '-'
         || c == '_'
         || c == '?'
+        || c == '!'
         || c == '*'
         || c == '+'
         || c == '/'

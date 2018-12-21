@@ -7,7 +7,20 @@ use quicli::prelude::*;
 use super::as_atom::AsAtom;
 use super::{utils, Context, LispError, LispResult, Primitive, NULL};
 
-/// A parsed S-Expression.
+/// An S-Expression. Can be parsed from a string via FromStr, or constructed
+/// programmatically.
+///
+/// # Examples
+/// ```
+/// use parsley::{NULL, SExp};
+/// let null = "()".parse::<SExp>().unwrap();
+/// assert_eq!(null, NULL);
+/// ```
+/// ```
+/// use parsley::{NULL, SExp};
+/// let null = SExp::List(Vec::new());
+/// assert_eq!(null, NULL);
+/// ```
 #[derive(Debug, PartialEq, Clone)]
 pub enum SExp {
     Atom(Primitive),
@@ -74,7 +87,7 @@ impl SExp {
             match utils::find_closing_delim(&code, '(', ')') {
                 Some(idx) => {
                     debug!("Matched list with length {} chars", idx + 1);
-                    let mut list_str = code.clone();
+                    let mut list_str = code;
                     let mut list_out: Vec<SExp> = Vec::new();
 
                     if idx + 1 == code.len() {
@@ -143,6 +156,37 @@ impl SExp {
         }
     }
 
+    /// Evaluate an S-Expression in a context.
+    ///
+    /// The context will retain any definitions bound during evaluation
+    /// (e.g. `define`, `set!`).
+    ///
+    /// # Examples
+    /// ```
+    /// use parsley::{AsAtom, Context};
+    /// use parsley::SExp::{self, List};
+    ///
+    /// let exp = List(vec![SExp::make_symbol("eq?"), 0.0.as_atom(), 1.0.as_atom()]);
+    /// let mut ctx = Context::base();
+    /// let result = exp.eval(&mut ctx);
+    /// assert_eq!(result.unwrap(), false.as_atom());
+    /// ```
+    /// ```
+    /// use parsley::{AsAtom, Context};
+    /// use parsley::SExp::{self, List};
+    ///
+    /// let exp1 = List(vec![
+    ///     SExp::make_symbol("define"),
+    ///     SExp::make_symbol("x"),
+    ///     10.0.as_atom()
+    /// ]);
+    /// let exp2 = SExp::make_symbol("x");
+    ///
+    /// let mut ctx = Context::base();
+    /// exp1.eval(&mut ctx);
+    /// let result = exp2.eval(&mut ctx);
+    /// assert_eq!(result.unwrap(), 10.0.as_atom());
+    /// ```
     pub fn eval(self, ctx: &mut Context) -> LispResult {
         match self {
             SExp::Atom(Primitive::Symbol(sym)) => match ctx.get(&sym) {
@@ -254,8 +298,7 @@ impl SExp {
                         })),
                         3 => match &contents[1] {
                             SExp::Atom(Primitive::Symbol(sym)) => {
-                                ctx.set(&sym, contents[2].to_owned());
-                                Some(Ok(SExp::Atom(Primitive::Undefined)))
+                                Some(ctx.set(&sym, contents[2].to_owned()))
                             }
                             other => Some(Err(LispError::SyntaxError {
                                 exp: other.to_string(),
@@ -277,13 +320,13 @@ impl SExp {
                         _ => match &contents[1] {
                             SExp::List(vals) => {
                                 debug!("Creating a local binding.");
-                                let mut new_ctx = ctx.push();
-                                match vals.iter().find_map(|e| match e {
+                                ctx.push();
+                                let result = match vals.iter().find_map(|e| match e {
                                     SExp::List(kv) if kv.len() == 2 => match &kv[0] {
                                         SExp::Atom(Primitive::Symbol(key)) => {
                                             match kv[1].clone().eval(ctx) {
                                                 Ok(val) => {
-                                                    new_ctx.define(key, val);
+                                                    ctx.define(key, val);
                                                     None
                                                 }
                                                 Err(stuff) => Some(Err(LispError::SyntaxError {
@@ -299,13 +342,13 @@ impl SExp {
                                         exp: stuff.to_string(),
                                     })),
                                 }) {
-                                    None => contents
-                                        .into_iter()
-                                        .skip(2)
-                                        .map(|e| e.eval(&mut new_ctx))
-                                        .last(),
+                                    None => {
+                                        contents.into_iter().skip(2).map(|e| e.eval(ctx)).last()
+                                    }
                                     stuff => stuff,
-                                }
+                                };
+                                ctx.pop();
+                                result
                             }
                             stuff => Some(Err(LispError::SyntaxError {
                                 exp: stuff.to_string(),
@@ -482,14 +525,14 @@ impl SExp {
         }
     }
 
-    pub fn is_null(&self) -> bool {
+    pub(super) fn is_null(&self) -> bool {
         match self {
             SExp::List(ref contents) if contents.is_empty() => true,
             _ => false,
         }
     }
 
-    pub fn car(&self) -> LispResult {
+    pub(super) fn car(&self) -> LispResult {
         match self {
             atom @ SExp::Atom(_) => Err(LispError::NotAList {
                 atom: atom.to_string(),
@@ -499,7 +542,7 @@ impl SExp {
         }
     }
 
-    pub fn cdr(&self) -> LispResult {
+    pub(super) fn cdr(&self) -> LispResult {
         match self {
             atom @ SExp::Atom(_) => Err(LispError::NotAList {
                 atom: atom.to_string(),
@@ -509,7 +552,7 @@ impl SExp {
         }
     }
 
-    pub fn cons(exp1: Self, exp2: Self) -> Self {
+    pub(super) fn cons(exp1: Self, exp2: Self) -> Self {
         match exp2 {
             SExp::Atom(_) => SExp::List(vec![exp1, exp2]),
             SExp::List(mut contents) => {
@@ -520,6 +563,21 @@ impl SExp {
         }
     }
 
+    /// Convenience method to build a symbolic atom.
+    ///
+    /// # Example
+    /// ```
+    /// use parsley::{Context, NULL, SExp};
+    /// let mut ctx = Context::base();
+    ///
+    /// // A null list is an empty application
+    /// assert!(NULL.eval(&mut ctx).is_err());
+    ///
+    /// // The symbol `null` (defined in `Context::base`) creates a null list
+    /// let result = SExp::make_symbol("null").eval(&mut ctx);
+    /// assert!(result.is_ok());
+    /// assert_eq!(result.unwrap(), NULL);
+    /// ```
     pub fn make_symbol(sym: &str) -> Self {
         SExp::Atom(Primitive::Symbol(sym.to_string()))
     }
