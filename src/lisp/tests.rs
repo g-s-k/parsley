@@ -48,8 +48,8 @@ fn parse_primitive_types() {
     do_parse_and_assert("2.0", 2.0.as_atom());
     do_parse_and_assert("inf", std::f64::INFINITY.as_atom());
     do_parse_and_assert("-inf", std::f64::NEG_INFINITY.as_atom());
-    do_parse_and_assert("'c'", 'c'.as_atom());
-    do_parse_and_assert("'''", '\''.as_atom());
+    do_parse_and_assert("#\\c", 'c'.as_atom());
+    do_parse_and_assert("#\\'", '\''.as_atom());
     do_parse_and_assert(
         r#""test string with spaces""#,
         "test string with spaces".as_atom(),
@@ -59,7 +59,7 @@ fn parse_primitive_types() {
 #[test]
 fn parse_mixed_type_list() {
     do_parse_and_assert(
-        "(0 #f () 33.5 \"xyz\" '?' #t \"\" \"   \")",
+        "(0 #f () 33.5 \"xyz\" #\\? #t \"\" \"   \")",
         List(vec![
             0_f64.as_atom(),
             false.as_atom(),
