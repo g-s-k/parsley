@@ -479,10 +479,11 @@ impl SExp {
         match c.len() {
             3 => {
                 debug!("Evaluating 'if' expression.");
-                if c[0] == true.as_atom() {
-                    c[1].to_owned().eval(ctx)
-                } else {
-                    c[2].to_owned().eval(ctx)
+                let false_ = false.as_atom();
+                match c[0].to_owned().eval(ctx) {
+                    Ok(ref f) if f == &false_ => c[2].to_owned().eval(ctx),
+                    Ok(_) => c[1].to_owned().eval(ctx),
+                    err => err,
                 }
             }
             n_args => Err(LispError::TooManyArguments {
