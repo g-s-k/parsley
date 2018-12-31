@@ -8,6 +8,8 @@ use quicli::prelude::*;
 use super::as_atom::AsAtom;
 use super::{utils, Context, LispError, LispResult, Primitive};
 
+use self::SExp::*;
+
 /// An S-Expression. Can be parsed from a string via FromStr, or constructed
 /// programmatically.
 ///
@@ -32,13 +34,13 @@ pub enum SExp {
 impl fmt::Display for SExp {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            SExp::Null => write!(f, "'()",),
-            SExp::Atom(a) => write!(f, "{}", a),
-            SExp::Pair { box head, box tail } => {
+            Null => write!(f, "'()",),
+            Atom(a) => write!(f, "{}", a),
+            Pair { box head, box tail } => {
                 write!(f, "'({}", head)?;
                 match tail {
-                    SExp::Null => write!(f, ")"),
-                    SExp::Atom(a) => write!(f, " . {})", a),
+                    Null => write!(f, ")"),
+                    Atom(a) => write!(f, " . {})", a),
                     pair => {
                         let mut it = pair.to_owned().into_iter().peekable();
                         while let Some(element) = it.next() {
@@ -85,7 +87,7 @@ impl Iterator for SExpIterator {
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.exp.to_owned() {
-            SExp::Pair { box head, box tail } => {
+            Pair { box head, box tail } => {
                 self.exp = tail;
                 Some(head)
             }
@@ -108,7 +110,7 @@ impl FromIterator<SExp> for SExp {
     where
         I: IntoIterator<Item = SExp>,
     {
-        let mut exp_out = SExp::Null;
+        let mut exp_out = Null;
 
         for item in iter {
             exp_out = exp_out.cons(item);
@@ -127,26 +129,26 @@ impl SExp {
             && code.chars().skip(1).all(utils::is_symbol_char)
         {
             debug!("Matched quoted symbol: {}", code);
-            Ok(SExp::Null
-                .cons(SExp::Atom(code[1..].parse::<Primitive>()?))
+            Ok(Null
+                .cons(Atom(code[1..].parse::<Primitive>()?))
                 .cons(SExp::make_symbol("quote")))
         } else if code.chars().all(utils::is_atom_char) {
             debug!("Matched atom: {}", code);
-            Ok(SExp::Atom(code.parse::<Primitive>()?))
+            Ok(Atom(code.parse::<Primitive>()?))
         } else if code.starts_with("'(") && code.ends_with(')') {
             let tail = box if code.len() == 3 {
-                SExp::Null.cons(SExp::Null)
+                Null.cons(Null)
             } else {
                 SExp::parse_str(&code[1..])?
             };
             Ok(tail.cons(SExp::make_symbol("quote")))
         } else if code.starts_with('(') && code.ends_with(')') {
             match utils::find_closing_delim(code.chars(), '(', ')') {
-                Some(idx) if idx == 1 => Ok(SExp::Null),
+                Some(idx) if idx == 1 => Ok(Null),
                 Some(idx) => {
                     debug!("Matched list with length {} chars", idx + 1);
                     let mut list_str = code[1..idx].trim();
-                    let mut list_out = SExp::Null;
+                    let mut list_out = Null;
 
                     while !list_str.is_empty() {
                         debug!(
@@ -180,7 +182,7 @@ impl SExp {
 
                                     let (before, after) = list_str.split_at(new_idx);
                                     list_str = before.trim();
-                                    list_out = SExp::Pair {
+                                    list_out = Pair {
                                         head: box SExp::parse_str(after)?,
                                         tail: box list_out,
                                     };
@@ -201,8 +203,7 @@ impl SExp {
                                         debug!("Matched string with length {} chars", idx2);
                                         let (rest, last) =
                                             list_str.split_at(list_str.len() - 2 - idx2);
-                                        list_out =
-                                            list_out.cons(SExp::Atom(last.parse::<Primitive>()?));
+                                        list_out = list_out.cons(Atom(last.parse::<Primitive>()?));
                                         list_str = rest.trim();
                                     }
                                     None => {
@@ -220,7 +221,7 @@ impl SExp {
                                         idx3
                                     );
                                     let (rest, last) = list_str.split_at(list_str.len() - idx3);
-                                    list_out = SExp::Pair {
+                                    list_out = Pair {
                                         head: box SExp::parse_str(last)?,
                                         tail: box list_out,
                                     };
@@ -228,7 +229,7 @@ impl SExp {
                                 }
                                 _ => {
                                     debug!("Entire string is an atom.");
-                                    list_out = SExp::Pair {
+                                    list_out = Pair {
                                         head: box SExp::parse_str(list_str)?,
                                         tail: box list_out,
                                     };
@@ -246,7 +247,7 @@ impl SExp {
             }
         } else {
             let prim = code.parse::<Primitive>()?;
-            Ok(SExp::Atom(prim))
+            Ok(Atom(prim))
         }
     }
 
@@ -283,13 +284,13 @@ impl SExp {
     /// ```
     pub fn eval(self, ctx: &mut Context) -> LispResult {
         match self {
-            SExp::Null => Err(LispError::NullList),
-            SExp::Atom(Primitive::Symbol(sym)) => match ctx.get(&sym) {
+            Null => Err(LispError::NullList),
+            Atom(Primitive::Symbol(sym)) => match ctx.get(&sym) {
                 None => Err(LispError::UndefinedSymbol { sym }),
                 Some(exp) => exp.eval(ctx),
             },
-            SExp::Atom(_) => Ok(self),
-            SExp::Pair { box head, box tail } => {
+            Atom(_) => Ok(self),
+            Pair { box head, box tail } => {
                 // handle special functions
                 let new_pair = tail.to_owned().cons(head.to_owned());
                 match new_pair.clone().eval_special_form(ctx) {
@@ -319,29 +320,29 @@ impl SExp {
 
     fn eval_special_form(self, ctx: &mut Context) -> Option<LispResult> {
         match self {
-            SExp::Null => None,
-            SExp::Atom(_) => None,
-            SExp::Pair { box head, box tail } => match head {
-                SExp::Atom(Primitive::Symbol(sym)) => match sym.as_ref() {
+            Null => None,
+            Atom(_) => None,
+            Pair { box head, box tail } => match head {
+                Atom(Primitive::Symbol(sym)) => match sym.as_ref() {
                     "lambda" => match tail {
-                        SExp::Null => Some(Err(LispError::NoArgumentsProvided {
+                        Null => Some(Err(LispError::NoArgumentsProvided {
                             symbol: "lambda".to_string(),
                         })),
-                        SExp::Atom(a) => Some(Err(LispError::NotAList {
+                        Atom(a) => Some(Err(LispError::NotAList {
                             atom: a.to_string(),
                         })),
-                        SExp::Pair {
+                        Pair {
                             head: box params,
                             tail: box fn_body,
                         } => {
                             debug!("Creating procedure.");
-                            Some(Ok(SExp::Atom(Primitive::Procedure(Rc::new(move |args| {
+                            Some(Ok(Atom(Primitive::Procedure(Rc::new(move |args| {
                                 debug!("Formal parameters: {}", params);
                                 let bound_params = params
                                     .to_owned()
                                     .into_iter()
                                     .zip(args.into_iter())
-                                    .map(|(p, a)| SExp::Null.cons(a).cons(p))
+                                    .map(|(p, a)| Null.cons(a).cons(p))
                                     .collect();
                                 debug!("Bound parameters: {}", bound_params);
                                 Ok(fn_body
@@ -352,38 +353,37 @@ impl SExp {
                         }
                     },
                     "define" => match tail {
-                        SExp::Null => Some(Err(LispError::NoArgumentsProvided {
+                        Null => Some(Err(LispError::NoArgumentsProvided {
                             symbol: "define".to_string(),
                         })),
-                        SExp::Atom(a) => Some(Err(LispError::NotAList {
+                        Atom(a) => Some(Err(LispError::NotAList {
                             atom: a.to_string(),
                         })),
-                        SExp::Pair {
+                        Pair {
                             head: box head2,
                             tail:
-                                box SExp::Pair {
+                                box Pair {
                                     head: box defn,
-                                    tail: box SExp::Null,
+                                    tail: box Null,
                                 },
                         } => match head2 {
-                            SExp::Atom(Primitive::Symbol(sym)) => {
+                            Atom(Primitive::Symbol(sym)) => {
                                 debug!("Defining a quanitity with symbol {}", &sym);
                                 ctx.define(&sym, defn.clone());
                                 Some(Ok(defn))
                             }
-                            SExp::Pair {
-                                head: box SExp::Atom(Primitive::Symbol(sym)),
+                            Pair {
+                                head: box Atom(Primitive::Symbol(sym)),
                                 tail: box fn_params,
                             } => {
                                 debug!("Defining a function with \"define\" syntax.");
                                 ctx.define(
                                     &sym,
-                                    SExp::Null
-                                        .cons(defn)
+                                    Null.cons(defn)
                                         .cons(fn_params)
                                         .cons(SExp::make_symbol("lambda")),
                                 );
-                                Some(Ok(SExp::Atom(Primitive::Undefined)))
+                                Some(Ok(Atom(Primitive::Undefined)))
                             }
                             exp => Some(Err(LispError::SyntaxError {
                                 exp: exp.to_string(),
@@ -394,11 +394,11 @@ impl SExp {
                         })),
                     },
                     "set!" => match tail {
-                        SExp::Null => Some(Err(LispError::NoArgumentsProvided {
+                        Null => Some(Err(LispError::NoArgumentsProvided {
                             symbol: "set!".to_string(),
                         })),
-                        SExp::Pair {
-                            head: box SExp::Atom(Primitive::Symbol(sym)),
+                        Pair {
+                            head: box Atom(Primitive::Symbol(sym)),
                             tail: box defn,
                         } => Some(ctx.set(&sym, defn)),
                         exp => Some(Err(LispError::SyntaxError {
@@ -406,10 +406,10 @@ impl SExp {
                         })),
                     },
                     "let" => match tail {
-                        SExp::Null => Some(Err(LispError::NoArgumentsProvided {
+                        Null => Some(Err(LispError::NoArgumentsProvided {
                             symbol: "let".to_string(),
                         })),
-                        SExp::Pair {
+                        Pair {
                             head: box defn_list,
                             tail: box statements,
                         } => {
@@ -418,12 +418,12 @@ impl SExp {
 
                             for defn in defn_list {
                                 match defn {
-                                    SExp::Pair {
-                                        head: box SExp::Atom(Primitive::Symbol(key)),
+                                    Pair {
+                                        head: box Atom(Primitive::Symbol(key)),
                                         tail:
-                                            box SExp::Pair {
+                                            box Pair {
                                                 head: box val,
-                                                tail: box SExp::Null,
+                                                tail: box Null,
                                             },
                                     } => match val.eval(ctx) {
                                         Ok(result) => ctx.define(&key, result),
@@ -461,12 +461,12 @@ impl SExp {
 
                         for case in tail {
                             match case {
-                                SExp::Pair {
+                                Pair {
                                     head: box predicate,
                                     tail:
-                                        box SExp::Pair {
+                                        box Pair {
                                             head: box consequent,
-                                            tail: box SExp::Null,
+                                            tail: box Null,
                                         },
                                 } => {
                                     // TODO: check if `else` clause is actually last
@@ -475,7 +475,7 @@ impl SExp {
                                     }
 
                                     match predicate.eval(ctx) {
-                                        Ok(SExp::Atom(Primitive::Boolean(false))) => {
+                                        Ok(Atom(Primitive::Boolean(false))) => {
                                             continue;
                                         }
                                         Ok(_) => return Some(consequent.eval(ctx)),
@@ -491,7 +491,7 @@ impl SExp {
                         }
 
                         // falls through if no valid predicates found
-                        Some(Ok(SExp::Atom(Primitive::Void)))
+                        Some(Ok(Atom(Primitive::Void)))
                     }
                     "and" => Some(tail.eval_and(ctx)),
                     "begin" => Some(tail.eval_begin(ctx)),
@@ -507,7 +507,7 @@ impl SExp {
 
     fn eval_begin(self, ctx: &mut Context) -> LispResult {
         match self {
-            SExp::Null => Err(LispError::NoArgumentsProvided {
+            Null => Err(LispError::NoArgumentsProvided {
                 symbol: "begin".to_string(),
             }),
             _ => {
@@ -529,7 +529,7 @@ impl SExp {
         for element in self {
             state = element.eval(ctx)?;
 
-            if let SExp::Atom(Primitive::Boolean(false)) = state {
+            if let Atom(Primitive::Boolean(false)) = state {
                 break;
             }
         }
@@ -541,7 +541,7 @@ impl SExp {
         debug!("Evaluating 'or' expression.");
         for element in self {
             match element.eval(ctx)? {
-                SExp::Atom(Primitive::Boolean(false)) => (),
+                Atom(Primitive::Boolean(false)) => (),
                 exp => {
                     return Ok(exp);
                 }
@@ -553,21 +553,21 @@ impl SExp {
 
     fn eval_if(self, ctx: &mut Context) -> LispResult {
         match self {
-            SExp::Pair {
+            Pair {
                 head: box condition,
                 tail:
-                    box SExp::Pair {
+                    box Pair {
                         head: box if_true,
                         tail:
-                            box SExp::Pair {
+                            box Pair {
                                 head: box if_false,
-                                tail: box SExp::Null,
+                                tail: box Null,
                             },
                     },
             } => {
                 debug!("Evaluating 'if' expression.");
                 (match condition.eval(ctx)? {
-                    SExp::Atom(Primitive::Boolean(false)) => if_false,
+                    Atom(Primitive::Boolean(false)) => if_false,
                     _ => if_true,
                 })
                 .eval(ctx)
@@ -581,9 +581,9 @@ impl SExp {
     fn eval_quote(self) -> Self {
         trace!("Evaluating 'quote' expression: {}", self);
         match self {
-            SExp::Pair {
+            Pair {
                 box head,
-                tail: box SExp::Null,
+                tail: box Null,
             } => head,
             _ => self,
         }
@@ -591,16 +591,16 @@ impl SExp {
 
     fn apply(self, ctx: &mut Context) -> LispResult {
         match self {
-            SExp::Null | SExp::Atom(_) => Ok(self),
-            SExp::Pair { box head, box tail } => match head {
-                SExp::Atom(Primitive::Procedure(proc)) => {
+            Null | Atom(_) => Ok(self),
+            Pair { box head, box tail } => match head {
+                Atom(Primitive::Procedure(proc)) => {
                     trace!("Applying a procedure to the arguments {}", tail);
                     proc(tail)?.eval(ctx)
                 }
-                SExp::Atom(Primitive::Symbol(sym)) => Err(LispError::NotAProcedure {
+                Atom(Primitive::Symbol(sym)) => Err(LispError::NotAProcedure {
                     exp: sym.to_string(),
                 }),
-                SExp::Pair {
+                Pair {
                     head: box proc,
                     tail: box tail2,
                 } => tail2.cons(proc.eval(ctx)?).eval(ctx),
@@ -611,26 +611,26 @@ impl SExp {
 
     pub(super) fn car(&self) -> LispResult {
         match self {
-            SExp::Null => Err(LispError::NullList),
-            SExp::Atom(_) => Err(LispError::NotAList {
+            Null => Err(LispError::NullList),
+            Atom(_) => Err(LispError::NotAList {
                 atom: self.to_string(),
             }),
-            SExp::Pair { box head, .. } => Ok(head.to_owned()),
+            Pair { box head, .. } => Ok(head.to_owned()),
         }
     }
 
     pub(super) fn cdr(&self) -> LispResult {
         match self {
-            SExp::Null => Err(LispError::NullList),
-            SExp::Atom(_) => Err(LispError::NotAList {
+            Null => Err(LispError::NullList),
+            Atom(_) => Err(LispError::NotAList {
                 atom: self.to_string(),
             }),
-            SExp::Pair { box tail, .. } => Ok(tail.to_owned()),
+            Pair { box tail, .. } => Ok(tail.to_owned()),
         }
     }
 
     pub fn cons(self, exp: Self) -> Self {
-        SExp::Pair {
+        Pair {
             head: box exp,
             tail: box self,
         }
@@ -652,6 +652,6 @@ impl SExp {
     /// assert_eq!(result.unwrap(), SExp::Null);
     /// ```
     pub fn make_symbol(sym: &str) -> Self {
-        SExp::Atom(Primitive::Symbol(sym.to_string()))
+        Atom(Primitive::Symbol(sym.to_string()))
     }
 }
