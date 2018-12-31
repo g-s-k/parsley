@@ -264,7 +264,11 @@ impl SExp {
             }),
             Pair {
                 head: box Atom(Primitive::Symbol(sym)),
-                tail: box defn,
+                tail:
+                    box Pair {
+                        head: box defn,
+                        tail: box Null,
+                    },
             } => ctx.set(&sym, defn),
             exp => Err(LispError::SyntaxError {
                 exp: exp.to_string(),
