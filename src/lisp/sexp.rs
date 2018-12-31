@@ -174,8 +174,14 @@ impl SExp {
                                 // }
                                 Some(idx2) => {
                                     debug!("Matched sub-list with length {} chars", idx2 + 1);
-                                    let (before, after) =
-                                        list_str.split_at(list_str.len() - idx2 - 1);
+                                    let mut new_idx = list_str.len() - 1 - idx2;
+                                    if new_idx > 0 {
+                                        if let Some('\'') = list_str.chars().nth(new_idx - 1) {
+                                            new_idx -= 1;
+                                        }
+                                    }
+
+                                    let (before, after) = list_str.split_at(new_idx);
                                     list_str = before.trim();
                                     list_out = SExp::Pair {
                                         head: box SExp::parse_str(after)?,
@@ -435,7 +441,11 @@ impl SExp {
                             match case {
                                 SExp::Pair {
                                     head: box predicate,
-                                    tail: box consequent,
+                                    tail:
+                                        box SExp::Pair {
+                                            head: box consequent,
+                                            tail: box SExp::Null,
+                                        },
                                 } => {
                                     // TODO: check if `else` clause is actually last
                                     if predicate == else_ {
@@ -507,18 +517,16 @@ impl SExp {
 
     fn eval_or(self, ctx: &mut Context) -> LispResult {
         debug!("Evaluating 'or' expression.");
-        let mut state = false.as_atom();
-
         for element in self {
             match element.eval(ctx)? {
                 SExp::Atom(Primitive::Boolean(false)) => (),
                 exp => {
-                    state = exp;
+                    return Ok(exp);
                 }
             }
         }
 
-        Ok(state)
+        Ok(false.as_atom())
     }
 
     fn eval_if(self, ctx: &mut Context) -> LispResult {
@@ -528,7 +536,11 @@ impl SExp {
                 tail:
                     box SExp::Pair {
                         head: box if_true,
-                        tail: box if_false,
+                        tail:
+                            box SExp::Pair {
+                                head: box if_false,
+                                tail: box SExp::Null,
+                            },
                     },
             } => {
                 debug!("Evaluating 'if' expression.");
@@ -562,13 +574,14 @@ impl SExp {
                     debug!("Applying a procedure.");
                     proc(tail)?.eval(ctx)
                 }
+                SExp::Atom(Primitive::Symbol(sym)) => Err(LispError::NotAProcedure {
+                    exp: sym.to_string(),
+                }),
                 SExp::Pair {
                     head: box proc,
                     tail: box tail2,
                 } => tail2.cons(proc.eval(ctx)?).eval(ctx),
-                head => Err(LispError::NotAProcedure {
-                    exp: head.to_string(),
-                }),
+                _ => Ok(tail.cons(head)),
             },
         }
     }

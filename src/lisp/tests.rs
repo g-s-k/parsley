@@ -227,7 +227,11 @@ fn eval_and() {
 
     let mut ctx = Context::default();
     assert_eq!(
-        Null.cons(t()).cons(3.0.as_atom()).eval(&mut ctx).unwrap(),
+        Null.cons(3.0.as_atom())
+            .cons(t())
+            .cons(and())
+            .eval(&mut ctx)
+            .unwrap(),
         3.0.as_atom()
     );
 
@@ -336,8 +340,8 @@ fn eval_cond() {
 
     let mut ctx = Context::default();
     assert_eq!(
-        Null.cons(Null.cons('b'.as_atom()).cons(t()))
-            .cons(Null.cons('a'.as_atom()).cons(else_()))
+        Null.cons(Null.cons('a'.as_atom()).cons(else_()))
+            .cons(Null.cons('b'.as_atom()).cons(t()))
             .cons(cond())
             .eval(&mut ctx)
             .unwrap(),
@@ -356,10 +360,10 @@ fn eval_cond() {
 
     let mut ctx = Context::default();
     assert_eq!(
-        Null.cons(Null.cons('c'.as_atom()).cons(f()))
-            .cons(Null.cons('b'.as_atom()).cons(t()))
+        Null.cons(Null.cons('a'.as_atom()).cons(else_()))
             .cons(Null.cons('d'.as_atom()).cons(t()))
-            .cons(Null.cons('a'.as_atom()).cons(else_()))
+            .cons(Null.cons('b'.as_atom()).cons(t()))
+            .cons(Null.cons('c'.as_atom()).cons(f()))
             .cons(cond())
             .eval(&mut ctx)
             .unwrap(),
@@ -368,10 +372,10 @@ fn eval_cond() {
 
     let mut ctx = Context::default();
     assert_eq!(
-        Null.cons(Null.cons('c'.as_atom()).cons(f()))
-            .cons(Null.cons('b'.as_atom()).cons(f()))
+        Null.cons(Null.cons('a'.as_atom()).cons(else_()))
             .cons(Null.cons('d'.as_atom()).cons(f()))
-            .cons(Null.cons('a'.as_atom()).cons(else_()))
+            .cons(Null.cons('b'.as_atom()).cons(f()))
+            .cons(Null.cons('c'.as_atom()).cons(f()))
             .cons(cond())
             .eval(&mut ctx)
             .unwrap(),
