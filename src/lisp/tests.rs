@@ -1,7 +1,7 @@
 #![cfg(test)]
 
 use super::as_atom::AsAtom;
-use super::SExp::{self, Atom, List};
+use super::SExp::{self, Atom, List, Null};
 use super::*;
 
 fn do_parse_and_assert(test_val: &str, expected_val: SExp) {
@@ -11,12 +11,12 @@ fn do_parse_and_assert(test_val: &str, expected_val: SExp) {
 
 #[test]
 fn parse_empty_list() {
-    do_parse_and_assert("()", NULL);
+    do_parse_and_assert("()", Null);
 }
 
 #[test]
 fn parse_list_of_lists() {
-    do_parse_and_assert("(() () ())", List(vec![NULL, NULL, NULL]));
+    do_parse_and_assert("(() () ())", List(vec![Null, Null, Null]));
 }
 
 #[test]
@@ -63,7 +63,7 @@ fn parse_mixed_type_list() {
         List(vec![
             0_f64.as_atom(),
             false.as_atom(),
-            NULL,
+            Null,
             33.5.as_atom(),
             "xyz".as_atom(),
             '?'.as_atom(),
@@ -101,14 +101,14 @@ fn parse_quote_syntax() {
 #[test]
 fn eval_empty_list() {
     let mut ctx = Context::default();
-    assert!(NULL.eval(&mut ctx).is_err());
+    assert!(Null.eval(&mut ctx).is_err());
 
     let mut ctx = Context::default();
     assert_eq!(
-        List(vec![SExp::make_symbol("quote"), NULL])
+        List(vec![SExp::make_symbol("quote"), Null])
             .eval(&mut ctx)
             .unwrap(),
-        NULL
+        Null
     );
 }
 
@@ -126,7 +126,7 @@ fn eval_atom() {
 
 #[test]
 fn eval_list_quote() {
-    let test_list = vec![SExp::make_symbol("quote"), NULL];
+    let test_list = vec![SExp::make_symbol("quote"), Null];
     let mut ctx = Context::default();
     assert_eq!(
         List(test_list.clone()).eval(&mut ctx).unwrap(),
@@ -159,7 +159,7 @@ fn eval_null_test() {
 
     let mut ctx = Context::base();
     assert_eq!(
-        List(vec![null(), List(vec![quote(), NULL])])
+        List(vec![null(), List(vec![quote(), Null])])
             .eval(&mut ctx)
             .unwrap(),
         true.as_atom()
@@ -169,7 +169,7 @@ fn eval_null_test() {
     assert_eq!(
         List(vec![
             null(),
-            List(vec![quote(), List(vec![false.as_atom(), NULL])])
+            List(vec![quote(), List(vec![false.as_atom(), Null])])
         ])
         .eval(&mut ctx)
         .unwrap(),
@@ -250,10 +250,10 @@ fn eval_and() {
 
     let mut ctx = Context::default();
     assert_eq!(
-        List(vec![and(), List(vec![SExp::make_symbol("quote"), NULL])])
+        List(vec![and(), List(vec![SExp::make_symbol("quote"), Null])])
             .eval(&mut ctx)
             .unwrap(),
-        NULL
+        Null
     );
 
     let mut ctx = Context::default();
@@ -312,10 +312,10 @@ fn eval_or() {
 
     let mut ctx = Context::default();
     assert_eq!(
-        List(vec![or(), List(vec![SExp::make_symbol("quote"), NULL])])
+        List(vec![or(), List(vec![SExp::make_symbol("quote"), Null])])
             .eval(&mut ctx)
             .unwrap(),
-        NULL
+        Null
     );
 
     let mut ctx = Context::default();

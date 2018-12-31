@@ -1,4 +1,3 @@
-#![feature(const_vec_new)]
 //! A Scheme parsing and evaluation framework.
 //!
 //! # Example

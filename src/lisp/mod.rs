@@ -12,8 +12,5 @@ pub use self::errors::LispError;
 use self::primitives::Primitive;
 pub use self::sexp::SExp;
 
-/// The null list.
-pub const NULL: SExp = SExp::List(Vec::new());
-
 /// A shorthand Result type.
 pub type LispResult = Result<SExp, LispError>;

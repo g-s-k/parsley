@@ -5,8 +5,8 @@ use quicli::prelude::*;
 
 use super::as_atom::AsAtom;
 use super::Primitive::{Character, Number, Procedure, String as LispString, Undefined};
-use super::SExp::{self, Atom, List};
-use super::{LispError, LispResult, NULL};
+use super::SExp::{self, Atom, List, Null};
+use super::{LispError, LispResult};
 
 /// Evaluation context for LISP expressions.
 ///
@@ -39,12 +39,12 @@ impl Context {
     ///
     /// # Example
     /// ```
-    /// use parsley::{Context, NULL};
+    /// use parsley::{Context, SExp};
     /// let mut ctx = Context::default();
     /// assert_eq!(ctx.get("x"), None);
     /// ctx.push();
-    /// ctx.define("x", NULL);
-    /// assert_eq!(ctx.get("x"), Some(NULL));
+    /// ctx.define("x", SExp::Null);
+    /// assert_eq!(ctx.get("x"), Some(SExp::Null));
     /// ctx.pop();
     /// assert_eq!(ctx.get("x"), None);
     /// ```
@@ -121,9 +121,9 @@ impl Context {
     ///
     /// # Example
     /// ```
-    /// use parsley::{Context, NULL};
+    /// use parsley::{Context, SExp};
     /// let ctx = Context::base();
-    /// assert_eq!(ctx.get("null").unwrap(), NULL);
+    /// assert_eq!(ctx.get("null").unwrap(), SExp::Null);
     /// println!("{}", ctx.get("null?").unwrap()); // "#<procedure>"
     /// println!("{}", ctx.get("eq?").unwrap());   // "#<procedure>"
     /// println!("{}", ctx.get("+").unwrap());     // "#<procedure>"
@@ -137,9 +137,9 @@ impl Context {
         );
         ret.define(
             "null?",
-            Atom(Procedure(Rc::new(|v| Ok(v[0].is_null().as_atom())))),
+            Atom(Procedure(Rc::new(|v| Ok((v[0] == Null).as_atom())))),
         );
-        ret.define("null", NULL);
+        ret.define("null", SExp::Null);
         ret.define(
             "cons",
             Atom(Procedure(Rc::new(|v| {

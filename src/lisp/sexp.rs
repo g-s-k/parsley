@@ -5,24 +5,25 @@ use std::str::FromStr;
 use quicli::prelude::*;
 
 use super::as_atom::AsAtom;
-use super::{utils, Context, LispError, LispResult, Primitive, NULL};
+use super::{utils, Context, LispError, LispResult, Primitive};
 
 /// An S-Expression. Can be parsed from a string via FromStr, or constructed
 /// programmatically.
 ///
 /// # Examples
 /// ```
-/// use parsley::{NULL, SExp};
+/// use parsley::SExp;
 /// let null = "()".parse::<SExp>().unwrap();
-/// assert_eq!(null, NULL);
+/// assert_eq!(null, SExp::Null);
 /// ```
 /// ```
-/// use parsley::{NULL, SExp};
-/// let null = SExp::List(Vec::new());
-/// assert_eq!(null, NULL);
+/// use parsley::{AsAtom, SExp};
+/// let parsed = "\"abcdefg\"".parse::<SExp>().unwrap();
+/// assert_eq!(parsed, "abcdefg".as_atom());
 /// ```
 #[derive(Debug, PartialEq, Clone)]
 pub enum SExp {
+    Null,
     Atom(Primitive),
     List(Vec<SExp>),
 }
@@ -30,6 +31,7 @@ pub enum SExp {
 impl fmt::Display for SExp {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
+            SExp::Null => write!(f, "()",),
             SExp::Atom(a) => write!(f, "{}", a),
             SExp::List(v) => write!(
                 f,
@@ -81,10 +83,15 @@ impl SExp {
         } else if code.starts_with("'(") && code.ends_with(')') {
             Ok(SExp::List(vec![
                 SExp::make_symbol("quote"),
-                SExp::parse_str(code.get(1..).unwrap())?,
+                if code.len() == 3 {
+                    SExp::Null
+                } else {
+                    SExp::parse_str(&code[1..])?
+                },
             ]))
         } else if code.starts_with('(') && code.ends_with(')') {
             match utils::find_closing_delim(&code, '(', ')') {
+                Some(idx) if idx == 1 => Ok(SExp::Null),
                 Some(idx) => {
                     debug!("Matched list with length {} chars", idx + 1);
                     let mut list_str = code;
@@ -189,12 +196,12 @@ impl SExp {
     /// ```
     pub fn eval(self, ctx: &mut Context) -> LispResult {
         match self {
+            SExp::Null => Err(LispError::NullList),
             SExp::Atom(Primitive::Symbol(sym)) => match ctx.get(&sym) {
                 None => Err(LispError::UndefinedSymbol { sym }),
                 Some(exp) => Ok(exp),
             },
             SExp::Atom(_) => Ok(self),
-            SExp::List(_) if self.is_null() => Err(LispError::NullList),
             SExp::List(contents) => {
                 // handle special functions
                 if let Some(result) = SExp::List(contents.clone()).eval_special_form(ctx) {
@@ -214,8 +221,8 @@ impl SExp {
 
     fn eval_special_form(self, ctx: &mut Context) -> Option<LispResult> {
         match self {
+            SExp::Null => None,
             SExp::Atom(_) => None,
-            SExp::List(_) if self.is_null() => None,
             SExp::List(contents) => match &contents[0] {
                 SExp::Atom(Primitive::Symbol(sym)) => match sym.as_ref() {
                     "lambda" => match contents.len() {
@@ -505,8 +512,7 @@ impl SExp {
 
     fn apply(self, ctx: &mut Context) -> LispResult {
         match self {
-            SExp::Atom(_) => Ok(self),
-            SExp::List(_) if self.is_null() => Ok(NULL),
+            SExp::Null | SExp::Atom(_) => Ok(self),
             SExp::List(contents) => match &contents[0] {
                 SExp::Atom(Primitive::Procedure(proc)) => {
                     debug!("Applying a procedure.");
@@ -526,35 +532,29 @@ impl SExp {
         }
     }
 
-    pub(super) fn is_null(&self) -> bool {
-        match self {
-            SExp::List(ref contents) if contents.is_empty() => true,
-            _ => false,
-        }
-    }
-
     pub(super) fn car(&self) -> LispResult {
         match self {
-            atom @ SExp::Atom(_) => Err(LispError::NotAList {
-                atom: atom.to_string(),
+            SExp::Null => Err(LispError::NullList),
+            SExp::Atom(_) => Err(LispError::NotAList {
+                atom: self.to_string(),
             }),
-            SExp::List(_) if self.is_null() => Err(LispError::NullList),
             SExp::List(contents) => Ok(contents[0].clone()),
         }
     }
 
     pub(super) fn cdr(&self) -> LispResult {
         match self {
-            atom @ SExp::Atom(_) => Err(LispError::NotAList {
-                atom: atom.to_string(),
+            SExp::Null => Err(LispError::NullList),
+            SExp::Atom(_) => Err(LispError::NotAList {
+                atom: self.to_string(),
             }),
-            SExp::List(_) if self.is_null() => Err(LispError::NullList),
             SExp::List(contents) => Ok(SExp::List(contents[1..].to_vec())),
         }
     }
 
     pub(super) fn cons(exp1: Self, exp2: Self) -> Self {
         match exp2 {
+            SExp::Null => SExp::List(vec![exp1]),
             SExp::Atom(_) => SExp::List(vec![exp1, exp2]),
             SExp::List(mut contents) => {
                 let mut new_contents = vec![exp1];
@@ -568,16 +568,16 @@ impl SExp {
     ///
     /// # Example
     /// ```
-    /// use parsley::{Context, NULL, SExp};
+    /// use parsley::{Context, SExp};
     /// let mut ctx = Context::base();
     ///
     /// // A null list is an empty application
-    /// assert!(NULL.eval(&mut ctx).is_err());
+    /// assert!(SExp::Null.eval(&mut ctx).is_err());
     ///
     /// // The symbol `null` (defined in `Context::base`) creates a null list
     /// let result = SExp::make_symbol("null").eval(&mut ctx);
     /// assert!(result.is_ok());
-    /// assert_eq!(result.unwrap(), NULL);
+    /// assert_eq!(result.unwrap(), SExp::Null);
     /// ```
     pub fn make_symbol(sym: &str) -> Self {
         SExp::Atom(Primitive::Symbol(sym.to_string()))
