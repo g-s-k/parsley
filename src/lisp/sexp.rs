@@ -91,6 +91,10 @@ impl Iterator for SExpIterator {
                 self.exp = tail;
                 Some(head)
             }
+            a @ Atom(_) => {
+                self.exp = Null;
+                Some(a)
+            }
             _ => None,
         }
     }
@@ -301,14 +305,14 @@ impl SExp {
                     None => {
                         // handle everything else
                         debug!("Evaluating normal list: {}", new_pair);
-                        let evaluated = tail
+                        let evaluated = new_pair
                             .into_iter()
+                            .inspect(|e| trace!("Evaluating list member {}", e))
                             .map(|e| e.eval(ctx))
                             .collect::<Result<Vec<_>, LispError>>()?
                             .into_iter()
                             .rev()
-                            .collect::<SExp>()
-                            .cons(head.eval(ctx)?);
+                            .collect::<SExp>();
 
                         trace!("Applying operation: {}", evaluated);
                         evaluated.apply(ctx)

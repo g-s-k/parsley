@@ -178,7 +178,9 @@ impl Context {
                             head: box elem2,
                             tail: box Null,
                         },
-                } => Ok(elem2.cons(elem1)),
+                } => Ok(Null
+                    .cons(elem2.cons(elem1))
+                    .cons(SExp::make_symbol("quote"))),
                 exp => Err(LispError::SyntaxError {
                     exp: exp.to_string(),
                 }),

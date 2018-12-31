@@ -1,7 +1,7 @@
 #![cfg(test)]
 
 use super::as_atom::AsAtom;
-use super::SExp::{self, Atom, Null};
+use super::SExp::{self, Atom, Null, Pair};
 use super::*;
 
 fn do_parse_and_assert(test_val: &str, expected_val: SExp) {
@@ -167,6 +167,53 @@ fn eval_null_test() {
         .eval(&mut ctx)
         .unwrap(),
         false.as_atom()
+    );
+}
+
+#[test]
+fn eval_cons() {
+    let cons = || SExp::make_symbol("cons");
+    let item_1 = || 5.0.as_atom();
+    let item_2 = || "abc".as_atom();
+    let item_3 = || SExp::make_symbol("null");
+
+    // sanity check
+    assert_eq!(
+        Null.cons(item_1()),
+        Pair {
+            head: box item_1(),
+            tail: box Null
+        }
+    );
+
+    let mut ctx = Context::base();
+    assert_eq!(
+        Null.cons(item_3())
+            .cons(item_1())
+            .cons(cons())
+            .eval(&mut ctx)
+            .unwrap(),
+        Null.cons(item_1())
+    );
+
+    let mut ctx = Context::base();
+    assert_eq!(
+        Null.cons(item_2())
+            .cons(item_1())
+            .cons(cons())
+            .eval(&mut ctx)
+            .unwrap(),
+        item_2().cons(item_1())
+    );
+
+    let mut ctx = Context::base();
+    assert_eq!(
+        Null.cons(Null.cons(item_2()))
+            .cons(item_1())
+            .cons(cons())
+            .eval(&mut ctx)
+            .unwrap(),
+        Null.cons(item_2()).cons(item_1())
     );
 }
 
