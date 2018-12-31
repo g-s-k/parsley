@@ -28,7 +28,7 @@ impl Context {
     ///
     /// See [Context::pop](#method.pop) for a usage example.
     pub fn push(&mut self) {
-        debug!("Creating a new scope.");
+        trace!("Creating a new scope.");
         self.0.push(HashMap::new());
     }
 
@@ -49,7 +49,7 @@ impl Context {
     /// assert_eq!(ctx.get("x"), None);
     /// ```
     pub fn pop(&mut self) {
-        debug!("Leaving nested scope.");
+        trace!("Leaving nested scope.");
         self.0.pop();
 
         if self.0.is_empty() {
@@ -59,7 +59,7 @@ impl Context {
 
     /// Create a new definition in the current scope.
     pub fn define(&mut self, key: &str, value: SExp) {
-        debug!("Binding the symbol {} to the value {}.", key, value);
+        trace!("Binding the symbol {} to the value {}.", key, value);
         let num_frames = self.0.len();
         self.0[num_frames - 1].insert(key.to_string(), value);
     }
@@ -81,7 +81,7 @@ impl Context {
     /// assert_eq!(ctx.get("x"), Some(3_f64.as_atom()));
     /// ```
     pub fn get(&self, key: &str) -> Option<SExp> {
-        debug!("Retrieving a definition.");
+        trace!("Retrieving a definition for the key {}", key);
         match self.0.iter().rev().find_map(|w| w.get(key)) {
             Some(exp) => Some(exp.clone()),
             _ => None,
@@ -104,7 +104,7 @@ impl Context {
     /// assert_eq!(ctx.get("x"), Some("potato".as_atom())); // check that its value is now "potato"
     /// ```
     pub fn set(&mut self, key: &str, value: SExp) -> LispResult {
-        debug!("Re-binding a symbol.");
+        trace!("Re-binding the symbol {} to the value {}", key, value);
         for frame in self.0.iter_mut().rev() {
             if frame.contains_key(key) {
                 frame.insert(key.to_string(), value);
@@ -121,10 +121,16 @@ impl Context {
     ///
     /// # Example
     /// ```
-    /// use parsley::{Context, SExp};
-    /// let ctx = Context::base();
-    /// assert_eq!(ctx.get("null").unwrap(), SExp::Null);
-    /// println!("{}", ctx.get("null?").unwrap()); // "#<procedure>"
+    /// use parsley::{AsAtom, Context, SExp};
+    /// let mut ctx = Context::base();
+    ///
+    /// let null_const = ctx.get("null").unwrap();
+    /// let null_fn = ctx.get("null?").unwrap();
+    /// assert_eq!(
+    ///     SExp::Null.cons(null_const).cons(null_fn).eval(&mut ctx).unwrap(),
+    ///     true.as_atom()
+    /// );
+    ///
     /// println!("{}", ctx.get("eq?").unwrap());   // "#<procedure>"
     /// println!("{}", ctx.get("+").unwrap());     // "#<procedure>"
     /// ```
@@ -149,9 +155,19 @@ impl Context {
         );
         ret.define(
             "null?",
-            Atom(Procedure(Rc::new(|e| Ok((e == Null).as_atom())))),
+            Atom(Procedure(Rc::new(|e| {
+                trace!("{}", e);
+                Ok((match e {
+                    Pair {
+                        head: box Null,
+                        tail: box Null,
+                    } => true,
+                    _ => false,
+                })
+                .as_atom())
+            }))),
         );
-        ret.define("null", Null);
+        ret.define("null", Null.cons(Null).cons(SExp::make_symbol("quote")));
         ret.define(
             "cons",
             Atom(Procedure(Rc::new(|e| match e {

@@ -111,7 +111,7 @@ impl FromIterator<SExp> for SExp {
         let mut exp_out = SExp::Null;
 
         for item in iter {
-            exp_out = SExp::cons(item, exp_out);
+            exp_out = exp_out.cons(item);
         }
 
         exp_out
@@ -135,14 +135,11 @@ impl SExp {
             Ok(SExp::Atom(code.parse::<Primitive>()?))
         } else if code.starts_with("'(") && code.ends_with(')') {
             let tail = box if code.len() == 3 {
-                SExp::Null
+                SExp::Null.cons(SExp::Null)
             } else {
                 SExp::parse_str(&code[1..])?
             };
-            Ok(SExp::Pair {
-                head: box SExp::make_symbol("quote"),
-                tail,
-            })
+            Ok(tail.cons(SExp::make_symbol("quote")))
         } else if code.starts_with('(') && code.ends_with(')') {
             match utils::find_closing_delim(code.chars(), '(', ')') {
                 Some(idx) if idx == 1 => Ok(SExp::Null),
@@ -261,22 +258,22 @@ impl SExp {
     /// # Examples
     /// ```
     /// use parsley::{AsAtom, Context};
-    /// use parsley::SExp::{self, List};
+    /// use parsley::SExp::{self, Null};
     ///
-    /// let exp = List(vec![SExp::make_symbol("eq?"), 0.0.as_atom(), 1.0.as_atom()]);
+    /// let exp = Null.cons(1.0.as_atom())
+    ///     .cons(0.0.as_atom())
+    ///     .cons(SExp::make_symbol("eq?"));
     /// let mut ctx = Context::base();
     /// let result = exp.eval(&mut ctx);
     /// assert_eq!(result.unwrap(), false.as_atom());
     /// ```
     /// ```
     /// use parsley::{AsAtom, Context};
-    /// use parsley::SExp::{self, List};
+    /// use parsley::SExp::{self, Null};
     ///
-    /// let exp1 = List(vec![
-    ///     SExp::make_symbol("define"),
-    ///     SExp::make_symbol("x"),
-    ///     10.0.as_atom()
-    /// ]);
+    /// let exp1 = Null.cons(10.0.as_atom())
+    ///     .cons(SExp::make_symbol("x"))
+    ///     .cons(SExp::make_symbol("define"));
     /// let exp2 = SExp::make_symbol("x");
     ///
     /// let mut ctx = Context::base();
@@ -288,14 +285,8 @@ impl SExp {
         match self {
             SExp::Null => Err(LispError::NullList),
             SExp::Atom(Primitive::Symbol(sym)) => match ctx.get(&sym) {
-                None => {
-                    if sym == "quote" {
-                        Ok(SExp::make_symbol(&sym))
-                    } else {
-                        Err(LispError::UndefinedSymbol { sym })
-                    }
-                }
-                Some(exp) => Ok(exp),
+                None => Err(LispError::UndefinedSymbol { sym }),
+                Some(exp) => exp.eval(ctx),
             },
             SExp::Atom(_) => Ok(self),
             SExp::Pair { box head, box tail } => {
@@ -308,16 +299,18 @@ impl SExp {
                     }
                     None => {
                         // handle everything else
-                        debug!("Evaluating normal list.");
-                        if let SExp::Null = tail {
-                            new_pair.apply(ctx)
-                        } else {
-                            SExp::Pair {
-                                head: box head.eval(ctx)?,
-                                tail: box tail.eval(ctx)?,
-                            }
-                            .apply(ctx)
-                        }
+                        debug!("Evaluating normal list: {}", new_pair);
+                        let evaluated = tail
+                            .into_iter()
+                            .map(|e| e.eval(ctx))
+                            .collect::<Result<Vec<_>, LispError>>()?
+                            .into_iter()
+                            .rev()
+                            .collect::<SExp>()
+                            .cons(head.eval(ctx)?);
+
+                        trace!("Applying operation: {}", evaluated);
+                        evaluated.apply(ctx)
                     }
                 }
             }
@@ -343,12 +336,14 @@ impl SExp {
                         } => {
                             debug!("Creating procedure.");
                             Some(Ok(SExp::Atom(Primitive::Procedure(Rc::new(move |args| {
+                                debug!("Formal parameters: {}", params);
                                 let bound_params = params
                                     .to_owned()
                                     .into_iter()
                                     .zip(args.into_iter())
                                     .map(|(p, a)| SExp::Null.cons(a).cons(p))
                                     .collect();
+                                debug!("Bound parameters: {}", bound_params);
                                 Ok(fn_body
                                     .to_owned()
                                     .cons(bound_params)
@@ -383,7 +378,10 @@ impl SExp {
                                 debug!("Defining a function with \"define\" syntax.");
                                 ctx.define(
                                     &sym,
-                                    defn.cons(fn_params).cons(SExp::make_symbol("lambda")),
+                                    SExp::Null
+                                        .cons(defn)
+                                        .cons(fn_params)
+                                        .cons(SExp::make_symbol("lambda")),
                                 );
                                 Some(Ok(SExp::Atom(Primitive::Undefined)))
                             }
@@ -581,6 +579,7 @@ impl SExp {
     }
 
     fn eval_quote(self) -> Self {
+        trace!("Evaluating 'quote' expression: {}", self);
         match self {
             SExp::Pair {
                 box head,
@@ -595,7 +594,7 @@ impl SExp {
             SExp::Null | SExp::Atom(_) => Ok(self),
             SExp::Pair { box head, box tail } => match head {
                 SExp::Atom(Primitive::Procedure(proc)) => {
-                    debug!("Applying a procedure.");
+                    trace!("Applying a procedure to the arguments {}", tail);
                     proc(tail)?.eval(ctx)
                 }
                 SExp::Atom(Primitive::Symbol(sym)) => Err(LispError::NotAProcedure {
@@ -630,7 +629,7 @@ impl SExp {
         }
     }
 
-    pub(super) fn cons(self, exp: Self) -> Self {
+    pub fn cons(self, exp: Self) -> Self {
         SExp::Pair {
             head: box exp,
             tail: box self,
