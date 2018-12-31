@@ -49,7 +49,7 @@ impl fmt::Display for SExp {
                             }
                         }
                         Ok(())
-                    },
+                    }
                 }
             }
         }
@@ -127,10 +127,9 @@ impl SExp {
             && code.chars().skip(1).all(utils::is_symbol_char)
         {
             debug!("Matched quoted symbol: {}", code);
-            Ok(SExp::Pair {
-                head: box SExp::make_symbol("quote"),
-                tail: box SExp::Atom(code[1..].parse::<Primitive>()?),
-            })
+            Ok(SExp::Null
+                .cons(SExp::Atom(code[1..].parse::<Primitive>()?))
+                .cons(SExp::make_symbol("quote")))
         } else if code.chars().all(utils::is_atom_char) {
             debug!("Matched atom: {}", code);
             Ok(SExp::Atom(code.parse::<Primitive>()?))
@@ -175,7 +174,8 @@ impl SExp {
                                 // }
                                 Some(idx2) => {
                                     debug!("Matched sub-list with length {} chars", idx2 + 1);
-                                    let (before, after) = list_str.split_at(list_str.len() - idx2 - 1);
+                                    let (before, after) =
+                                        list_str.split_at(list_str.len() - idx2 - 1);
                                     list_str = before.trim();
                                     list_out = SExp::Pair {
                                         head: box SExp::parse_str(after)?,
@@ -465,7 +465,7 @@ impl SExp {
                     "begin" => Some(tail.eval_begin(ctx)),
                     "if" => Some(tail.eval_if(ctx)),
                     "or" => Some(tail.eval_or(ctx)),
-                    "quote" => Some(Ok(tail)),
+                    "quote" => Some(Ok(tail.eval_quote())),
                     _ => None,
                 },
                 _ => None,
@@ -541,6 +541,16 @@ impl SExp {
             exp => Err(LispError::SyntaxError {
                 exp: exp.to_string(),
             }),
+        }
+    }
+
+    fn eval_quote(self) -> Self {
+        match self {
+            SExp::Pair {
+                box head,
+                tail: box SExp::Null,
+            } => head,
+            _ => self,
         }
     }
 

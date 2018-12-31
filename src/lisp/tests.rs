@@ -74,12 +74,11 @@ fn parse_mixed_type_list() {
 fn parse_quote_syntax() {
     do_parse_and_assert(
         "'(a b c d)",
-        Null.cons(SExp::make_symbol("quote")).cons(
-            Null.cons(SExp::make_symbol("d"))
-                .cons(SExp::make_symbol("c"))
-                .cons(SExp::make_symbol("b"))
-                .cons(SExp::make_symbol("a")),
-        ),
+        Null.cons(SExp::make_symbol("d"))
+            .cons(SExp::make_symbol("c"))
+            .cons(SExp::make_symbol("b"))
+            .cons(SExp::make_symbol("a"))
+            .cons(SExp::make_symbol("quote")),
     );
 
     do_parse_and_assert(
