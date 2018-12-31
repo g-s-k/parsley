@@ -1,3 +1,4 @@
+#![feature(box_patterns, box_syntax)]
 //! A Scheme parsing and evaluation framework.
 //!
 //! # Example

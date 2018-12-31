@@ -1,7 +1,7 @@
 #![cfg(test)]
 
 use super::as_atom::AsAtom;
-use super::SExp::{self, Atom, List, Null};
+use super::SExp::{self, Atom, Null};
 use super::*;
 
 fn do_parse_and_assert(test_val: &str, expected_val: SExp) {
@@ -16,7 +16,7 @@ fn parse_empty_list() {
 
 #[test]
 fn parse_list_of_lists() {
-    do_parse_and_assert("(() () ())", List(vec![Null, Null, Null]));
+    do_parse_and_assert("(() () ())", Null.cons(Null).cons(Null).cons(Null));
 }
 
 #[test]
@@ -28,15 +28,13 @@ fn parse_atom() {
 fn parse_list_of_atoms() {
     do_parse_and_assert(
         "(a bc de fgh ijk l mnop)",
-        List(vec![
-            SExp::make_symbol("a"),
-            SExp::make_symbol("bc"),
-            SExp::make_symbol("de"),
-            SExp::make_symbol("fgh"),
-            SExp::make_symbol("ijk"),
-            SExp::make_symbol("l"),
-            SExp::make_symbol("mnop"),
-        ]),
+        Null.cons(SExp::make_symbol("mnop"))
+            .cons(SExp::make_symbol("l"))
+            .cons(SExp::make_symbol("ijk"))
+            .cons(SExp::make_symbol("fgh"))
+            .cons(SExp::make_symbol("de"))
+            .cons(SExp::make_symbol("bc"))
+            .cons(SExp::make_symbol("a")),
     );
 }
 
@@ -60,17 +58,15 @@ fn parse_primitive_types() {
 fn parse_mixed_type_list() {
     do_parse_and_assert(
         "(0 #f () 33.5 \"xyz\" #\\? #t \"\" \"   \")",
-        List(vec![
-            0_f64.as_atom(),
-            false.as_atom(),
-            Null,
-            33.5.as_atom(),
-            "xyz".as_atom(),
-            '?'.as_atom(),
-            true.as_atom(),
-            "".as_atom(),
-            "   ".as_atom(),
-        ]),
+        Null.cons("   ".as_atom())
+            .cons("".as_atom())
+            .cons(true.as_atom())
+            .cons('?'.as_atom())
+            .cons("xyz".as_atom())
+            .cons(33.5.as_atom())
+            .cons(Null)
+            .cons(false.as_atom())
+            .cons(0_f64.as_atom()),
     );
 }
 
@@ -78,23 +74,18 @@ fn parse_mixed_type_list() {
 fn parse_quote_syntax() {
     do_parse_and_assert(
         "'(a b c d)",
-        List(vec![
-            SExp::make_symbol("quote"),
-            List(vec![
-                SExp::make_symbol("a"),
-                SExp::make_symbol("b"),
-                SExp::make_symbol("c"),
-                SExp::make_symbol("d"),
-            ]),
-        ]),
+        Null.cons(SExp::make_symbol("quote")).cons(
+            Null.cons(SExp::make_symbol("d"))
+                .cons(SExp::make_symbol("c"))
+                .cons(SExp::make_symbol("b"))
+                .cons(SExp::make_symbol("a")),
+        ),
     );
 
     do_parse_and_assert(
         "'potato",
-        List(vec![
-            SExp::make_symbol("quote"),
-            SExp::make_symbol("potato"),
-        ]),
+        Null.cons(SExp::make_symbol("potato"))
+            .cons(SExp::make_symbol("quote")),
     );
 }
 
@@ -105,7 +96,8 @@ fn eval_empty_list() {
 
     let mut ctx = Context::default();
     assert_eq!(
-        List(vec![SExp::make_symbol("quote"), Null])
+        Null.cons(Null)
+            .cons(SExp::make_symbol("quote"))
             .eval(&mut ctx)
             .unwrap(),
         Null
@@ -121,27 +113,26 @@ fn eval_atom() {
     assert!(sym().eval(&mut ctx).is_err());
 
     let mut ctx = Context::default();
-    assert_eq!(List(vec![quote(), sym()]).eval(&mut ctx).unwrap(), sym())
+    assert_eq!(
+        Null.cons(sym()).cons(quote()).eval(&mut ctx).unwrap(),
+        sym()
+    )
 }
 
 #[test]
 fn eval_list_quote() {
-    let test_list = vec![SExp::make_symbol("quote"), Null];
+    let test_list = Null.cons(Null).cons(SExp::make_symbol("quote"));
     let mut ctx = Context::default();
-    assert_eq!(
-        List(test_list.clone()).eval(&mut ctx).unwrap(),
-        test_list[1].clone()
-    );
+    assert_eq!(test_list.eval(&mut ctx).unwrap(), Null);
 
-    let test_list_2 = vec![
-        SExp::make_symbol("quote"),
-        List(vec![SExp::make_symbol("abc"), SExp::make_symbol("xyz")]),
-    ];
+    let test_list_2 = Null
+        .cons(SExp::make_symbol("xyz"))
+        .cons(SExp::make_symbol("abc"));
+    let test_again = Null
+        .cons(test_list_2.clone())
+        .cons(SExp::make_symbol("quote"));
     let mut ctx = Context::default();
-    assert_eq!(
-        List(test_list_2.clone()).eval(&mut ctx).unwrap(),
-        test_list_2[1].clone()
-    );
+    assert_eq!(test_again.eval(&mut ctx).unwrap(), test_list_2);
 }
 
 #[test]
@@ -151,7 +142,8 @@ fn eval_null_test() {
 
     let mut ctx = Context::base();
     assert_eq!(
-        List(vec![null(), List(vec![quote(), SExp::make_symbol("test")])])
+        Null.cons(Null.cons(SExp::make_symbol("test")).cons(quote()))
+            .cons(null())
             .eval(&mut ctx)
             .unwrap(),
         false.as_atom()
@@ -159,7 +151,8 @@ fn eval_null_test() {
 
     let mut ctx = Context::base();
     assert_eq!(
-        List(vec![null(), List(vec![quote(), Null])])
+        Null.cons(Null.cons(Null).cons(quote()))
+            .cons(null())
             .eval(&mut ctx)
             .unwrap(),
         true.as_atom()
@@ -167,10 +160,11 @@ fn eval_null_test() {
 
     let mut ctx = Context::base();
     assert_eq!(
-        List(vec![
-            null(),
-            List(vec![quote(), List(vec![false.as_atom(), Null])])
-        ])
+        Null.cons(
+            Null.cons(Null.cons(Null).cons(false.as_atom()))
+                .cons(quote())
+        )
+        .cons(null())
         .eval(&mut ctx)
         .unwrap(),
         false.as_atom()
@@ -184,27 +178,23 @@ fn eval_if() {
 
     let mut ctx = Context::default();
     assert_eq!(
-        List(vec![
-            SExp::make_symbol("if"),
-            true.as_atom(),
-            sym_1(),
-            sym_2()
-        ])
-        .eval(&mut ctx)
-        .unwrap(),
+        Null.cons(sym_2())
+            .cons(sym_1())
+            .cons(true.as_atom())
+            .cons(SExp::make_symbol("if"))
+            .eval(&mut ctx)
+            .unwrap(),
         sym_1()
     );
 
     let mut ctx = Context::default();
     assert_eq!(
-        List(vec![
-            SExp::make_symbol("if"),
-            false.as_atom(),
-            sym_1(),
-            sym_2()
-        ])
-        .eval(&mut ctx)
-        .unwrap(),
+        Null.cons(sym_2())
+            .cons(sym_1())
+            .cons(false.as_atom())
+            .cons(SExp::make_symbol("if"))
+            .eval(&mut ctx)
+            .unwrap(),
         sym_2()
     );
 }
@@ -212,45 +202,40 @@ fn eval_if() {
 #[test]
 fn eval_and() {
     let and = || SExp::make_symbol("and");
+    let t = || true.as_atom();
+    let f = || false.as_atom();
 
     let mut ctx = Context::default();
-    assert_eq!(List(vec![and()]).eval(&mut ctx).unwrap(), true.as_atom());
+    assert_eq!(Null.cons(and()).eval(&mut ctx).unwrap(), t());
 
     let mut ctx = Context::default();
     assert_eq!(
-        List(vec![and(), true.as_atom(), true.as_atom()])
-            .eval(&mut ctx)
-            .unwrap(),
-        true.as_atom()
+        Null.cons(t()).cons(t()).cons(and()).eval(&mut ctx).unwrap(),
+        t()
     );
 
     let mut ctx = Context::default();
     assert_eq!(
-        List(vec![and(), false.as_atom(), true.as_atom()])
-            .eval(&mut ctx)
-            .unwrap(),
-        false.as_atom()
+        Null.cons(t()).cons(f()).cons(and()).eval(&mut ctx).unwrap(),
+        f()
     );
 
     let mut ctx = Context::default();
     assert_eq!(
-        List(vec![and(), false.as_atom(), false.as_atom()])
-            .eval(&mut ctx)
-            .unwrap(),
-        false.as_atom()
+        Null.cons(f()).cons(f()).cons(and()).eval(&mut ctx).unwrap(),
+        f()
     );
 
     let mut ctx = Context::default();
     assert_eq!(
-        List(vec![and(), true.as_atom(), 3.0.as_atom()])
-            .eval(&mut ctx)
-            .unwrap(),
+        Null.cons(t()).cons(3.0.as_atom()).eval(&mut ctx).unwrap(),
         3.0.as_atom()
     );
 
     let mut ctx = Context::default();
     assert_eq!(
-        List(vec![and(), List(vec![SExp::make_symbol("quote"), Null])])
+        Null.cons(Null.cons(Null).cons(SExp::make_symbol("quote")))
+            .cons(and())
             .eval(&mut ctx)
             .unwrap(),
         Null
@@ -258,15 +243,13 @@ fn eval_and() {
 
     let mut ctx = Context::default();
     assert_eq!(
-        List(vec![
-            and(),
-            'a'.as_atom(),
-            'b'.as_atom(),
-            false.as_atom(),
-            'c'.as_atom()
-        ])
-        .eval(&mut ctx)
-        .unwrap(),
+        Null.cons('c'.as_atom())
+            .cons(false.as_atom())
+            .cons('b'.as_atom())
+            .cons('a'.as_atom())
+            .cons(and())
+            .eval(&mut ctx)
+            .unwrap(),
         false.as_atom()
     );
 }
@@ -274,37 +257,35 @@ fn eval_and() {
 #[test]
 fn eval_or() {
     let or = || SExp::make_symbol("or");
+    let t = || true.as_atom();
+    let f = || false.as_atom();
 
     let mut ctx = Context::default();
-    assert_eq!(List(vec![or()]).eval(&mut ctx).unwrap(), false.as_atom());
+    assert_eq!(Null.cons(or()).eval(&mut ctx).unwrap(), f());
 
     let mut ctx = Context::default();
     assert_eq!(
-        List(vec![or(), true.as_atom(), true.as_atom()])
-            .eval(&mut ctx)
-            .unwrap(),
-        true.as_atom()
+        Null.cons(t()).cons(t()).cons(or()).eval(&mut ctx).unwrap(),
+        t()
     );
 
     let mut ctx = Context::default();
     assert_eq!(
-        List(vec![or(), false.as_atom(), true.as_atom()])
-            .eval(&mut ctx)
-            .unwrap(),
-        true.as_atom()
+        Null.cons(t()).cons(f()).cons(or()).eval(&mut ctx).unwrap(),
+        t()
     );
 
     let mut ctx = Context::default();
     assert_eq!(
-        List(vec![or(), false.as_atom(), false.as_atom()])
-            .eval(&mut ctx)
-            .unwrap(),
-        false.as_atom()
+        Null.cons(f()).cons(f()).cons(or()).eval(&mut ctx).unwrap(),
+        f()
     );
 
     let mut ctx = Context::default();
     assert_eq!(
-        List(vec![or(), 3.0.as_atom(), true.as_atom()])
+        Null.cons(t())
+            .cons(3.0.as_atom())
+            .cons(or())
             .eval(&mut ctx)
             .unwrap(),
         3.0.as_atom()
@@ -312,7 +293,8 @@ fn eval_or() {
 
     let mut ctx = Context::default();
     assert_eq!(
-        List(vec![or(), List(vec![SExp::make_symbol("quote"), Null])])
+        Null.cons(Null.cons(Null).cons(SExp::make_symbol("quote")))
+            .cons(or())
             .eval(&mut ctx)
             .unwrap(),
         Null
@@ -320,15 +302,13 @@ fn eval_or() {
 
     let mut ctx = Context::default();
     assert_eq!(
-        List(vec![
-            or(),
-            false.as_atom(),
-            'a'.as_atom(),
-            'b'.as_atom(),
-            'c'.as_atom()
-        ])
-        .eval(&mut ctx)
-        .unwrap(),
+        Null.cons('c'.as_atom())
+            .cons('b'.as_atom())
+            .cons('a'.as_atom())
+            .cons(false.as_atom())
+            .cons(or())
+            .eval(&mut ctx)
+            .unwrap(),
         'a'.as_atom()
     );
 }
@@ -337,16 +317,19 @@ fn eval_or() {
 fn eval_cond() {
     let cond = || SExp::make_symbol("cond");
     let else_ = || SExp::make_symbol("else");
+    let t = || true.as_atom();
+    let f = || false.as_atom();
 
     let mut ctx = Context::default();
     assert_eq!(
-        List(vec![cond()]).eval(&mut ctx).unwrap(),
+        Null.cons(cond()).eval(&mut ctx).unwrap(),
         Atom(Primitive::Void)
     );
 
     let mut ctx = Context::default();
     assert_eq!(
-        List(vec![cond(), List(vec![else_(), 'a'.as_atom()])])
+        Null.cons(Null.cons('a'.as_atom()).cons(else_()))
+            .cons(cond())
             .eval(&mut ctx)
             .unwrap(),
         'a'.as_atom()
@@ -354,53 +337,45 @@ fn eval_cond() {
 
     let mut ctx = Context::default();
     assert_eq!(
-        List(vec![
-            cond(),
-            List(vec![true.as_atom(), 'b'.as_atom()]),
-            List(vec![else_(), 'a'.as_atom()])
-        ])
-        .eval(&mut ctx)
-        .unwrap(),
+        Null.cons(Null.cons('b'.as_atom()).cons(t()))
+            .cons(Null.cons('a'.as_atom()).cons(else_()))
+            .cons(cond())
+            .eval(&mut ctx)
+            .unwrap(),
         'b'.as_atom()
     );
 
     let mut ctx = Context::default();
     assert_eq!(
-        List(vec![
-            cond(),
-            List(vec![false.as_atom(), 'b'.as_atom()]),
-            List(vec![else_(), 'a'.as_atom()])
-        ])
-        .eval(&mut ctx)
-        .unwrap(),
+        Null.cons(Null.cons('b'.as_atom()).cons(f()))
+            .cons(Null.cons('a'.as_atom()).cons(else_()))
+            .cons(cond())
+            .eval(&mut ctx)
+            .unwrap(),
         'a'.as_atom()
     );
 
     let mut ctx = Context::default();
     assert_eq!(
-        List(vec![
-            cond(),
-            List(vec![false.as_atom(), 'c'.as_atom()]),
-            List(vec![true.as_atom(), 'b'.as_atom()]),
-            List(vec![true.as_atom(), 'd'.as_atom()]),
-            List(vec![else_(), 'a'.as_atom()])
-        ])
-        .eval(&mut ctx)
-        .unwrap(),
+        Null.cons(Null.cons('c'.as_atom()).cons(f()))
+            .cons(Null.cons('b'.as_atom()).cons(t()))
+            .cons(Null.cons('d'.as_atom()).cons(t()))
+            .cons(Null.cons('a'.as_atom()).cons(else_()))
+            .cons(cond())
+            .eval(&mut ctx)
+            .unwrap(),
         'b'.as_atom()
     );
 
     let mut ctx = Context::default();
     assert_eq!(
-        List(vec![
-            cond(),
-            List(vec![false.as_atom(), 'c'.as_atom()]),
-            List(vec![false.as_atom(), 'b'.as_atom()]),
-            List(vec![false.as_atom(), 'd'.as_atom()]),
-            List(vec![else_(), 'a'.as_atom()])
-        ])
-        .eval(&mut ctx)
-        .unwrap(),
+        Null.cons(Null.cons('c'.as_atom()).cons(f()))
+            .cons(Null.cons('b'.as_atom()).cons(f()))
+            .cons(Null.cons('d'.as_atom()).cons(f()))
+            .cons(Null.cons('a'.as_atom()).cons(else_()))
+            .cons(cond())
+            .eval(&mut ctx)
+            .unwrap(),
         'a'.as_atom()
     );
 }
@@ -410,11 +385,13 @@ fn eval_begin() {
     let begin = || SExp::make_symbol("begin");
 
     let mut ctx = Context::default();
-    assert!(List(vec![begin()]).eval(&mut ctx).is_err());
+    assert!(Null.cons(begin()).eval(&mut ctx).is_err());
 
     let mut ctx = Context::default();
     assert_eq!(
-        List(vec![begin(), 0_f64.as_atom(), 1_f64.as_atom()])
+        Null.cons(1_f64.as_atom())
+            .cons(0_f64.as_atom())
+            .cons(begin())
             .eval(&mut ctx)
             .unwrap(),
         1_f64.as_atom()
@@ -428,36 +405,32 @@ fn eval_let() {
     let let_ = || SExp::make_symbol("let");
 
     let mut ctx = Context::default();
-    assert!(List(vec![let_()]).eval(&mut ctx).is_err());
+    assert!(Null.cons(let_()).eval(&mut ctx).is_err());
 
     let mut ctx = Context::default();
-    assert!(List(vec![let_(), List(vec![])]).eval(&mut ctx).is_err());
+    assert!(Null.cons(Null).cons(let_()).eval(&mut ctx).is_err());
 
     let mut ctx = Context::default();
     assert_eq!(
-        List(vec![
-            let_(),
-            List(vec![List(vec![x(), 3_f64.as_atom()])]),
-            x()
-        ])
-        .eval(&mut ctx)
-        .unwrap(),
+        Null.cons(x())
+            .cons(Null.cons(Null.cons(3_f64.as_atom()).cons(x())))
+            .cons(let_())
+            .eval(&mut ctx)
+            .unwrap(),
         3_f64.as_atom()
     );
 
     let mut ctx = Context::default();
     assert_eq!(
-        List(vec![
-            let_(),
-            List(vec![
-                List(vec![x(), 3_f64.as_atom()]),
-                List(vec![y(), 5_f64.as_atom()])
-            ]),
-            x(),
-            y()
-        ])
-        .eval(&mut ctx)
-        .unwrap(),
+        Null.cons(y())
+            .cons(x())
+            .cons(
+                Null.cons(Null.cons(5_f64.as_atom()).cons(y()))
+                    .cons(Null.cons(3_f64.as_atom()).cons(x()))
+            )
+            .cons(let_())
+            .eval(&mut ctx)
+            .unwrap(),
         5_f64.as_atom()
     );
 }

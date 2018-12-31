@@ -5,7 +5,7 @@ use quicli::prelude::*;
 
 use super::as_atom::AsAtom;
 use super::Primitive::{Character, Number, Procedure, String as LispString, Undefined};
-use super::SExp::{self, Atom, List, Null};
+use super::SExp::{self, Atom, Null, Pair};
 use super::{LispError, LispResult};
 
 /// Evaluation context for LISP expressions.
@@ -133,25 +133,47 @@ impl Context {
 
         ret.define(
             "eq?",
-            Atom(Procedure(Rc::new(|v| Ok((v[0] == v[1]).as_atom())))),
+            Atom(Procedure(Rc::new(|e| match e {
+                Pair {
+                    head: box elem1,
+                    tail:
+                        box Pair {
+                            head: box elem2,
+                            tail: box Null,
+                        },
+                } => Ok((elem1 == elem2).as_atom()),
+                exp => Err(LispError::SyntaxError {
+                    exp: exp.to_string(),
+                }),
+            }))),
         );
         ret.define(
             "null?",
-            Atom(Procedure(Rc::new(|v| Ok((v[0] == Null).as_atom())))),
+            Atom(Procedure(Rc::new(|e| Ok((e == Null).as_atom())))),
         );
-        ret.define("null", SExp::Null);
+        ret.define("null", Null);
         ret.define(
             "cons",
-            Atom(Procedure(Rc::new(|v| {
-                Ok(SExp::cons(v[0].to_owned(), v[1].to_owned()))
+            Atom(Procedure(Rc::new(|e| match e {
+                Pair {
+                    head: box elem1,
+                    tail:
+                        box Pair {
+                            head: box elem2,
+                            tail: box Null,
+                        },
+                } => Ok(elem2.cons(elem1)),
+                exp => Err(LispError::SyntaxError {
+                    exp: exp.to_string(),
+                }),
             }))),
         );
-        ret.define("car", Atom(Procedure(Rc::new(|v| v[0].car()))));
-        ret.define("cdr", Atom(Procedure(Rc::new(|v| v[0].cdr()))));
+        ret.define("car", Atom(Procedure(Rc::new(|e| e.car()))));
+        ret.define("cdr", Atom(Procedure(Rc::new(|e| e.cdr()))));
         ret.define(
             "+",
             Atom(Procedure(Rc::new(|v| {
-                v.iter().fold(Ok(0_f64.as_atom()), |a, e| match e {
+                v.into_iter().fold(Ok(0_f64.as_atom()), |a, e| match e {
                     Atom(Number(n)) => {
                         if let Ok(Atom(Number(na))) = a {
                             Ok(Atom(Number(n + na)))
@@ -165,23 +187,33 @@ impl Context {
         );
         ret.define(
             "-",
-            Atom(Procedure(Rc::new(|v| {
-                v.iter().skip(1).fold(Ok(v[0].clone()), |a, e| match e {
-                    Atom(Number(n)) => {
-                        if let Ok(Atom(Number(na))) = a {
-                            Ok(Atom(Number(na - n)))
-                        } else {
-                            a
+            Atom(Procedure(Rc::new(|e| match e {
+                Null => Err(LispError::TypeError),
+                a @ Atom(_) => Err(LispError::NotAList {
+                    atom: a.to_string(),
+                }),
+                Pair {
+                    head: box Atom(Number(n)),
+                    tail,
+                } => {
+                    let mut state = n;
+
+                    for exp in tail.into_iter() {
+                        match exp {
+                            Atom(Number(n2)) => state -= n2,
+                            _ => return Err(LispError::TypeError),
                         }
                     }
-                    _ => Err(LispError::TypeError),
-                })
+
+                    Ok(Atom(Number(state)))
+                }
+                _ => Err(LispError::TypeError),
             }))),
         );
         ret.define(
             "*",
             Atom(Procedure(Rc::new(|v| {
-                v.iter().fold(Ok(1_f64.as_atom()), |a, e| match e {
+                v.into_iter().fold(Ok(1_f64.as_atom()), |a, e| match e {
                     Atom(Number(n)) => {
                         if let Ok(Atom(Number(na))) = a {
                             Ok(Atom(Number(n * na)))
@@ -195,63 +227,60 @@ impl Context {
         );
         ret.define(
             "/",
-            Atom(Procedure(Rc::new(|v| {
-                v.iter().skip(1).fold(Ok(v[0].clone()), |a, e| match e {
-                    Atom(Number(n)) => {
-                        if let Ok(Atom(Number(na))) = a {
-                            Ok(Atom(Number(na / n)))
-                        } else {
-                            a
+            Atom(Procedure(Rc::new(|e| match e {
+                Null => Err(LispError::TypeError),
+                a @ Atom(_) => Err(LispError::NotAList {
+                    atom: a.to_string(),
+                }),
+                Pair {
+                    head: box Atom(Number(n)),
+                    tail,
+                } => {
+                    let mut state = n;
+
+                    for exp in tail.into_iter() {
+                        match exp {
+                            Atom(Number(n2)) => state /= n2,
+                            _ => return Err(LispError::TypeError),
                         }
                     }
-                    _ => Err(LispError::TypeError),
-                })
+
+                    Ok(Atom(Number(state)))
+                }
+                _ => Err(LispError::TypeError),
             }))),
         );
         ret.define(
             "string->list",
-            Atom(Procedure(Rc::new(|v| match v.len() {
-                1 => match v[0] {
-                    Atom(LispString(ref s)) => {
-                        let mut elements = vec![SExp::make_symbol("quote")];
-                        elements.push(List(s.chars().map(|c| Atom(Character(c))).collect()));
-                        Ok(List(elements))
-                    }
-                    _ => Err(LispError::TypeError),
-                },
-                n_args => Err(LispError::TooManyArguments {
-                    n_args,
-                    right_num: 1,
-                }),
+            Atom(Procedure(Rc::new(|e| match e {
+                Pair {
+                    head: box Atom(LispString(s)),
+                    tail: box Null,
+                } => Ok(s.chars().map(|c| Atom(Character(c))).rev().collect()),
+                _ => Err(LispError::TypeError),
             }))),
         );
         ret.define(
             "list->string",
-            Atom(Procedure(Rc::new(|v| match v.len() {
-                1 => match v[0] {
-                    List(ref elems) => {
-                        match elems.iter().fold(Ok(String::new()), |s, e| match e {
-                            Atom(Character(ref c)) => {
-                                if let Ok(st) = s {
-                                    let mut stri = st;
-                                    stri.push(*c);
-                                    Ok(stri)
-                                } else {
-                                    s
-                                }
+            Atom(Procedure(Rc::new(|e| match e {
+                Pair { .. } => {
+                    match e.into_iter().fold(Ok(String::new()), |s, e| match e {
+                        Atom(Character(ref c)) => {
+                            if let Ok(st) = s {
+                                let mut stri = st;
+                                stri.push(*c);
+                                Ok(stri)
+                            } else {
+                                s
                             }
-                            _ => Err(LispError::TypeError),
-                        }) {
-                            Ok(s) => Ok(Atom(LispString(s))),
-                            Err(err) => Err(err),
                         }
+                        _ => Err(LispError::TypeError),
+                    }) {
+                        Ok(s) => Ok(Atom(LispString(s))),
+                        Err(err) => Err(err),
                     }
-                    _ => Err(LispError::TypeError),
-                },
-                n_args => Err(LispError::TooManyArguments {
-                    n_args,
-                    right_num: 1,
-                }),
+                }
+                _ => Err(LispError::TypeError),
             }))),
         );
 

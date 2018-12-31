@@ -16,10 +16,14 @@ pub fn is_symbol_char(c: char) -> bool {
         || c == '>')
 }
 
-pub fn find_closing_delim(s: &str, d_plus: char, d_minus: char) -> Option<usize> {
+pub fn find_closing_delim(
+    s: impl Iterator<Item = char>,
+    d_plus: char,
+    d_minus: char,
+) -> Option<usize> {
     let mut depth = 0;
 
-    for (idx, c) in s.chars().enumerate() {
+    for (idx, c) in s.enumerate() {
         if d_plus == d_minus {
             if c == d_plus {
                 depth = !depth;

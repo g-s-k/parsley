@@ -13,7 +13,7 @@ pub enum Primitive {
     Number(f64),
     String(String),
     Symbol(String),
-    Procedure(Rc<dyn Fn(&[SExp]) -> LispResult>),
+    Procedure(Rc<dyn Fn(SExp) -> LispResult>),
 }
 
 impl PartialEq for Primitive {
@@ -122,7 +122,7 @@ impl FromStr for Primitive {
         }
 
         if s.starts_with('"') && s.ends_with('"') {
-            match utils::find_closing_delim(s, '"', '"') {
+            match utils::find_closing_delim(s.chars(), '"', '"') {
                 Some(idx) if idx + 1 == s.len() => {
                     return Ok(Primitive::String(s.get(1..idx).unwrap().to_string()));
                 }
