@@ -198,6 +198,24 @@ impl SExp {
                             //     break;
                             // }
 
+                            if list_str.ends_with('"') {
+                                match list_str.chars().rev().skip(1).position(|e| e == '"') {
+                                    Some(idx2) => {
+                                        debug!("Matched string with length {} chars", idx2);
+                                        let (rest, last) =
+                                            list_str.split_at(list_str.len() - 2 - idx2);
+                                        list_out =
+                                            list_out.cons(SExp::Atom(last.parse::<Primitive>()?));
+                                        list_str = rest.trim();
+                                    }
+                                    None => {
+                                        return Err(LispError::SyntaxError {
+                                            exp: list_str.to_string(),
+                                        });
+                                    }
+                                }
+                            }
+
                             match list_str.chars().rev().position(|c| !utils::is_atom_char(c)) {
                                 Some(idx3) => {
                                     debug!(
@@ -270,7 +288,13 @@ impl SExp {
         match self {
             SExp::Null => Err(LispError::NullList),
             SExp::Atom(Primitive::Symbol(sym)) => match ctx.get(&sym) {
-                None => Err(LispError::UndefinedSymbol { sym }),
+                None => {
+                    if sym == "quote" {
+                        Ok(SExp::make_symbol(&sym))
+                    } else {
+                        Err(LispError::UndefinedSymbol { sym })
+                    }
+                }
                 Some(exp) => Ok(exp),
             },
             SExp::Atom(_) => Ok(self),
