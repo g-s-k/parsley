@@ -92,13 +92,13 @@ impl fmt::Display for Primitive {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Primitive::Void => write!(f, "#<void>"),
-            Primitive::Undefined => write!(f, "#<undefined>"),
+            Primitive::Undefined => write!(f, ""),
             Primitive::Boolean(b) => write!(f, "{}", if *b { "#t" } else { "#f" }),
             Primitive::Character(c) => write!(f, "#\\{}", c),
             Primitive::Number(n) => write!(f, "{}", n),
             Primitive::String(s) => write!(f, "\"{}\"", s),
             Primitive::Symbol(s) => write!(f, "{}", s),
-            Primitive::Procedure(_) => write!(f, "#<native code>"),
+            Primitive::Procedure(_) => write!(f, "#<procedure>"),
         }
     }
 }

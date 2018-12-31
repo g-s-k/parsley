@@ -94,8 +94,9 @@ impl SExp {
             } => match head2 {
                 Atom(Primitive::Symbol(sym)) => {
                     debug!("Defining a quanitity with symbol {}", &sym);
-                    ctx.define(&sym, defn.clone());
-                    Ok(defn)
+                    let ev_defn = defn.eval(ctx)?;
+                    ctx.define(&sym, ev_defn);
+                    Ok(Atom(Primitive::Undefined))
                 }
                 Pair {
                     head: box Atom(Primitive::Symbol(sym)),

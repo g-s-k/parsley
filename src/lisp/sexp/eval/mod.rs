@@ -49,6 +49,7 @@ impl SExp {
                 match new_pair.clone().eval_special_form(ctx) {
                     Some(result) => {
                         debug!("Special form finished evaluating.");
+                        trace!("Result of special form eval: {:?}", result);
                         result
                     }
                     None => {

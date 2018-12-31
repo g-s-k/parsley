@@ -3,7 +3,7 @@
 //!
 //! # Example
 //! ```
-//! use parsley::{Context, SExp};
+//! use parsley::prelude::*;
 //! let mut ctx = Context::base();
 //!
 //! let expr = "(null? '())";
@@ -41,3 +41,8 @@ extern crate log;
 mod lisp;
 
 pub use self::lisp::*;
+
+/// Quick access to the important stuff.
+pub mod prelude {
+    pub use super::{Context, LispError, SExp};
+}

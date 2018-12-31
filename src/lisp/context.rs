@@ -135,6 +135,7 @@ impl Context {
     pub fn base() -> Self {
         let mut ret = Self::default();
 
+        // The basics
         ret.define(
             "eq?",
             Atom(Procedure(Rc::new(|e| match e {
@@ -184,8 +185,70 @@ impl Context {
                 }),
             }))),
         );
-        ret.define("car", Atom(Procedure(Rc::new(|e| e.car()))));
-        ret.define("cdr", Atom(Procedure(Rc::new(|e| e.cdr()))));
+        ret.define("car", Atom(Procedure(Rc::new(|e| match e {
+            Pair {
+                box head,
+                ..
+            } => head.car(),
+            _ => Err(LispError::TypeError)
+        }))));
+        ret.define("cdr", Atom(Procedure(Rc::new(|e| match e {
+            Pair {
+                box head,
+                ..
+            } => head.cdr(),
+            _ => Err(LispError::TypeError)
+        }))));
+
+        // Numerics
+        ret.define(
+            "=",
+            Atom(Procedure(Rc::new(|e| match e {
+                Pair {
+                    head: box Atom(Number(n1)),
+                    tail:
+                    box Pair {
+                        head: box Atom(Number(n2)),
+                        tail: box Null,
+                    },
+                } => Ok((n1 == n2).as_atom()),
+                exp => Err(LispError::SyntaxError {
+                    exp: exp.to_string(),
+                }),
+            }))),
+        );
+        ret.define(
+            "<",
+            Atom(Procedure(Rc::new(|e| match e {
+                Pair {
+                    head: box Atom(Number(n1)),
+                    tail:
+                    box Pair {
+                        head: box Atom(Number(n2)),
+                        tail: box Null,
+                    },
+                } => Ok((n1 < n2).as_atom()),
+                exp => Err(LispError::SyntaxError {
+                    exp: exp.to_string(),
+                }),
+            }))),
+        );
+        ret.define(
+            ">",
+            Atom(Procedure(Rc::new(|e| match e {
+                Pair {
+                    head: box Atom(Number(n1)),
+                    tail:
+                    box Pair {
+                        head: box Atom(Number(n2)),
+                        tail: box Null,
+                    },
+                } => Ok((n1 > n2).as_atom()),
+                exp => Err(LispError::SyntaxError {
+                    exp: exp.to_string(),
+                }),
+            }))),
+        );
         ret.define(
             "+",
             Atom(Procedure(Rc::new(|v| {
@@ -266,6 +329,8 @@ impl Context {
                 _ => Err(LispError::TypeError),
             }))),
         );
+
+        // Strings
         ret.define(
             "string->list",
             Atom(Procedure(Rc::new(|e| match e {

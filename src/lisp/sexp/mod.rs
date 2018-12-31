@@ -50,6 +50,7 @@ impl SExp {
     }
 
     pub(super) fn car(&self) -> LispResult {
+        trace!("Getting the car of {}", self);
         match self {
             Null => Err(LispError::NullList),
             Atom(_) => Err(LispError::NotAList {
@@ -60,6 +61,7 @@ impl SExp {
     }
 
     pub(super) fn cdr(&self) -> LispResult {
+        trace!("Getting the cdr of {}", self);
         match self {
             Null => Err(LispError::NullList),
             Atom(_) => Err(LispError::NotAList {
