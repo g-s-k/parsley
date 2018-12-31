@@ -1,6 +1,6 @@
 [package]
 name = "parsley"
-version = "0.2.2"
+version = "0.3.0"
 authors = ["George Kaplan <george@georgekaplan.xyz>"]
 edition = "2018"
 description = "An implementation of Scheme"
@@ -21,4 +21,5 @@ failure = "0.1"
 failure_derive = "0.1"
 log = "0.4"
 quicli = "0.4"
+rustyline = "3.0"
 structopt = "0.2"

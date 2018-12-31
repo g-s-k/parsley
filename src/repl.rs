@@ -1,8 +1,6 @@
-use std::io::{self, Write};
+use rustyline::{error, Editor};
 
-use quicli::prelude::*;
-
-use parsley::{Context, SExp};
+use parsley::prelude::*;
 
 const LIB_VERSION: &str = env!("CARGO_PKG_VERSION");
 const REPL_WELCOME_BORDER: &str =
@@ -15,10 +13,8 @@ The following special commands are available:
 .exit     end interactive session
 "#;
 
-pub fn repl(ctx: &mut Context) -> io::Result<usize> {
+pub fn repl(ctx: &mut Context) -> Result<String, error::ReadlineError> {
     info!("Initializing REPL.");
-
-    let mut buffer = String::new();
 
     print!(
         "\n{0}\n'(){1:^72}'()\n'(){2:^72}'()\n{0}\n\n",
@@ -27,21 +23,17 @@ pub fn repl(ctx: &mut Context) -> io::Result<usize> {
         "Enter `.help` to list special commands."
     );
 
+    let mut rl = Editor::<()>::new();
+
     loop {
-        // write prompt and ensure it actually prints
-        print!("{}", REPL_PROMPT);
-        io::stdout().flush()?;
+        let readline = rl.readline(REPL_PROMPT);
 
-        match io::stdin().read_line(&mut buffer) {
-            Ok(n) => {
-                // check for empty line
-                if n < 2 {
-                    continue;
-                }
-
-                // check for special commands
-                match buffer.trim() {
-                    ".exit" => break Ok(0),
+        match readline {
+            Ok(line) => {
+                // check for empty line/special commands
+                match line.trim() {
+                    "" => continue,
+                    ".exit" => break Ok(line),
                     ".clear" => {
                         ctx.pop();
                     }
@@ -57,8 +49,7 @@ pub fn repl(ctx: &mut Context) -> io::Result<usize> {
                     },
                 }
             }
-            error => break error,
+            Err(error) => break Err(error),
         }
-        buffer.clear();
     }
 }

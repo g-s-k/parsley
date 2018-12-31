@@ -1,5 +1,8 @@
+#[macro_use]
+extern crate log;
 extern crate parsley;
 extern crate quicli;
+extern crate rustyline;
 extern crate structopt;
 
 use std::io::{self, Read};
