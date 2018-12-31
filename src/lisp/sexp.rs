@@ -32,14 +32,24 @@ pub enum SExp {
 impl fmt::Display for SExp {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            SExp::Null => write!(f, "()",),
+            SExp::Null => write!(f, "'()",),
             SExp::Atom(a) => write!(f, "{}", a),
             SExp::Pair { box head, box tail } => {
-                write!(f, "({}", head)?;
+                write!(f, "'({}", head)?;
                 match tail {
                     SExp::Null => write!(f, ")"),
                     SExp::Atom(a) => write!(f, " . {})", a),
-                    pair => write!(f, "{}", pair),
+                    pair => {
+                        let mut it = pair.to_owned().into_iter().peekable();
+                        while let Some(element) = it.next() {
+                            if it.peek().is_some() {
+                                write!(f, " {}", element)?;
+                            } else {
+                                write!(f, " {})", element)?;
+                            }
+                        }
+                        Ok(())
+                    },
                 }
             }
         }
@@ -165,7 +175,7 @@ impl SExp {
                                 // }
                                 Some(idx2) => {
                                     debug!("Matched sub-list with length {} chars", idx2 + 1);
-                                    let (before, after) = list_str.split_at(list_str.len() - idx2);
+                                    let (before, after) = list_str.split_at(list_str.len() - idx2 - 1);
                                     list_str = before.trim();
                                     list_out = SExp::Pair {
                                         head: box SExp::parse_str(after)?,
