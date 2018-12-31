@@ -1,5 +1,6 @@
 use super::{Primitive, SExp};
 
+/// A straightforward way to get each kind of primitive.
 pub trait AsAtom {
     fn as_atom(&self) -> SExp;
 }

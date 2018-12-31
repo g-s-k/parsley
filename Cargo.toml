@@ -19,5 +19,6 @@ path = "src/main.rs"
 [dependencies]
 failure = "0.1"
 failure_derive = "0.1"
+log = "0.4"
 quicli = "0.4"
 structopt = "0.2"

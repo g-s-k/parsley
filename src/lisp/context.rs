@@ -1,8 +1,6 @@
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use quicli::prelude::*;
-
 use super::as_atom::AsAtom;
 use super::Primitive::{Character, Number, Procedure, String as LispString, Undefined};
 use super::SExp::{self, Atom, Null, Pair};
