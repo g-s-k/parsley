@@ -1,5 +1,4 @@
 use parsley::prelude::*;
-use parsley::AsAtom;
 
 // Exercise 1.1
 #[test]
@@ -44,7 +43,7 @@ fn sicp_1_2() {
 
     let parsed: SExp = code.parse().unwrap();
     let evaluated = parsed.eval(&mut ctx).unwrap();
-    assert_eq!(evaluated, answer.as_atom());
+    assert_eq!(evaluated, SExp::from(answer));
 }
 
 // Exercise 1.3
@@ -79,7 +78,7 @@ fn sicp_1_3() {
 
     let parsed: SExp = invocation.parse().unwrap();
     let evaluated = parsed.eval(&mut ctx).unwrap();
-    assert_eq!(evaluated, answer.as_atom());
+    assert_eq!(evaluated, SExp::from(answer));
 }
 
 // Exercise 1.4
@@ -93,13 +92,13 @@ fn sicp_1_4() {
     let invoc_1 = "(a-plus-abs-b 3 5)";
     assert_eq!(
         invoc_1.parse::<SExp>().unwrap().eval(&mut ctx).unwrap(),
-        8.0.as_atom()
+        SExp::from(8)
     );
 
     let invoc_2 = "(a-plus-abs-b 3 -72.6)";
     assert_eq!(
         invoc_2.parse::<SExp>().unwrap().eval(&mut ctx).unwrap(),
-        75.6.as_atom()
+        SExp::from(75.6)
     );
 }
 
@@ -125,17 +124,17 @@ fn sicp_1_10() {
     let invoc_1 = "(A 1 10)";
     assert_eq!(
         invoc_1.parse::<SExp>().unwrap().eval(&mut ctx).unwrap(),
-        1024.0.as_atom()
+        SExp::from(1024)
     );
     let invoc_2 = "(A 2 4)";
     assert_eq!(
         invoc_2.parse::<SExp>().unwrap().eval(&mut ctx).unwrap(),
-        65536.0.as_atom()
+        SExp::from(65536)
     );
     let invoc_3 = "(A 3 3)";
     assert_eq!(
         invoc_3.parse::<SExp>().unwrap().eval(&mut ctx).unwrap(),
-        65536.0.as_atom()
+        SExp::from(65536)
     );
 }
 

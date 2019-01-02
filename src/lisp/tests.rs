@@ -1,6 +1,5 @@
 #![cfg(test)]
 
-use super::as_atom::AsAtom;
 use super::SExp::{self, Atom, Null, Pair};
 use super::*;
 
@@ -40,17 +39,17 @@ fn parse_list_of_atoms() {
 
 #[test]
 fn parse_primitive_types() {
-    do_parse_and_assert("#f", false.as_atom());
-    do_parse_and_assert("#t", true.as_atom());
-    do_parse_and_assert("0", 0_f64.as_atom());
-    do_parse_and_assert("2.0", 2.0.as_atom());
-    do_parse_and_assert("inf", std::f64::INFINITY.as_atom());
-    do_parse_and_assert("-inf", std::f64::NEG_INFINITY.as_atom());
-    do_parse_and_assert("#\\c", 'c'.as_atom());
-    do_parse_and_assert("#\\'", '\''.as_atom());
+    do_parse_and_assert("#f", SExp::from(false));
+    do_parse_and_assert("#t", SExp::from(true));
+    do_parse_and_assert("0", SExp::from(0));
+    do_parse_and_assert("2.0", SExp::from(2));
+    do_parse_and_assert("inf", SExp::from(std::f64::INFINITY));
+    do_parse_and_assert("-inf", SExp::from(std::f64::NEG_INFINITY));
+    do_parse_and_assert("#\\c", SExp::from('c'));
+    do_parse_and_assert("#\\'", SExp::from('\''));
     do_parse_and_assert(
         r#""test string with spaces""#,
-        "test string with spaces".as_atom(),
+        SExp::from("test string with spaces"),
     );
 }
 
@@ -58,15 +57,15 @@ fn parse_primitive_types() {
 fn parse_mixed_type_list() {
     do_parse_and_assert(
         "(0 #f () 33.5 \"xyz\" #\\? #t \"\" \"   \")",
-        Null.cons("   ".as_atom())
-            .cons("".as_atom())
-            .cons(true.as_atom())
-            .cons('?'.as_atom())
-            .cons("xyz".as_atom())
-            .cons(33.5.as_atom())
+        Null.cons(SExp::from("   "))
+            .cons(SExp::from(""))
+            .cons(SExp::from(true))
+            .cons(SExp::from('?'))
+            .cons(SExp::from("xyz"))
+            .cons(SExp::from(33.5))
             .cons(Null)
-            .cons(false.as_atom())
-            .cons(0_f64.as_atom()),
+            .cons(SExp::from(false))
+            .cons(SExp::from(0)),
     );
 }
 
@@ -145,7 +144,7 @@ fn eval_null_test() {
             .cons(null())
             .eval(&mut ctx)
             .unwrap(),
-        false.as_atom()
+        SExp::from(false)
     );
 
     let mut ctx = Context::base();
@@ -154,27 +153,27 @@ fn eval_null_test() {
             .cons(null())
             .eval(&mut ctx)
             .unwrap(),
-        true.as_atom()
+        SExp::from(true)
     );
 
     let mut ctx = Context::base();
     assert_eq!(
         Null.cons(
-            Null.cons(Null.cons(Null).cons(false.as_atom()))
+            Null.cons(Null.cons(Null).cons(SExp::from(false)))
                 .cons(quote())
         )
         .cons(null())
         .eval(&mut ctx)
         .unwrap(),
-        false.as_atom()
+        SExp::from(false)
     );
 }
 
 #[test]
 fn eval_cons() {
     let cons = || SExp::make_symbol("cons");
-    let item_1 = || 5.0.as_atom();
-    let item_2 = || "abc".as_atom();
+    let item_1 = || SExp::from(5.0);
+    let item_2 = || SExp::from("abc");
     let item_3 = || SExp::make_symbol("null");
 
     // sanity check
@@ -219,14 +218,14 @@ fn eval_cons() {
 
 #[test]
 fn eval_if() {
-    let sym_1 = || "one".as_atom();
-    let sym_2 = || "two".as_atom();
+    let sym_1 = || SExp::from("one");
+    let sym_2 = || SExp::from("two");
 
     let mut ctx = Context::default();
     assert_eq!(
         Null.cons(sym_2())
             .cons(sym_1())
-            .cons(true.as_atom())
+            .cons(SExp::from(true))
             .cons(SExp::make_symbol("if"))
             .eval(&mut ctx)
             .unwrap(),
@@ -237,7 +236,7 @@ fn eval_if() {
     assert_eq!(
         Null.cons(sym_2())
             .cons(sym_1())
-            .cons(false.as_atom())
+            .cons(SExp::from(false))
             .cons(SExp::make_symbol("if"))
             .eval(&mut ctx)
             .unwrap(),
@@ -248,8 +247,8 @@ fn eval_if() {
 #[test]
 fn eval_and() {
     let and = || SExp::make_symbol("and");
-    let t = || true.as_atom();
-    let f = || false.as_atom();
+    let t = || SExp::from(true);
+    let f = || SExp::from(false);
 
     let mut ctx = Context::default();
     assert_eq!(Null.cons(and()).eval(&mut ctx).unwrap(), t());
@@ -274,12 +273,12 @@ fn eval_and() {
 
     let mut ctx = Context::default();
     assert_eq!(
-        Null.cons(3.0.as_atom())
+        SExp::from((3,))
             .cons(t())
             .cons(and())
             .eval(&mut ctx)
             .unwrap(),
-        3.0.as_atom()
+        SExp::from(3.0)
     );
 
     let mut ctx = Context::default();
@@ -293,22 +292,18 @@ fn eval_and() {
 
     let mut ctx = Context::default();
     assert_eq!(
-        Null.cons('c'.as_atom())
-            .cons(false.as_atom())
-            .cons('b'.as_atom())
-            .cons('a'.as_atom())
-            .cons(and())
+        SExp::from((and(), ('a', ('b', (false, ('c',))))))
             .eval(&mut ctx)
             .unwrap(),
-        false.as_atom()
+        SExp::from(false)
     );
 }
 
 #[test]
 fn eval_or() {
     let or = || SExp::make_symbol("or");
-    let t = || true.as_atom();
-    let f = || false.as_atom();
+    let t = || SExp::from(true);
+    let f = || SExp::from(false);
 
     let mut ctx = Context::default();
     assert_eq!(Null.cons(or()).eval(&mut ctx).unwrap(), f());
@@ -333,12 +328,10 @@ fn eval_or() {
 
     let mut ctx = Context::default();
     assert_eq!(
-        Null.cons(t())
-            .cons(3.0.as_atom())
-            .cons(or())
+        SExp::from((or(), (3, (t(),))))
             .eval(&mut ctx)
             .unwrap(),
-        3.0.as_atom()
+        SExp::from(3)
     );
 
     let mut ctx = Context::default();
@@ -352,14 +345,10 @@ fn eval_or() {
 
     let mut ctx = Context::default();
     assert_eq!(
-        Null.cons('c'.as_atom())
-            .cons('b'.as_atom())
-            .cons('a'.as_atom())
-            .cons(false.as_atom())
-            .cons(or())
+        SExp::from((or(), (false, ('a', ('b', ('c',))))))
             .eval(&mut ctx)
             .unwrap(),
-        'a'.as_atom()
+        SExp::from('a')
     );
 }
 
@@ -367,8 +356,8 @@ fn eval_or() {
 fn eval_cond() {
     let cond = || SExp::make_symbol("cond");
     let else_ = || SExp::make_symbol("else");
-    let t = || true.as_atom();
-    let f = || false.as_atom();
+    let t = || SExp::from(true);
+    let f = || SExp::from(false);
 
     let mut ctx = Context::default();
     assert_eq!(
@@ -378,55 +367,54 @@ fn eval_cond() {
 
     let mut ctx = Context::default();
     assert_eq!(
-        Null.cons(Null.cons('a'.as_atom()).cons(else_()))
-            .cons(cond())
+        SExp::from((cond(), ((else_(), ('a',)),)))
             .eval(&mut ctx)
             .unwrap(),
-        'a'.as_atom()
+        SExp::from('a')
     );
 
     let mut ctx = Context::default();
     assert_eq!(
-        Null.cons(Null.cons('a'.as_atom()).cons(else_()))
-            .cons(Null.cons('b'.as_atom()).cons(t()))
+        Null.cons(SExp::from(('a',)).cons(else_()))
+            .cons(SExp::from(('b',)).cons(t()))
             .cons(cond())
             .eval(&mut ctx)
             .unwrap(),
-        'b'.as_atom()
+        SExp::from('b')
     );
 
     let mut ctx = Context::default();
     assert_eq!(
-        Null.cons(Null.cons('b'.as_atom()).cons(f()))
-            .cons(Null.cons('a'.as_atom()).cons(else_()))
+        Null.cons(SExp::from(('a',)).cons(else_()))
+            .cons(SExp::from(('b',)).cons(f()))
             .cons(cond())
             .eval(&mut ctx)
             .unwrap(),
-        'a'.as_atom()
+        SExp::from('a')
     );
 
     let mut ctx = Context::default();
     assert_eq!(
-        Null.cons(Null.cons('a'.as_atom()).cons(else_()))
-            .cons(Null.cons('d'.as_atom()).cons(t()))
-            .cons(Null.cons('b'.as_atom()).cons(t()))
-            .cons(Null.cons('c'.as_atom()).cons(f()))
+        Null.cons(SExp::from(('a',)).cons(else_()))
+            .cons(SExp::from(('d',)).cons(t()))
+            .cons(SExp::from(('b',)).cons(t()))
+            .cons(SExp::from(('c',)).cons(f()))
             .cons(cond())
             .eval(&mut ctx)
             .unwrap(),
-        'b'.as_atom()
+        SExp::from('b')
     );
 
     let mut ctx = Context::default();
     assert_eq!(
-        Null.cons(Null.cons('a'.as_atom()).cons(else_()))
-            .cons(Null.cons('d'.as_atom()).cons(f()))
-            .cons(Null.cons('b'.as_atom()).cons(f()))
-            .cons(Null.cons('c'.as_atom()).cons(f()))
+        Null.cons(SExp::from(('a',)).cons(else_()))
+            .cons(SExp::from(('d',)).cons(f()))
+            .cons(SExp::from(('b',)).cons(f()))
+            .cons(SExp::from(('c',)).cons(f()))
             .cons(cond())
             .eval(&mut ctx)
             .unwrap(),
-        'a'.as_atom()
+        SExp::from('a')
     );
 }
 
@@ -439,12 +427,10 @@ fn eval_begin() {
 
     let mut ctx = Context::default();
     assert_eq!(
-        Null.cons(1_f64.as_atom())
-            .cons(0_f64.as_atom())
-            .cons(begin())
+        SExp::from((begin(), (0, (1,))))
             .eval(&mut ctx)
             .unwrap(),
-        1_f64.as_atom()
+        SExp::from(1)
     )
 }
 
@@ -463,11 +449,11 @@ fn eval_let() {
     let mut ctx = Context::default();
     assert_eq!(
         Null.cons(x())
-            .cons(Null.cons(Null.cons(3_f64.as_atom()).cons(x())))
+            .cons(Null.cons(SExp::from((3_f64,)).cons(x())))
             .cons(let_())
             .eval(&mut ctx)
             .unwrap(),
-        3_f64.as_atom()
+        SExp::from(3)
     );
 
     let mut ctx = Context::default();
@@ -475,12 +461,12 @@ fn eval_let() {
         Null.cons(y())
             .cons(x())
             .cons(
-                Null.cons(Null.cons(5_f64.as_atom()).cons(y()))
-                    .cons(Null.cons(3_f64.as_atom()).cons(x()))
+                Null.cons(SExp::from((5_f64,)).cons(y()))
+                    .cons(SExp::from((3_f64,)).cons(x()))
             )
             .cons(let_())
             .eval(&mut ctx)
             .unwrap(),
-        5_f64.as_atom()
+        SExp::from(5)
     );
 }
