@@ -43,51 +43,44 @@ impl SExp {
                 Some(exp) => exp.eval(ctx),
             },
             Atom(_) => Ok(self),
-            Pair { box head, box tail } => {
-                // handle special functions
-                let new_pair = tail.to_owned().cons(head.to_owned());
-                match new_pair.clone().eval_special_form(ctx) {
-                    Some(result) => {
-                        debug!("Special form finished evaluating.");
-                        trace!("Result of special form eval: {:?}", result);
-                        result
-                    }
-                    None => {
-                        // handle everything else
-                        debug!("Evaluating normal list: {}", new_pair);
-                        let evaluated = new_pair
-                            .into_iter()
-                            .inspect(|e| trace!("Evaluating list member {}", e))
-                            .map(|e| e.eval(ctx))
-                            .collect::<Result<SExp, LispError>>()?;
-
-                        trace!("Applying operation: {}", evaluated);
-                        evaluated.apply(ctx)
-                    }
-                }
-            }
+            Pair { .. } => self.eval_pair(ctx),
         }
     }
 
-    fn eval_special_form(self, ctx: &mut Context) -> Option<LispResult> {
+    fn eval_pair(self, ctx: &mut Context) -> LispResult {
         match self {
-            Pair {
-                head: box Atom(Primitive::Symbol(sym)),
-                box tail,
-            } => match sym.as_ref() {
-                "and" => Some(tail.eval_and(ctx)),
-                "begin" => Some(tail.eval_begin(ctx)),
-                "cond" => Some(tail.eval_cond(ctx)),
-                "define" => Some(tail.eval_define(ctx)),
-                "if" => Some(tail.eval_if(ctx)),
-                "lambda" => Some(tail.eval_lambda()),
-                "let" => Some(tail.eval_let(ctx)),
-                "or" => Some(tail.eval_or(ctx)),
-                "quote" => Some(Ok(tail.eval_quote())),
-                "set!" => Some(tail.eval_set(ctx)),
-                _ => None,
-            },
-            _ => None,
+            Pair { head, tail } => {
+                if let Atom(Primitive::Symbol(sym)) = *head {
+                    match sym.as_ref() {
+                        "and" => tail.eval_and(ctx),
+                        "begin" => tail.eval_begin(ctx),
+                        "cond" => tail.eval_cond(ctx),
+                        "define" => tail.eval_define(ctx),
+                        "if" => tail.eval_if(ctx),
+                        "lambda" => tail.eval_lambda(),
+                        "let" => tail.eval_let(ctx),
+                        "or" => tail.eval_or(ctx),
+                        "quote" => Ok(tail.eval_quote()),
+                        "set!" => tail.eval_set(ctx),
+                        _ => tail.cons(SExp::make_symbol(&sym)).eval_typical_pair(ctx),
+                    }
+                } else {
+                    tail.cons(*head).eval_typical_pair(ctx)
+                }
+            }
+            _ => self.eval_typical_pair(ctx),
         }
+    }
+
+    fn eval_typical_pair(self, ctx: &mut Context) -> LispResult {
+        debug!("Evaluating normal list: {}", self);
+        let evaluated = self
+            .into_iter()
+            .inspect(|e| trace!("Evaluating list member {}", e))
+            .map(|e| e.eval(ctx))
+            .collect::<Result<SExp, LispError>>()?;
+
+        trace!("Applying operation: {}", evaluated);
+        evaluated.apply(ctx)
     }
 }

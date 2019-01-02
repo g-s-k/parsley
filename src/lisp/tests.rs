@@ -181,8 +181,8 @@ fn eval_cons() {
     assert_eq!(
         Null.cons(item_1()),
         Pair {
-            head: box item_1(),
-            tail: box Null
+            head: Box::new(item_1()),
+            tail: Box::new(Null)
         }
     );
 

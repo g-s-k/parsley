@@ -44,15 +44,15 @@ impl SExp {
         for case in self {
             match case {
                 Pair {
-                    head: box predicate,
+                    head: predicate,
                     tail:
                         box Pair {
-                            head: box consequent,
+                            head: consequent,
                             tail: box Null,
                         },
                 } => {
                     // TODO: check if `else` clause is actually last
-                    if predicate == else_ {
+                    if *predicate == else_ {
                         return consequent.eval(ctx);
                     }
 
@@ -85,13 +85,13 @@ impl SExp {
                 atom: a.to_string(),
             }),
             Pair {
-                head: box head2,
+                head: head2,
                 tail:
                     box Pair {
-                        head: box defn,
+                        head: defn,
                         tail: box Null,
                     },
-            } => match head2 {
+            } => match *head2 {
                 Atom(Primitive::Symbol(sym)) => {
                     debug!("Defining a quanitity with symbol {}", &sym);
                     let ev_defn = defn.eval(ctx)?;
@@ -100,13 +100,13 @@ impl SExp {
                 }
                 Pair {
                     head: box Atom(Primitive::Symbol(sym)),
-                    tail: box fn_params,
+                    tail: fn_params,
                 } => {
                     debug!("Defining a function with \"define\" syntax.");
                     ctx.define(
                         &sym,
-                        Null.cons(defn)
-                            .cons(fn_params)
+                        Null.cons(*defn)
+                            .cons(*fn_params)
                             .cons(SExp::make_symbol("lambda")),
                     );
                     Ok(Atom(Primitive::Undefined))
@@ -124,13 +124,13 @@ impl SExp {
     pub(super) fn eval_if(self, ctx: &mut Context) -> LispResult {
         match self {
             Pair {
-                head: box condition,
+                head: condition,
                 tail:
                     box Pair {
-                        head: box if_true,
+                        head: if_true,
                         tail:
                             box Pair {
-                                head: box if_false,
+                                head: if_false,
                                 tail: box Null,
                             },
                     },
@@ -157,8 +157,8 @@ impl SExp {
                 atom: a.to_string(),
             }),
             Pair {
-                head: box params,
-                tail: box fn_body,
+                head: params,
+                tail: fn_body,
             } => {
                 debug!("Creating procedure.");
                 Ok(Atom(Primitive::Procedure(Rc::new(move |args| {
@@ -185,19 +185,19 @@ impl SExp {
                 symbol: "let".to_string(),
             }),
             Pair {
-                head: box defn_list,
-                tail: box statements,
+                head: defn_list,
+                tail: statements,
             } => {
                 debug!("Creating a local binding.");
                 ctx.push();
 
-                for defn in defn_list {
+                for defn in *defn_list {
                     match defn {
                         Pair {
                             head: box Atom(Primitive::Symbol(key)),
                             tail:
                                 box Pair {
-                                    head: box val,
+                                    head: val,
                                     tail: box Null,
                                 },
                         } => match val.eval(ctx) {
@@ -214,7 +214,7 @@ impl SExp {
 
                 let mut result = Err(LispError::NullList);
 
-                for statement in statements {
+                for statement in *statements {
                     result = statement.eval(ctx);
 
                     if result.is_err() {
@@ -250,9 +250,9 @@ impl SExp {
         trace!("Evaluating 'quote' expression: {}", self);
         match self {
             Pair {
-                box head,
+                head,
                 tail: box Null,
-            } => head,
+            } => *head,
             _ => self,
         }
     }
@@ -266,10 +266,10 @@ impl SExp {
                 head: box Atom(Primitive::Symbol(sym)),
                 tail:
                     box Pair {
-                        head: box defn,
+                        head: defn,
                         tail: box Null,
                     },
-            } => ctx.set(&sym, defn),
+            } => ctx.set(&sym, *defn),
             exp => Err(LispError::SyntaxError {
                 exp: exp.to_string(),
             }),

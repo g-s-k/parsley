@@ -6,9 +6,9 @@ impl fmt::Display for SExp {
         match self {
             Null => write!(f, "'()",),
             Atom(a) => write!(f, "{}", a),
-            Pair { box head, box tail } => {
+            Pair { head, tail } => {
                 write!(f, "'({}", head)?;
-                match tail {
+                match &**tail {
                     Null => write!(f, ")"),
                     Atom(a) => write!(f, " . {})", a),
                     pair => {

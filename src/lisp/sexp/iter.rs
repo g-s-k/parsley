@@ -12,9 +12,9 @@ impl Iterator for SExpIterator {
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.exp.to_owned() {
-            Pair { box head, box tail } => {
-                self.exp = tail;
-                Some(head)
+            Pair { head, tail } => {
+                self.exp = *tail;
+                Some(*head)
             }
             a @ Atom(_) => {
                 self.exp = Null;
