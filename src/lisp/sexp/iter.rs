@@ -41,7 +41,9 @@ impl FromIterator<SExp> for SExp {
     {
         let mut exp_out = Null;
 
-        for item in iter {
+        let iter_rev = iter.into_iter().collect::<Vec<_>>().into_iter().rev();
+
+        for item in iter_rev {
             exp_out = exp_out.cons(item);
         }
 

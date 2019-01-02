@@ -59,10 +59,7 @@ impl SExp {
                             .into_iter()
                             .inspect(|e| trace!("Evaluating list member {}", e))
                             .map(|e| e.eval(ctx))
-                            .collect::<Result<Vec<_>, LispError>>()?
-                            .into_iter()
-                            .rev()
-                            .collect::<SExp>();
+                            .collect::<Result<SExp, LispError>>()?;
 
                         trace!("Applying operation: {}", evaluated);
                         evaluated.apply(ctx)

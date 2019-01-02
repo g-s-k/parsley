@@ -337,7 +337,7 @@ impl Context {
                 Pair {
                     head: box Atom(LispString(s)),
                     tail: box Null,
-                } => Ok(s.chars().map(|c| Atom(Character(c))).rev().collect()),
+                } => Ok(s.chars().map(|c| Atom(Character(c))).collect()),
                 _ => Err(LispError::TypeError),
             }))),
         );
