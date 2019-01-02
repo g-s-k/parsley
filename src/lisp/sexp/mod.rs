@@ -32,19 +32,19 @@ impl SExp {
     fn apply(self, ctx: &mut Context) -> LispResult {
         match self {
             Null | Atom(_) => Ok(self),
-            Pair { box head, box tail } => match head {
+            Pair { head, tail } => match *head {
                 Atom(Primitive::Procedure(proc)) => {
                     trace!("Applying a procedure to the arguments {}", tail);
-                    proc(tail)?.eval(ctx)
+                    proc(*tail)?.eval(ctx)
                 }
                 Atom(Primitive::Symbol(sym)) => Err(LispError::NotAProcedure {
                     exp: sym.to_string(),
                 }),
                 Pair {
-                    head: box proc,
-                    tail: box tail2,
+                    head: proc,
+                    tail: tail2,
                 } => tail2.cons(proc.eval(ctx)?).eval(ctx),
-                _ => Ok(tail.cons(head)),
+                _ => Ok(tail.cons(*head)),
             },
         }
     }
@@ -56,7 +56,7 @@ impl SExp {
             Atom(_) => Err(LispError::NotAList {
                 atom: self.to_string(),
             }),
-            Pair { box head, .. } => Ok(head.to_owned()),
+            Pair { head, .. } => Ok((**head).clone()),
         }
     }
 
@@ -67,7 +67,7 @@ impl SExp {
             Atom(_) => Err(LispError::NotAList {
                 atom: self.to_string(),
             }),
-            Pair { box tail, .. } => Ok(tail.to_owned()),
+            Pair { tail, .. } => Ok((**tail).to_owned()),
         }
     }
 

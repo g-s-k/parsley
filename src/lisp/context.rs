@@ -140,10 +140,10 @@ impl Context {
             "eq?",
             Atom(Procedure(Rc::new(|e| match e {
                 Pair {
-                    head: box elem1,
+                    head: elem1,
                     tail:
                         box Pair {
-                            head: box elem2,
+                            head: elem2,
                             tail: box Null,
                         },
                 } => Ok((elem1 == elem2).as_atom()),
@@ -171,14 +171,14 @@ impl Context {
             "cons",
             Atom(Procedure(Rc::new(|e| match e {
                 Pair {
-                    head: box elem1,
+                    head: elem1,
                     tail:
                         box Pair {
-                            head: box elem2,
+                            head: elem2,
                             tail: box Null,
                         },
                 } => Ok(Null
-                    .cons(elem2.cons(elem1))
+                    .cons(elem2.cons(*elem1))
                     .cons(SExp::make_symbol("quote"))),
                 exp => Err(LispError::SyntaxError {
                     exp: exp.to_string(),
@@ -188,14 +188,14 @@ impl Context {
         ret.define(
             "car",
             Atom(Procedure(Rc::new(|e| match e {
-                Pair { box head, .. } => head.car(),
+                Pair { head, .. } => head.car(),
                 _ => Err(LispError::TypeError),
             }))),
         );
         ret.define(
             "cdr",
             Atom(Procedure(Rc::new(|e| match e {
-                Pair { box head, .. } => head.cdr(),
+                Pair { head, .. } => head.cdr(),
                 _ => Err(LispError::TypeError),
             }))),
         );
