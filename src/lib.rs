@@ -1,4 +1,3 @@
-#![feature(box_patterns, box_syntax)]
 //! A Scheme parsing and evaluation framework.
 //!
 //! # Example
@@ -32,6 +31,8 @@
 //! );
 //! ```
 
+#![feature(box_patterns, box_syntax)]
+
 #[macro_use]
 extern crate failure_derive;
 
@@ -39,7 +40,6 @@ extern crate failure_derive;
 extern crate log;
 
 mod lisp;
-
 pub use self::lisp::*;
 
 /// Quick access to the important stuff.
