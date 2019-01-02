@@ -44,16 +44,13 @@ pub fn repl(ctx: &mut Context) -> Result<String, ReadlineError> {
                     ".help" => {
                         println!("{}", REPL_HELP);
                     }
-                    other => match other.parse::<SExp>() {
-                        Ok(tree) => match tree.eval(ctx) {
-                            Ok(result) => {
-                                let res = format!("{}", result);
-                                if !res.is_empty() {
-                                    println!("{}", res);
-                                }
+                    other => match run_in(other, ctx) {
+                        Ok(result) => {
+                            let res = format!("{}", result);
+                            if !res.is_empty() {
+                                println!("{}", res);
                             }
-                            Err(error) => println!("{}", error),
-                        },
+                        }
                         Err(error) => println!("{}", error),
                     },
                 }

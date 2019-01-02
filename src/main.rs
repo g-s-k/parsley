@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use quicli::prelude::*;
 use structopt::StructOpt;
 
-use parsley::{Context, SExp};
+use parsley::prelude::*;
 mod repl;
 
 #[derive(Debug, StructOpt)]
@@ -41,11 +41,10 @@ fn main() -> CliResult {
     };
 
     if !code.is_empty() {
-        info!("Parsing source code.");
-        match code.parse::<SExp>() {
+        info!("Parsing and evaluating source code.");
+        match run_in(&code, &mut base_context) {
             Ok(tree) => {
-                info!("Evaluating.");
-                println!("{}", tree.eval(&mut base_context).unwrap());
+                println!("{}", tree);
             }
             Err(error) => error!("{}", error),
         };
