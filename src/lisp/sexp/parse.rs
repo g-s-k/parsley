@@ -38,11 +38,11 @@ impl SExp {
             debug!("Matched atom: {}", code);
             Ok(Atom(code.parse::<Primitive>()?))
         } else if code.starts_with("'(") && code.ends_with(')') {
-            let tail = box if code.len() == 3 {
+            let tail = Box::new(if code.len() == 3 {
                 Null.cons(Null)
             } else {
                 SExp::parse_str(&code[1..])?
-            };
+            });
             Ok(tail.cons(SExp::make_symbol("quote")))
         } else if code.starts_with('(') && code.ends_with(')') {
             match utils::find_closing_delim(code.chars(), '(', ')') {
@@ -65,14 +65,6 @@ impl SExp {
                                         exp: list_str.to_string(),
                                     });
                                 }
-                                // Some(idx2) if idx2 + 1 == list_str.len() => {
-                                //     debug!("Whole string is a single list");
-                                //     list_out = SExp::Pair {
-                                //         head: box SExp::parse_str(list_str)?,
-                                //         tail: box list_out,
-                                //     };
-                                //     break;
-                                // }
                                 Some(idx2) => {
                                     debug!("Matched sub-list with length {} chars", idx2 + 1);
                                     let mut new_idx = list_str.len() - 1 - idx2;
@@ -85,20 +77,12 @@ impl SExp {
                                     let (before, after) = list_str.split_at(new_idx);
                                     list_str = before.trim();
                                     list_out = Pair {
-                                        head: box SExp::parse_str(after)?,
-                                        tail: box list_out,
+                                        head: Box::new(SExp::parse_str(after)?),
+                                        tail: Box::new(list_out),
                                     };
                                 }
                             }
                         } else {
-                            // if let Ok(prim_val) = list_str.parse::<Primitive>() {
-                            //     list_out = SExp::Pair {
-                            //         head: box SExp::Atom(prim_val),
-                            //         tail: box list_out,
-                            //     };
-                            //     break;
-                            // }
-
                             if list_str.ends_with('"') {
                                 match list_str.chars().rev().skip(1).position(|e| e == '"') {
                                     Some(idx2) => {
@@ -124,16 +108,16 @@ impl SExp {
                                     );
                                     let (rest, last) = list_str.split_at(list_str.len() - idx3);
                                     list_out = Pair {
-                                        head: box SExp::parse_str(last)?,
-                                        tail: box list_out,
+                                        head: Box::new(SExp::parse_str(last)?),
+                                        tail: Box::new(list_out),
                                     };
                                     list_str = rest.trim();
                                 }
                                 _ => {
                                     debug!("Entire string is an atom.");
                                     list_out = Pair {
-                                        head: box SExp::parse_str(list_str)?,
-                                        tail: box list_out,
+                                        head: Box::new(SExp::parse_str(list_str)?),
+                                        tail: Box::new(list_out),
                                     };
                                     break;
                                 }
