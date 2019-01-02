@@ -328,9 +328,7 @@ fn eval_or() {
 
     let mut ctx = Context::default();
     assert_eq!(
-        SExp::from((or(), (3, (t(),))))
-            .eval(&mut ctx)
-            .unwrap(),
+        SExp::from((or(), (3, (t(),)))).eval(&mut ctx).unwrap(),
         SExp::from(3)
     );
 
@@ -427,9 +425,7 @@ fn eval_begin() {
 
     let mut ctx = Context::default();
     assert_eq!(
-        SExp::from((begin(), (0, (1,))))
-            .eval(&mut ctx)
-            .unwrap(),
+        SExp::from((begin(), (0, (1,)))).eval(&mut ctx).unwrap(),
         SExp::from(1)
     )
 }
