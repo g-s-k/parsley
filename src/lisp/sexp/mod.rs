@@ -18,9 +18,9 @@ use self::SExp::*;
 /// assert_eq!(null, SExp::Null);
 /// ```
 /// ```
-/// use parsley::{AsAtom, SExp};
+/// use parsley::SExp;
 /// let parsed = "\"abcdefg\"".parse::<SExp>().unwrap();
-/// assert_eq!(parsed, "abcdefg".as_atom());
+/// assert_eq!(parsed, SExp::from("abcdefg"));
 /// ```
 #[derive(Debug, PartialEq, Clone)]
 pub enum SExp {

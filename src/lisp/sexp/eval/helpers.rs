@@ -1,13 +1,12 @@
 use std::rc::Rc;
 
-use super::super::super::as_atom::AsAtom;
 use super::SExp::{self, *};
 use super::{Context, LispError, LispResult, Primitive};
 
 impl SExp {
     pub(super) fn eval_and(self, ctx: &mut Context) -> LispResult {
         debug!("Evaluating 'and' expression.");
-        let mut state = true.as_atom();
+        let mut state = SExp::from(true);
 
         for element in self {
             state = element.eval(ctx)?;
@@ -243,7 +242,7 @@ impl SExp {
             }
         }
 
-        Ok(false.as_atom())
+        Ok(SExp::from(false))
     }
 
     pub(super) fn eval_quote(self) -> Self {

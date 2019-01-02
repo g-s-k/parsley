@@ -11,29 +11,23 @@ impl SExp {
     ///
     /// # Examples
     /// ```
-    /// use parsley::{AsAtom, Context};
-    /// use parsley::SExp::{self, Null};
+    /// use parsley::prelude::*;
     ///
-    /// let exp = Null.cons(1.0.as_atom())
-    ///     .cons(0.0.as_atom())
-    ///     .cons(SExp::make_symbol("eq?"));
+    /// let exp = SExp::from((SExp::make_symbol("eq?"), (0, (1,))));
     /// let mut ctx = Context::base();
     /// let result = exp.eval(&mut ctx);
-    /// assert_eq!(result.unwrap(), false.as_atom());
+    /// assert_eq!(result.unwrap(), SExp::from(false));
     /// ```
     /// ```
-    /// use parsley::{AsAtom, Context};
-    /// use parsley::SExp::{self, Null};
+    /// use parsley::prelude::*;
     ///
-    /// let exp1 = Null.cons(10.0.as_atom())
-    ///     .cons(SExp::make_symbol("x"))
-    ///     .cons(SExp::make_symbol("define"));
+    /// let exp1 = SExp::from((SExp::make_symbol("define"), (SExp::make_symbol("x"), (10,))));
     /// let exp2 = SExp::make_symbol("x");
     ///
     /// let mut ctx = Context::base();
     /// exp1.eval(&mut ctx);
     /// let result = exp2.eval(&mut ctx);
-    /// assert_eq!(result.unwrap(), 10.0.as_atom());
+    /// assert_eq!(result.unwrap(), SExp::from(10));
     /// ```
     pub fn eval(self, ctx: &mut Context) -> LispResult {
         match self {

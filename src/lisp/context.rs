@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use super::as_atom::AsAtom;
 use super::Primitive::{Character, Number, Procedure, String as LispString, Undefined};
 use super::SExp::{self, Atom, Null, Pair};
 use super::{LispError, LispResult};
@@ -37,8 +36,9 @@ impl Context {
     ///
     /// # Example
     /// ```
-    /// use parsley::{Context, SExp};
+    /// use parsley::prelude::*;
     /// let mut ctx = Context::default();
+    ///
     /// assert_eq!(ctx.get("x"), None);
     /// ctx.push();
     /// ctx.define("x", SExp::Null);
@@ -73,10 +73,11 @@ impl Context {
     /// assert!(ctx.get("potato").is_none());
     /// ```
     /// ```
-    /// use parsley::{Context, AsAtom};
+    /// use parsley::prelude::*;
     /// let mut ctx = Context::default();
-    /// ctx.define("x", 3_f64.as_atom());
-    /// assert_eq!(ctx.get("x"), Some(3_f64.as_atom()));
+    ///
+    /// ctx.define("x", SExp::from(3));
+    /// assert_eq!(ctx.get("x"), Some(SExp::from(3)));
     /// ```
     pub fn get(&self, key: &str) -> Option<SExp> {
         trace!("Retrieving a definition for the key {}", key);
@@ -93,13 +94,14 @@ impl Context {
     ///
     /// # Example
     /// ```
-    /// use parsley::{Context, AsAtom};
+    /// use parsley::prelude::*;
     /// let mut ctx = Context::default();
-    /// assert!(ctx.set("x", false.as_atom()).is_err());    // Err, because x is not yet defined
-    /// ctx.define("x", 3_f64.as_atom());                   // define x
-    /// assert_eq!(ctx.get("x"), Some(3_f64.as_atom()));    // check that its value is 3
-    /// assert!(ctx.set("x", "potato".as_atom()).is_ok());  // Ok because x is now defined
-    /// assert_eq!(ctx.get("x"), Some("potato".as_atom())); // check that its value is now "potato"
+    ///
+    /// assert!(ctx.set("x", SExp::from(false)).is_err());    // Err, because x is not yet defined
+    /// ctx.define("x", SExp::from(3));                       // define x
+    /// assert_eq!(ctx.get("x"), Some(SExp::from(3)));        // check that its value is 3
+    /// assert!(ctx.set("x", SExp::from("potato")).is_ok());  // Ok because x is now defined
+    /// assert_eq!(ctx.get("x"), Some(SExp::from("potato"))); // check that its value is now "potato"
     /// ```
     pub fn set(&mut self, key: &str, value: SExp) -> LispResult {
         trace!("Re-binding the symbol {} to the value {}", key, value);
@@ -119,14 +121,14 @@ impl Context {
     ///
     /// # Example
     /// ```
-    /// use parsley::{AsAtom, Context, SExp};
+    /// use parsley::prelude::*;
     /// let mut ctx = Context::base();
     ///
     /// let null_const = ctx.get("null").unwrap();
     /// let null_fn = ctx.get("null?").unwrap();
     /// assert_eq!(
-    ///     SExp::Null.cons(null_const).cons(null_fn).eval(&mut ctx).unwrap(),
-    ///     true.as_atom()
+    ///     SExp::from((null_fn, (null_const,))).eval(&mut ctx).unwrap(),
+    ///     SExp::from(true),
     /// );
     ///
     /// println!("{}", ctx.get("eq?").unwrap());   // "#<procedure>"
@@ -146,7 +148,7 @@ impl Context {
                             head: elem2,
                             tail: box Null,
                         },
-                } => Ok((elem1 == elem2).as_atom()),
+                } => Ok(SExp::from(elem1 == elem2)),
                 exp => Err(LispError::SyntaxError {
                     exp: exp.to_string(),
                 }),
@@ -156,14 +158,13 @@ impl Context {
             "null?",
             Atom(Procedure(Rc::new(|e| {
                 trace!("{}", e);
-                Ok((match e {
+                Ok(SExp::from(match e {
                     Pair {
                         head: box Null,
                         tail: box Null,
                     } => true,
                     _ => false,
-                })
-                .as_atom())
+                }))
             }))),
         );
         ret.define("null", Null.cons(Null).cons(SExp::make_symbol("quote")));
@@ -211,7 +212,7 @@ impl Context {
                             head: box Atom(Number(n2)),
                             tail: box Null,
                         },
-                } => Ok(((n1 - n2).abs() < std::f64::EPSILON).as_atom()),
+                } => Ok(SExp::from((n1 - n2).abs() < std::f64::EPSILON)),
                 exp => Err(LispError::SyntaxError {
                     exp: exp.to_string(),
                 }),
@@ -227,7 +228,7 @@ impl Context {
                             head: box Atom(Number(n2)),
                             tail: box Null,
                         },
-                } => Ok((n1 < n2).as_atom()),
+                } => Ok(SExp::from(n1 < n2)),
                 exp => Err(LispError::SyntaxError {
                     exp: exp.to_string(),
                 }),
@@ -243,7 +244,7 @@ impl Context {
                             head: box Atom(Number(n2)),
                             tail: box Null,
                         },
-                } => Ok((n1 > n2).as_atom()),
+                } => Ok(SExp::from(n1 > n2)),
                 exp => Err(LispError::SyntaxError {
                     exp: exp.to_string(),
                 }),
@@ -252,7 +253,7 @@ impl Context {
         ret.define(
             "+",
             Atom(Procedure(Rc::new(|v| {
-                v.into_iter().fold(Ok(0_f64.as_atom()), |a, e| match e {
+                v.into_iter().fold(Ok(SExp::from(0)), |a, e| match e {
                     Atom(Number(n)) => {
                         if let Ok(Atom(Number(na))) = a {
                             Ok(Atom(Number(n + na)))
@@ -292,7 +293,7 @@ impl Context {
         ret.define(
             "*",
             Atom(Procedure(Rc::new(|v| {
-                v.into_iter().fold(Ok(1_f64.as_atom()), |a, e| match e {
+                v.into_iter().fold(Ok(SExp::from(1)), |a, e| match e {
                     Atom(Number(n)) => {
                         if let Ok(Atom(Number(na))) = a {
                             Ok(Atom(Number(n * na)))
