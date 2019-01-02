@@ -1,5 +1,6 @@
 mod display;
 mod eval;
+mod from;
 mod iter;
 mod parse;
 

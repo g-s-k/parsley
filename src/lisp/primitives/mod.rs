@@ -1,7 +1,10 @@
 use std::fmt;
 use std::rc::Rc;
+use std::string::String as CoreString;
 
 use super::{LispResult, SExp};
+
+use self::Primitive::*;
 
 mod eq;
 mod from;
@@ -13,23 +16,22 @@ pub enum Primitive {
     Boolean(bool),
     Character(char),
     Number(f64),
-    String(String),
-    Symbol(String),
+    String(CoreString),
+    Symbol(CoreString),
     Procedure(Rc<dyn Fn(SExp) -> LispResult>),
 }
-
 
 impl fmt::Debug for Primitive {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Primitive::Void => write!(f, "#<void>"),
-            Primitive::Undefined => write!(f, "#<undefined>"),
-            Primitive::Boolean(b) => write!(f, "<boolean {}>", b),
-            Primitive::Character(c) => write!(f, "#\\{}", c),
-            Primitive::Number(n) => write!(f, "{}", n),
-            Primitive::String(s) => write!(f, "\"{}\"", s),
-            Primitive::Symbol(s) => write!(f, "{}", s),
-            Primitive::Procedure(_) => write!(f, "#<procedure>"),
+            Void => write!(f, "#<void>"),
+            Undefined => write!(f, "#<undefined>"),
+            Boolean(b) => write!(f, "<boolean {}>", b),
+            Character(c) => write!(f, "#\\{}", c),
+            Number(n) => write!(f, "{}", n),
+            String(s) => write!(f, "\"{}\"", s),
+            Symbol(s) => write!(f, "{}", s),
+            Procedure(_) => write!(f, "#<procedure>"),
         }
     }
 }
@@ -37,14 +39,14 @@ impl fmt::Debug for Primitive {
 impl fmt::Display for Primitive {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Primitive::Void => write!(f, "#<void>"),
-            Primitive::Undefined => write!(f, ""),
-            Primitive::Boolean(b) => write!(f, "{}", if *b { "#t" } else { "#f" }),
-            Primitive::Character(c) => write!(f, "#\\{}", c),
-            Primitive::Number(n) => write!(f, "{}", n),
-            Primitive::String(s) => write!(f, "\"{}\"", s),
-            Primitive::Symbol(s) => write!(f, "{}", s),
-            Primitive::Procedure(_) => write!(f, "#<procedure>"),
+            Void => write!(f, "#<void>"),
+            Undefined => write!(f, ""),
+            Boolean(b) => write!(f, "{}", if *b { "#t" } else { "#f" }),
+            Character(c) => write!(f, "#\\{}", c),
+            Number(n) => write!(f, "{}", n),
+            String(s) => write!(f, "\"{}\"", s),
+            Symbol(s) => write!(f, "{}", s),
+            Procedure(_) => write!(f, "#<procedure>"),
         }
     }
 }
