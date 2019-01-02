@@ -1,4 +1,3 @@
-mod as_atom;
 mod context;
 mod errors;
 mod primitives;
@@ -6,7 +5,6 @@ mod sexp;
 mod tests;
 mod utils;
 
-pub use self::as_atom::AsAtom;
 pub use self::context::Context;
 pub use self::errors::LispError;
 use self::primitives::Primitive;
