@@ -9,7 +9,7 @@ what if scheme...but rust. still working on a backronym.
 
 - improve test coverage, especially e2e tests
 - (eventually) build on stable. blockers are:
-  - `box_syntax` and `box_patterns` features
+  - `box_patterns` feature
   - `quicli` dependency
 
 ## License

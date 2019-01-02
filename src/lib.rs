@@ -31,7 +31,7 @@
 //! );
 //! ```
 
-#![feature(box_patterns, box_syntax)]
+#![feature(box_patterns)]
 
 #[macro_use]
 extern crate failure_derive;

@@ -85,8 +85,8 @@ impl SExp {
     /// ```
     pub fn cons(self, exp: Self) -> Self {
         Pair {
-            head: box exp,
-            tail: box self,
+            head: Box::new(exp),
+            tail: Box::new(self),
         }
     }
 
