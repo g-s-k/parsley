@@ -2,11 +2,15 @@
 
 what if scheme...but rust. still working on a backronym.
 
-## helpful hints
+`cargo install parsley` installs the interpreter - see the
+[docs](https://docs.rs/parsley) if you want to use it as a library.
 
-- only builds on nightly
-- poor test coverage
-- i have no idea what i'm doing
+## on the horizon
+
+- improve test coverage, especially e2e tests
+- (eventually) build on stable. blockers are:
+  - `box_syntax` and `box_patterns` features
+  - `quicli` dependency
 
 ## License
 
