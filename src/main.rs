@@ -52,8 +52,9 @@ fn main() -> CliResult {
     }
 
     if code.is_empty() || args.force_interactive {
-        if let Err(error) = repl::repl(&mut base_context) {
-            error!("{}", error);
+        match repl::repl(&mut base_context) {
+            Ok(res) => println!("{}", res),
+            Err(err) => error!("{}", err),
         }
     }
 

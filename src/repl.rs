@@ -1,4 +1,5 @@
-use rustyline::{error, Editor};
+use rustyline::error::ReadlineError;
+use rustyline::Editor;
 
 use parsley::prelude::*;
 
@@ -8,12 +9,13 @@ const REPL_WELCOME_BORDER: &str =
 const REPL_PROMPT: &str = "> ";
 const REPL_HELP: &str = r#"
 The following special commands are available:
-.help     display this message
-.clear    clear the global scope
-.exit     end interactive session
+.help                display this message
+.clear               clear the global scope
+.exit OR C-c OR C-d  end interactive session
 "#;
+const REPL_EXIT_MSG: &str = "\nLeaving PARSLEY.\n";
 
-pub fn repl(ctx: &mut Context) -> Result<String, error::ReadlineError> {
+pub fn repl(ctx: &mut Context) -> Result<String, ReadlineError> {
     info!("Initializing REPL.");
 
     print!(
@@ -30,11 +32,13 @@ pub fn repl(ctx: &mut Context) -> Result<String, error::ReadlineError> {
 
         match readline {
             Ok(line) => {
+                rl.add_history_entry(line.as_ref());
                 // check for empty line/special commands
                 match line.trim() {
                     "" => continue,
-                    ".exit" => break Ok(line),
+                    ".exit" => break Ok(REPL_EXIT_MSG.to_string()),
                     ".clear" => {
+                        rl.clear_history();
                         ctx.pop();
                     }
                     ".help" => {
@@ -42,12 +46,20 @@ pub fn repl(ctx: &mut Context) -> Result<String, error::ReadlineError> {
                     }
                     other => match other.parse::<SExp>() {
                         Ok(tree) => match tree.eval(ctx) {
-                            Ok(result) => println!("{}", result),
+                            Ok(result) => {
+                                let res = format!("{}", result);
+                                if !res.is_empty() {
+                                    println!("{}", res);
+                                }
+                            }
                             Err(error) => println!("{}", error),
                         },
                         Err(error) => println!("{}", error),
                     },
                 }
+            }
+            Err(ReadlineError::Eof) | Err(ReadlineError::Interrupted) => {
+                break Ok(REPL_EXIT_MSG.to_string());
             }
             Err(error) => break Err(error),
         }
