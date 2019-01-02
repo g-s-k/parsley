@@ -1,5 +1,7 @@
 # parsley
 
+[![Build Status](https://travis-ci.org/g-s-k/parsley.svg?branch=master)](https://travis-ci.org/g-s-k/parsley)
+
 what if scheme...but rust. still working on a backronym.
 
 `cargo install parsley` installs the interpreter - see the
