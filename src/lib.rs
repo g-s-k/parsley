@@ -2,21 +2,16 @@
 //!
 //! # Example
 //! ```
-//! use parsley::prelude::*;
-//! let mut ctx = Context::base();
+//! use parsley::run;
 //!
-//! let expr = "(null? '())";
-//! let value = "#t";
 //! assert_eq!(
-//!     expr.parse::<SExp>().unwrap().eval(&mut ctx).unwrap(),
-//!     value.parse::<SExp>().unwrap().eval(&mut ctx).unwrap()
+//!     run("(null? '())").unwrap(),
+//!     run("#t").unwrap()
 //! );
 //!
-//! let expr = "(* (+ 3 4 5) (- 5 2))";
-//! let value = "36";
 //! assert_eq!(
-//!     expr.parse::<SExp>().unwrap().eval(&mut ctx).unwrap(),
-//!     value.parse::<SExp>().unwrap().eval(&mut ctx).unwrap()
+//!     run("(* (+ 3 4 5) (- 5 2))").unwrap(),
+//!     run("36").unwrap()
 //! );
 //!
 //! let expr = r#"
@@ -24,10 +19,9 @@
 //! (define (sum-of-squares x y) (+ (sqr x) (sqr y)))
 //! (sum-of-squares 3 4)
 //! "#;
-//! let value = "25";
 //! assert_eq!(
-//!     expr.parse::<SExp>().unwrap().eval(&mut ctx).unwrap(),
-//!     value.parse::<SExp>().unwrap().eval(&mut ctx).unwrap()
+//!     run(expr).unwrap(),
+//!     run("25").unwrap()
 //! );
 //! ```
 
@@ -42,7 +36,36 @@ extern crate log;
 mod lisp;
 pub use self::lisp::*;
 
+/// Run a code snippet in an existing [Context](./struct.Context.html).
+///
+/// # Example
+/// ```
+/// use parsley::prelude::*;
+/// let mut ctx = Context::default();
+///
+/// assert!(run_in("x", &mut ctx).is_err());
+/// assert!(run_in("(define x 6)", &mut ctx).is_ok());
+/// assert_eq!(run_in("x", &mut ctx).unwrap(), SExp::from(6));
+/// ```
+pub fn run_in(code: &str, ctx: &mut Context) -> LispResult {
+    code.parse::<SExp>()?.eval(ctx)
+}
+
+/// Run a code snippet in the [base context](./struct.Context.html#method.base).
+///
+/// # Example
+/// ```
+/// use parsley::prelude::*;
+///
+/// assert!(run("x").is_err());
+/// assert!(run("null").is_ok());
+/// assert_eq!(run("null").unwrap(), SExp::Null);
+/// ```
+pub fn run(code: &str) -> LispResult {
+    run_in(code, &mut Context::base())
+}
+
 /// Quick access to the important stuff.
 pub mod prelude {
-    pub use super::{Context, LispError, SExp};
+    pub use super::{run, run_in, Context, LispError, LispResult, SExp};
 }

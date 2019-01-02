@@ -95,16 +95,15 @@ impl SExp {
     ///
     /// # Example
     /// ```
-    /// use parsley::{Context, SExp};
+    /// use parsley::prelude::*;
     /// let mut ctx = Context::base();
     ///
     /// // A null list is an empty application
     /// assert!(SExp::Null.eval(&mut ctx).is_err());
     ///
     /// // The symbol `null` (defined in `Context::base`) creates a null list
-    /// let result = SExp::make_symbol("null").eval(&mut ctx);
-    /// assert!(result.is_ok());
-    /// assert_eq!(result.unwrap(), SExp::Null);
+    /// let result = SExp::make_symbol("null").eval(&mut ctx).unwrap();
+    /// assert_eq!(result, SExp::Null);
     /// ```
     pub fn make_symbol(sym: &str) -> Self {
         Atom(Primitive::Symbol(sym.to_string()))
