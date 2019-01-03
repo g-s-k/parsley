@@ -84,7 +84,7 @@ impl From<CoreString> for Primitive {
 
 impl<F> From<F> for Primitive
 where
-    F: Fn(SExp) -> LispResult + 'static
+    F: Fn(SExp) -> LispResult + 'static,
 {
     fn from(f: F) -> Self {
         Procedure(Rc::new(f))
