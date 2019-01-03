@@ -1,5 +1,3 @@
-use std::rc::Rc;
-
 use super::SExp::{self, *};
 use super::{Context, LispError, LispResult, Primitive};
 
@@ -160,7 +158,7 @@ impl SExp {
                 tail: fn_body,
             } => {
                 debug!("Creating procedure.");
-                Ok(Atom(Primitive::Procedure(Rc::new(move |args| {
+                Ok(SExp::from(move |args: SExp| {
                     debug!("Formal parameters: {}", params);
                     let bound_params = params
                         .to_owned()
@@ -173,7 +171,7 @@ impl SExp {
                         .to_owned()
                         .cons(bound_params)
                         .cons(SExp::make_symbol("let")))
-                }))))
+                }))
             }
         }
     }

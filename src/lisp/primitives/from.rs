@@ -82,8 +82,11 @@ impl From<CoreString> for Primitive {
     }
 }
 
-impl From<Rc<dyn Fn(SExp) -> LispResult>> for Primitive {
-    fn from(f: Rc<dyn Fn(SExp) -> LispResult>) -> Self {
-        Procedure(f)
+impl<F> From<F> for Primitive
+where
+    F: Fn(SExp) -> LispResult + 'static
+{
+    fn from(f: F) -> Self {
+        Procedure(Rc::new(f))
     }
 }

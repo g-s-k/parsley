@@ -1,7 +1,5 @@
-use std::rc::Rc;
-
 use super::super::LispError;
-use super::super::Primitive::{Character, Number, Procedure, String as LispString};
+use super::super::Primitive::{Character, Number, String as LispString};
 use super::super::SExp::{self, Atom, Null, Pair};
 
 use super::Context;
@@ -31,7 +29,7 @@ impl Context {
         // The basics
         ret.define(
             "eq?",
-            Atom(Procedure(Rc::new(|e| match e {
+            SExp::from(|e| match e {
                 Pair {
                     head: elem1,
                     tail:
@@ -43,11 +41,11 @@ impl Context {
                 exp => Err(LispError::SyntaxError {
                     exp: exp.to_string(),
                 }),
-            }))),
+            }),
         );
         ret.define(
             "null?",
-            Atom(Procedure(Rc::new(|e| {
+            SExp::from(|e| {
                 trace!("{}", e);
                 Ok(SExp::from(match e {
                     Pair {
@@ -56,12 +54,12 @@ impl Context {
                     } => true,
                     _ => false,
                 }))
-            }))),
+            }),
         );
         ret.define("null", Null.cons(Null).cons(SExp::make_symbol("quote")));
         ret.define(
             "cons",
-            Atom(Procedure(Rc::new(|e| match e {
+            SExp::from(|e| match e {
                 Pair {
                     head: elem1,
                     tail:
@@ -75,27 +73,27 @@ impl Context {
                 exp => Err(LispError::SyntaxError {
                     exp: exp.to_string(),
                 }),
-            }))),
+            }),
         );
         ret.define(
             "car",
-            Atom(Procedure(Rc::new(|e| match e {
+            SExp::from(|e| match e {
                 Pair { head, .. } => head.car(),
                 _ => Err(LispError::TypeError),
-            }))),
+            }),
         );
         ret.define(
             "cdr",
-            Atom(Procedure(Rc::new(|e| match e {
+            SExp::from(|e| match e {
                 Pair { head, .. } => head.cdr(),
                 _ => Err(LispError::TypeError),
-            }))),
+            }),
         );
 
         // Numerics
         ret.define(
             "=",
-            Atom(Procedure(Rc::new(|e| match e {
+            SExp::from(|e| match e {
                 Pair {
                     head: box Atom(Number(n1)),
                     tail:
@@ -107,11 +105,11 @@ impl Context {
                 exp => Err(LispError::SyntaxError {
                     exp: exp.to_string(),
                 }),
-            }))),
+            }),
         );
         ret.define(
             "<",
-            Atom(Procedure(Rc::new(|e| match e {
+            SExp::from(|e| match e {
                 Pair {
                     head: box Atom(Number(n1)),
                     tail:
@@ -123,11 +121,11 @@ impl Context {
                 exp => Err(LispError::SyntaxError {
                     exp: exp.to_string(),
                 }),
-            }))),
+            }),
         );
         ret.define(
             ">",
-            Atom(Procedure(Rc::new(|e| match e {
+            SExp::from(|e| match e {
                 Pair {
                     head: box Atom(Number(n1)),
                     tail:
@@ -139,11 +137,11 @@ impl Context {
                 exp => Err(LispError::SyntaxError {
                     exp: exp.to_string(),
                 }),
-            }))),
+            }),
         );
         ret.define(
             "+",
-            Atom(Procedure(Rc::new(|v| {
+            SExp::from(|v: SExp| {
                 v.into_iter().fold(Ok(SExp::from(0)), |a, e| match e {
                     Atom(Number(n)) => {
                         if let Ok(Atom(Number(na))) = a {
@@ -154,11 +152,11 @@ impl Context {
                     }
                     _ => Err(LispError::TypeError),
                 })
-            }))),
+            }),
         );
         ret.define(
             "-",
-            Atom(Procedure(Rc::new(|e| match e {
+            SExp::from(|e| match e {
                 Null => Err(LispError::TypeError),
                 a @ Atom(_) => Err(LispError::NotAList {
                     atom: a.to_string(),
@@ -179,11 +177,11 @@ impl Context {
                     Ok(Atom(Number(state)))
                 }
                 _ => Err(LispError::TypeError),
-            }))),
+            }),
         );
         ret.define(
             "*",
-            Atom(Procedure(Rc::new(|v| {
+            SExp::from(|v: SExp| {
                 v.into_iter().fold(Ok(SExp::from(1)), |a, e| match e {
                     Atom(Number(n)) => {
                         if let Ok(Atom(Number(na))) = a {
@@ -194,11 +192,11 @@ impl Context {
                     }
                     _ => Err(LispError::TypeError),
                 })
-            }))),
+            }),
         );
         ret.define(
             "/",
-            Atom(Procedure(Rc::new(|e| match e {
+            SExp::from(|e| match e {
                 Null => Err(LispError::TypeError),
                 a @ Atom(_) => Err(LispError::NotAList {
                     atom: a.to_string(),
@@ -219,23 +217,23 @@ impl Context {
                     Ok(Atom(Number(state)))
                 }
                 _ => Err(LispError::TypeError),
-            }))),
+            }),
         );
 
         // Strings
         ret.define(
             "string->list",
-            Atom(Procedure(Rc::new(|e| match e {
+            SExp::from(|e| match e {
                 Pair {
                     head: box Atom(LispString(s)),
                     tail: box Null,
                 } => Ok(s.chars().map(|c| Atom(Character(c))).collect()),
                 _ => Err(LispError::TypeError),
-            }))),
+            }),
         );
         ret.define(
             "list->string",
-            Atom(Procedure(Rc::new(|e| match e {
+            SExp::from(|e| match e {
                 Pair { .. } => {
                     match e.into_iter().fold(Ok(String::new()), |s, e| match e {
                         Atom(Character(ref c)) => {
@@ -254,7 +252,7 @@ impl Context {
                     }
                 }
                 _ => Err(LispError::TypeError),
-            }))),
+            }),
         );
 
         ret
