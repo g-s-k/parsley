@@ -16,7 +16,6 @@ impl Context {
     /// asrt("(floor -4.07326)", "-5");
     /// asrt("(ceil 7.1)", "8");
     /// asrt("(hypot 3 4)", "5");
-    /// asrt("(= (cube-root 27) 3)", "#t");
     /// asrt("(recip 100)", "0.01");
     /// asrt("(log (exp 7))", "7");
     /// ```
