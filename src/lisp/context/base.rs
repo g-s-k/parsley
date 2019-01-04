@@ -89,6 +89,13 @@ impl Context {
                 _ => Err(LispError::TypeError),
             }),
         );
+        ret.define(
+            "type-of",
+            (|e| match e {
+                Pair { head, .. } => Ok(head.type_of().into()),
+                _ => Err(LispError::TypeError),
+            }).into(),
+        );
 
         // Numerics
         ret.define(
