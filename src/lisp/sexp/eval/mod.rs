@@ -46,6 +46,8 @@ impl SExp {
             Pair { head, tail } => {
                 if let Atom(Primitive::Symbol(sym)) = *head {
                     match sym.as_ref() {
+                        "eval" => (&tail).car().unwrap_or(*tail).eval(ctx)?.eval(ctx),
+                        "apply" => tail.do_apply(ctx),
                         "and" => tail.eval_and(ctx),
                         "begin" => tail.eval_begin(ctx),
                         "cond" => tail.eval_cond(ctx),
@@ -56,6 +58,7 @@ impl SExp {
                         "or" => tail.eval_or(ctx),
                         "quote" => Ok(tail.eval_quote()),
                         "set!" => tail.eval_set(ctx),
+                        "map" => tail.eval_map(ctx),
                         _ => tail.cons(SExp::make_symbol(&sym)).eval_typical_pair(ctx),
                     }
                 } else {

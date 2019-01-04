@@ -272,4 +272,40 @@ impl SExp {
             }),
         }
     }
+
+    pub(super) fn eval_map(self, ctx: &mut Context) -> LispResult {
+        match self {
+            Pair {
+                head,
+                tail:
+                    box Pair {
+                        head: expr,
+                        tail: box Null,
+                    },
+            } => expr
+                .eval(ctx)?
+                .into_iter()
+                .map(|e| Null.cons(e).cons((*head).to_owned()).eval(ctx))
+                .collect(),
+            exp => Err(LispError::SyntaxError {
+                exp: exp.to_string(),
+            }),
+        }
+    }
+
+    pub(super) fn do_apply(self, ctx: &mut Context) -> LispResult {
+        match self {
+            Pair {
+                head: op,
+                tail:
+                    box Pair {
+                        head: args,
+                        tail: box Null,
+                    },
+            } => args.eval(ctx)?.cons(*op).eval(ctx),
+            exp => Err(LispError::SyntaxError {
+                exp: exp.to_string(),
+            }),
+        }
+    }
 }
