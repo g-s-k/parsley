@@ -3,3 +3,10 @@ rust:
   - nightly
 
 cache: cargo
+
+before_script:
+  - rustup component add clippy
+
+script:
+  - cargo clippy -- -D warnings
+  - cargo test --verbose
