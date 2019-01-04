@@ -124,7 +124,7 @@ impl SExp {
         match self {
             Null => "null",
             Atom(p) => p.type_of(),
-            Pair {..} => "list",
+            Pair { .. } => "list",
         }
     }
 }
