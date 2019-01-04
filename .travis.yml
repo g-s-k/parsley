@@ -5,8 +5,8 @@ rust:
 cache: cargo
 
 before_script:
-  - rustup component add clippy-preview
+  - rustup component add clippy-preview || export NO_CLIPPY=true
 
 script:
-  - cargo clippy -- -D warnings
+  - [ -z "$NO_CLIPPY" ] && cargo clippy -- -D warnings
   - cargo test --verbose
