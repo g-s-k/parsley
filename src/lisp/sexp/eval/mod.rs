@@ -34,7 +34,10 @@ impl SExp {
             Null => Err(LispError::NullList),
             Atom(Primitive::Symbol(sym)) => match ctx.get(&sym) {
                 None => Err(LispError::UndefinedSymbol { sym }),
-                Some(exp) => exp.eval(ctx),
+                Some(exp) => match exp {
+                    Null => Ok(Null),
+                    _ => exp.eval(ctx),
+                },
             },
             Atom(_) => Ok(self),
             Pair { .. } => self.eval_pair(ctx),
@@ -59,6 +62,7 @@ impl SExp {
                         "quote" => Ok(tail.eval_quote()),
                         "set!" => tail.eval_set(ctx),
                         "map" => tail.eval_map(ctx),
+                        "foldl" => tail.eval_fold(ctx),
                         _ => tail.cons(SExp::make_symbol(&sym)).eval_typical_pair(ctx),
                     }
                 } else {

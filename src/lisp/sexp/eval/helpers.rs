@@ -197,9 +197,12 @@ impl SExp {
                                     head: val,
                                     tail: box Null,
                                 },
-                        } => match val.eval(ctx) {
-                            Ok(result) => ctx.define(&key, result),
-                            err => return err,
+                        } => match *val {
+                            Null => ctx.define(&key, Null),
+                            _ => match val.eval(ctx) {
+                                Ok(result) => ctx.define(&key, result),
+                                err => return err,
+                            },
                         },
                         exp => {
                             return Err(LispError::SyntaxError {
@@ -287,6 +290,29 @@ impl SExp {
                 .into_iter()
                 .map(|e| Null.cons(e).cons((*head).to_owned()).eval(ctx))
                 .collect(),
+            exp => Err(LispError::SyntaxError {
+                exp: exp.to_string(),
+            }),
+        }
+    }
+
+    pub(super) fn eval_fold(self, ctx: &mut Context) -> LispResult {
+        match self {
+            Pair {
+                head,
+                tail:
+                    box Pair {
+                        head: init,
+                        tail:
+                            box Pair {
+                                head: expr,
+                                tail: box Null,
+                            },
+                    },
+            } => expr.eval(ctx)?.into_iter().fold(Ok(*init), |a, e| match a {
+                Ok(acc) => Null.cons(e).cons(acc).cons((*head).to_owned()).eval(ctx),
+                err => err,
+            }),
             exp => Err(LispError::SyntaxError {
                 exp: exp.to_string(),
             }),
