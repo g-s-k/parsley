@@ -5,6 +5,8 @@ use super::SExp::{self, Atom};
 use super::{LispError, LispResult};
 
 mod base;
+mod math;
+pub mod utils;
 
 /// Evaluation context for LISP expressions.
 ///

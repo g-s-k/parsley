@@ -62,3 +62,18 @@ impl PartialEq for Primitive {
         }
     }
 }
+
+impl Primitive {
+    pub fn type_of(&self) -> &str {
+        match self {
+            Void => "void",
+            Undefined => "undefined",
+            Boolean(_) => "bool",
+            Character(_) => "char",
+            Number(_) => "number",
+            String(_) => "string",
+            Symbol(_) => "symbol",
+            Procedure(_) => "procedure",
+        }
+    }
+}

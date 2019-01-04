@@ -34,7 +34,8 @@ extern crate failure_derive;
 extern crate log;
 
 mod lisp;
-pub use self::lisp::*;
+pub use self::lisp::{Context, LispError, LispResult, SExp};
+pub use self::lisp::context::utils as proc_utils;
 
 /// Run a code snippet in an existing [Context](./struct.Context.html).
 ///

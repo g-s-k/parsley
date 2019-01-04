@@ -108,4 +108,23 @@ impl SExp {
     pub fn make_symbol(sym: &str) -> Self {
         Atom(Primitive::Symbol(sym.to_string()))
     }
+
+    /// Printable type for an expression.
+    ///
+    /// # Example
+    /// ```
+    /// use parsley::SExp;
+    ///
+    /// assert_eq!(SExp::Null.type_of(), "null");
+    /// assert_eq!(SExp::from(3).type_of(), "number");
+    /// assert_eq!(SExp::from(true).type_of(), "bool");
+    /// assert_eq!(SExp::from((5,)).type_of(), "list");
+    /// ```
+    pub fn type_of(&self) -> &str {
+        match self {
+            Null => "null",
+            Atom(p) => p.type_of(),
+            Pair { .. } => "list",
+        }
+    }
 }

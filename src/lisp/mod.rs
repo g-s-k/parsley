@@ -1,4 +1,4 @@
-mod context;
+pub mod context;
 mod errors;
 mod primitives;
 mod sexp;
