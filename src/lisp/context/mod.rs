@@ -6,7 +6,7 @@ use super::{LispError, LispResult};
 
 mod base;
 mod math;
-mod utils;
+pub mod utils;
 
 /// Evaluation context for LISP expressions.
 ///
