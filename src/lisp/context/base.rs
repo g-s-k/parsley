@@ -1,5 +1,5 @@
 use super::super::LispError;
-use super::super::Primitive::{Character, Number, String as LispString};
+use super::super::Primitive::{Character, String as LispString};
 use super::super::SExp::{self, Atom, Null, Pair};
 
 use super::utils::*;
@@ -93,142 +93,19 @@ impl Context {
         );
 
         // Numerics
-        ret.define(
-            "=",
-            (|e| match e {
-                Pair {
-                    head: box Atom(Number(n1)),
-                    tail:
-                        box Pair {
-                            head: box Atom(Number(n2)),
-                            tail: box Null,
-                        },
-                } => Ok(((n1 - n2).abs() < std::f64::EPSILON).into()),
-                exp => Err(LispError::SyntaxError {
-                    exp: exp.to_string(),
-                }),
-            })
-            .into(),
-        );
-        ret.define(
-            "<",
-            (|e| match e {
-                Pair {
-                    head: box Atom(Number(n1)),
-                    tail:
-                        box Pair {
-                            head: box Atom(Number(n2)),
-                            tail: box Null,
-                        },
-                } => Ok((n1 < n2).into()),
-                exp => Err(LispError::SyntaxError {
-                    exp: exp.to_string(),
-                }),
-            })
-            .into(),
-        );
-        ret.define(
-            ">",
-            (|e| match e {
-                Pair {
-                    head: box Atom(Number(n1)),
-                    tail:
-                        box Pair {
-                            head: box Atom(Number(n2)),
-                            tail: box Null,
-                        },
-                } => Ok((n1 > n2).into()),
-                exp => Err(LispError::SyntaxError {
-                    exp: exp.to_string(),
-                }),
-            })
-            .into(),
-        );
+        ret.define("zero?", (|e| Ok((e == 0.into()).into())).into());
+        ret.define("add1", make_unary_numeric(|e| e + 1.));
+        ret.define("sub1", make_unary_numeric(|e| e - 1.));
+        ret.define("=", make_binary_numeric(|l, r| {
+            (l - r).abs() < std::f64::EPSILON
+        }));
+        ret.define("<", make_binary_numeric(|l, r| l < r));
+        ret.define(">", make_binary_numeric(|l, r| l > r));
         ret.define("abs", make_unary_numeric(f64::abs));
-        ret.define(
-            "+",
-            (|v: SExp| {
-                v.into_iter().fold(Ok(0.into()), |a, e| match e {
-                    Atom(Number(n)) => {
-                        if let Ok(Atom(Number(na))) = a {
-                            Ok(Atom(Number(n + na)))
-                        } else {
-                            a
-                        }
-                    }
-                    _ => Err(LispError::TypeError),
-                })
-            })
-            .into(),
-        );
-        ret.define(
-            "-",
-            (|e| match e {
-                Null => Err(LispError::TypeError),
-                a @ Atom(_) => Err(LispError::NotAList {
-                    atom: a.to_string(),
-                }),
-                Pair {
-                    head: box Atom(Number(n)),
-                    tail,
-                } => {
-                    let mut state = n;
-
-                    for exp in tail.into_iter() {
-                        match exp {
-                            Atom(Number(n2)) => state -= n2,
-                            _ => return Err(LispError::TypeError),
-                        }
-                    }
-
-                    Ok(Atom(Number(state)))
-                }
-                _ => Err(LispError::TypeError),
-            })
-            .into(),
-        );
-        ret.define(
-            "*",
-            (|v: SExp| {
-                v.into_iter().fold(Ok(1.into()), |a, e| match e {
-                    Atom(Number(n)) => {
-                        if let Ok(Atom(Number(na))) = a {
-                            Ok(Atom(Number(n * na)))
-                        } else {
-                            a
-                        }
-                    }
-                    _ => Err(LispError::TypeError),
-                })
-            })
-            .into(),
-        );
-        ret.define(
-            "/",
-            (|e| match e {
-                Null => Err(LispError::TypeError),
-                a @ Atom(_) => Err(LispError::NotAList {
-                    atom: a.to_string(),
-                }),
-                Pair {
-                    head: box Atom(Number(n)),
-                    tail,
-                } => {
-                    let mut state = n;
-
-                    for exp in tail.into_iter() {
-                        match exp {
-                            Atom(Number(n2)) => state /= n2,
-                            _ => return Err(LispError::TypeError),
-                        }
-                    }
-
-                    Ok(Atom(Number(state)))
-                }
-                _ => Err(LispError::TypeError),
-            })
-            .into(),
-        );
+        ret.define("+", make_fold_numeric(0., std::ops::Add::add));
+        ret.define("-", make_fold_from0_numeric(std::ops::Sub::sub));
+        ret.define("*", make_fold_numeric(1., std::ops::Mul::mul));
+        ret.define("/", make_fold_from0_numeric(std::ops::Div::div));
         ret.define("pow", make_binary_numeric(f64::powf));
         ret.define("pi", std::f64::consts::PI.into());
 
@@ -239,7 +116,7 @@ impl Context {
                 Pair {
                     head: box Atom(LispString(s)),
                     tail: box Null,
-                } => Ok(s.chars().map(|c| Atom(Character(c))).collect()),
+                } => Ok(s.chars().map(SExp::from).collect()),
                 _ => Err(LispError::TypeError),
             })
             .into(),

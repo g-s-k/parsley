@@ -39,3 +39,21 @@ where
         }
     }
 }
+
+impl<T> From<&[T]> for SExp
+where
+    T: Into<SExp> + Clone,
+{
+    fn from(ary: &[T]) -> Self {
+        ary.iter().rev().cloned().map(T::into).collect()
+    }
+}
+
+impl<T> From<Vec<T>> for SExp
+where
+    T: Into<SExp>,
+{
+    fn from(ary: Vec<T>) -> Self {
+        ary.into_iter().map(T::into).collect()
+    }
+}

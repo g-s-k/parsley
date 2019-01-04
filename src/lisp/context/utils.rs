@@ -71,3 +71,94 @@ where
     })
     .into()
 }
+
+/// Make a variadic procedure that takes a list of numeric arguments and folds
+/// the whole list.
+///
+/// # Note
+/// The underlying numeric type is f64.
+///
+/// # Example
+/// ```
+/// use parsley::prelude::*;
+/// use parsley::proc_utils::*;
+///
+/// let my_adder = |accumulator, current| accumulator + current;
+/// let my_add_proc = make_fold_numeric(0., my_adder);
+///
+/// assert_eq!(
+///     SExp::from((my_add_proc, vec![1, 2, 3, 4]))
+///         .eval(&mut Context::default()).unwrap(),
+///     SExp::from(10),
+/// );
+/// ```
+pub fn make_fold_numeric<F, T>(init: T, f: F) -> SExp
+where
+    F: Fn(T, f64) -> T + 'static,
+    T: Into<SExp> + Clone + 'static,
+{
+    (move |exp: SExp| match exp.into_iter().fold(Ok(init.to_owned()), |a, e| {
+        if let Ok(val) = a {
+            if let SExp::Atom(Primitive::Number(n)) = e {
+                Ok(f(val, n))
+            } else {
+                Err(LispError::TypeError)
+            }
+        } else {
+            a
+        }
+    }) {
+        Ok(v) => Ok(v.into()),
+        Err(err) => Err(err),
+    })
+    .into()
+}
+
+/// Make a variadic procedure that takes a list of numeric arguments, reserves
+/// the value of the first element as the initial accumulator, then folds the
+/// rest of the list into a number.
+///
+/// # Note
+/// The underlying numeric type is f64.
+///
+/// # Example
+/// ```
+/// use parsley::prelude::*;
+/// use parsley::proc_utils::*;
+///
+/// let my_subtract = |accumulator, current| accumulator - current;
+/// let my_sub_proc = make_fold_from0_numeric(my_subtract);
+///
+/// assert_eq!(
+///     SExp::from((my_sub_proc, vec![1, 2, -3, 4]))
+///         .eval(&mut Context::default()).unwrap(),
+///     SExp::from(-2),
+/// );
+/// ```
+pub fn make_fold_from0_numeric<F>(f: F) -> SExp
+where
+    F: Fn(f64, f64) -> f64 + 'static,
+{
+    (move |exp: SExp| {
+        let mut i = exp.into_iter();
+        if let Some(SExp::Atom(Primitive::Number(first))) = i.next() {
+            match i.fold(Ok(first), |a, e| {
+                if let Ok(val) = a {
+                    if let SExp::Atom(Primitive::Number(n)) = e {
+                        Ok(f(val, n))
+                    } else {
+                        Err(LispError::TypeError)
+                    }
+                } else {
+                    a
+                }
+            }) {
+                Ok(v) => Ok(v.into()),
+                Err(err) => Err(err),
+            }
+        } else {
+            Err(LispError::TypeError)
+        }
+    })
+    .into()
+}
