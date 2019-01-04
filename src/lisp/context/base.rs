@@ -2,6 +2,7 @@ use super::super::LispError;
 use super::super::Primitive::{Character, Number, String as LispString};
 use super::super::SExp::{self, Atom, Null, Pair};
 
+use super::utils::*;
 use super::Context;
 
 impl Context {
@@ -46,6 +47,7 @@ impl Context {
         );
         ret.define("null?", (|e| Ok((e == ((),).into()).into())).into());
         ret.define("null", (SExp::make_symbol("quote"), ((),)).into());
+        ret.define("not", (|e| Ok((e == (false,).into()).into())).into());
         ret.define(
             "cons",
             (|e| match e {
@@ -122,7 +124,8 @@ impl Context {
                 exp => Err(LispError::SyntaxError {
                     exp: exp.to_string(),
                 }),
-            }).into(),
+            })
+            .into(),
         );
         ret.define(
             ">",
@@ -138,19 +141,10 @@ impl Context {
                 exp => Err(LispError::SyntaxError {
                     exp: exp.to_string(),
                 }),
-            }).into(),
-        );
-        ret.define(
-            "abs",
-            (|e| match e {
-                Pair {
-                    head: box Atom(Number(n)),
-                    ..
-                } => Ok(n.abs().into()),
-                _ => Err(LispError::TypeError),
             })
             .into(),
         );
+        ret.define("abs", make_unary_numeric(f64::abs));
         ret.define(
             "+",
             (|v: SExp| {
@@ -164,7 +158,8 @@ impl Context {
                     }
                     _ => Err(LispError::TypeError),
                 })
-            }).into(),
+            })
+            .into(),
         );
         ret.define(
             "-",
@@ -189,7 +184,8 @@ impl Context {
                     Ok(Atom(Number(state)))
                 }
                 _ => Err(LispError::TypeError),
-            }).into(),
+            })
+            .into(),
         );
         ret.define(
             "*",
@@ -204,7 +200,8 @@ impl Context {
                     }
                     _ => Err(LispError::TypeError),
                 })
-            }).into(),
+            })
+            .into(),
         );
         ret.define(
             "/",
@@ -229,8 +226,11 @@ impl Context {
                     Ok(Atom(Number(state)))
                 }
                 _ => Err(LispError::TypeError),
-            }).into(),
+            })
+            .into(),
         );
+        ret.define("pow", make_binary_numeric(f64::powf));
+        ret.define("pi", std::f64::consts::PI.into());
 
         // Strings
         ret.define(
@@ -241,7 +241,8 @@ impl Context {
                     tail: box Null,
                 } => Ok(s.chars().map(|c| Atom(Character(c))).collect()),
                 _ => Err(LispError::TypeError),
-            }).into(),
+            })
+            .into(),
         );
         ret.define(
             "list->string",
@@ -264,7 +265,8 @@ impl Context {
                     }
                 }
                 _ => Err(LispError::TypeError),
-            }).into(),
+            })
+            .into(),
         );
 
         ret
