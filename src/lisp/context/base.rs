@@ -96,9 +96,10 @@ impl Context {
         ret.define("zero?", (|e| Ok((e == 0.into()).into())).into());
         ret.define("add1", make_unary_numeric(|e| e + 1.));
         ret.define("sub1", make_unary_numeric(|e| e - 1.));
-        ret.define("=", make_binary_numeric(|l, r| {
-            (l - r).abs() < std::f64::EPSILON
-        }));
+        ret.define(
+            "=",
+            make_binary_numeric(|l, r| (l - r).abs() < std::f64::EPSILON),
+        );
         ret.define("<", make_binary_numeric(|l, r| l < r));
         ret.define(">", make_binary_numeric(|l, r| l > r));
         ret.define("abs", make_unary_numeric(f64::abs));
