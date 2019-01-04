@@ -319,6 +319,32 @@ impl SExp {
         }
     }
 
+    pub(super) fn eval_filter(self, ctx: &mut Context) -> LispResult {
+        match self {
+            Pair {
+                head: predicate,
+                tail:
+                    box Pair {
+                        head: list,
+                        tail: box Null,
+                    },
+            } => list
+                .eval(ctx)?
+                .into_iter()
+                .filter_map(|e| {
+                    match Null.cons(e.clone()).cons((*predicate).to_owned()).eval(ctx) {
+                        Ok(Atom(Primitive::Boolean(false))) => None,
+                        Ok(_) => Some(Ok(e)),
+                        err => Some(err),
+                    }
+                })
+                .collect(),
+            exp => Err(LispError::SyntaxError {
+                exp: exp.to_string(),
+            }),
+        }
+    }
+
     pub(super) fn do_apply(self, ctx: &mut Context) -> LispResult {
         match self {
             Pair {

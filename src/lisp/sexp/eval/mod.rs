@@ -63,6 +63,7 @@ impl SExp {
                         "set!" => tail.eval_set(ctx),
                         "map" => tail.eval_map(ctx),
                         "foldl" => tail.eval_fold(ctx),
+                        "filter" => tail.eval_filter(ctx),
                         _ => tail.cons(SExp::make_symbol(&sym)).eval_typical_pair(ctx),
                     }
                 } else {
