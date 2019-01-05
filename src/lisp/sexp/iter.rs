@@ -34,17 +34,66 @@ impl IntoIterator for SExp {
     }
 }
 
+pub struct SExpRefIterator<'a> {
+    exp: &'a SExp,
+}
+
+impl<'a> Iterator for SExpRefIterator<'a> {
+    type Item = &'a SExp;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.exp {
+            Pair { head, tail } => {
+                self.exp = &*tail;
+                Some(&*head)
+            }
+            a @ Atom(_) => {
+                self.exp = &Null;
+                Some(&a)
+            }
+            _ => None,
+        }
+    }
+}
+
+impl SExp {
+    /// Iterate over an S-Expression, by reference.
+    ///
+    /// # Example
+    /// ```
+    /// use parsley::SExp::{self, Null};
+    ///
+    /// assert_eq!(SExp::from(((),)).iter().next().unwrap(), &Null);
+    /// ```
+    pub fn iter(&self) -> SExpRefIterator {
+        SExpRefIterator { exp: self }
+    }
+}
+
 impl FromIterator<SExp> for SExp {
     fn from_iter<I>(iter: I) -> Self
     where
         I: IntoIterator<Item = SExp>,
     {
         let mut exp_out = Null;
+        let mut last = &mut exp_out;
 
-        let iter_rev = iter.into_iter().collect::<Vec<_>>().into_iter().rev();
+        for exp in iter {
+            let new_val = Pair {
+                head: Box::new(exp),
+                tail: Box::new(Null),
+            };
 
-        for item in iter_rev {
-            exp_out = exp_out.cons(item);
+            match last {
+                Null => {
+                    *last = new_val;
+                }
+                Pair { ref mut tail, .. } => {
+                    *tail = Box::new(new_val);
+                    last = tail;
+                }
+                _ => (),
+            }
         }
 
         exp_out

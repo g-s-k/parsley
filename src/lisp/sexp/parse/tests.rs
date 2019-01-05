@@ -1,7 +1,6 @@
 #![cfg(test)]
 
-use super::SExp::{self, Atom, Null, Pair};
-use super::*;
+use super::SExp::{self, Null};
 
 fn do_parse_and_assert(test_val: &str, expected_val: SExp) {
     let test_parsed = test_val.parse::<SExp>().unwrap();

@@ -160,11 +160,10 @@ impl SExp {
                 debug!("Creating procedure.");
                 Ok(SExp::from(move |args: SExp| {
                     debug!("Formal parameters: {}", params);
-                    let bound_params = params
-                        .to_owned()
-                        .into_iter()
+                    let bound_params: SExp = params
+                        .iter()
                         .zip(args.into_iter())
-                        .map(|(p, a)| Null.cons(a).cons(p))
+                        .map(|(p, a)| sexp![p.to_owned(), a])
                         .collect();
                     debug!("Bound parameters: {}", bound_params);
                     Ok(fn_body
@@ -331,12 +330,10 @@ impl SExp {
             } => list
                 .eval(ctx)?
                 .into_iter()
-                .filter_map(|e| {
-                    match Null.cons(e.clone()).cons((*predicate).to_owned()).eval(ctx) {
-                        Ok(Atom(Primitive::Boolean(false))) => None,
-                        Ok(_) => Some(Ok(e)),
-                        err => Some(err),
-                    }
+                .filter_map(|e| match sexp![(*predicate).clone(), e.clone()].eval(ctx) {
+                    Ok(Atom(Primitive::Boolean(false))) => None,
+                    Ok(_) => Some(Ok(e)),
+                    err => Some(err),
                 })
                 .collect(),
             exp => Err(LispError::SyntaxError {
