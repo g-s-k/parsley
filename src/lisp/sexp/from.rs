@@ -1,6 +1,21 @@
 use super::super::Primitive;
 use super::SExp::{self, *};
 
+#[macro_export]
+macro_rules! sexp {
+    ( $( $x:expr ),* ) => {
+        {
+            let mut temp_vec = Vec::new();
+
+            $(
+                temp_vec.push(SExp::from($x));
+            )*
+
+            SExp::from(temp_vec)
+        }
+    };
+}
+
 impl<T> From<T> for SExp
 where
     Primitive: From<T>,

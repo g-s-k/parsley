@@ -1,6 +1,8 @@
+#[macro_use]
+mod from;
+
 mod display;
 mod eval;
-mod from;
 mod iter;
 mod parse;
 

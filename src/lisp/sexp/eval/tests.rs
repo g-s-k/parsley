@@ -1,186 +1,87 @@
 #![cfg(test)]
 
-use super::SExp::{self, Atom, Null, Pair};
+use super::SExp::{self, Atom, Null};
 use super::*;
 
-#[test]
-fn empty_list() {
-    let mut ctx = Context::default();
-    assert!(Null.eval(&mut ctx).is_err());
+macro_rules! sym {
+    ( $name:expr ) => {
+        SExp::make_symbol($name)
+    };
+}
 
-    let mut ctx = Context::default();
-    assert_eq!(
-        Null.cons(Null)
-            .cons(SExp::make_symbol("quote"))
-            .eval(&mut ctx)
-            .unwrap(),
-        Null
-    );
+macro_rules! eval {
+    ( $e:expr ) => {
+        $e.eval(&mut Context::default())
+    };
+}
+
+macro_rules! assert_eval_eq {
+    ( $lhs:expr, $rhs:expr ) => {
+        assert_eq!(eval!($lhs).expect("Evaluation failed"), SExp::from($rhs))
+    };
+}
+
+#[test]
+fn null_list() {
+    assert!(eval!(Null).is_err());
+    assert_eval_eq!(sexp![sym!("quote"), Null], Null);
 }
 
 #[test]
 fn atom() {
-    let sym = || SExp::make_symbol("test");
-    let quote = || SExp::make_symbol("quote");
-
-    let mut ctx = Context::default();
-    assert!(sym().eval(&mut ctx).is_err());
-
-    let mut ctx = Context::default();
-    assert_eq!(
-        Null.cons(sym()).cons(quote()).eval(&mut ctx).unwrap(),
-        sym()
-    )
+    assert!(eval!(sym!("test")).is_err());
+    assert_eval_eq!(sexp![sym!("quote"), sym!("test")], sym!("test"))
 }
 
 #[test]
 fn list_quote() {
-    let test_list = Null.cons(Null).cons(SExp::make_symbol("quote"));
-    let mut ctx = Context::default();
-    assert_eq!(test_list.eval(&mut ctx).unwrap(), Null);
+    assert_eval_eq!(sexp![sym!("quote"), Null], Null);
 
-    let test_list_2 = Null
-        .cons(SExp::make_symbol("xyz"))
-        .cons(SExp::make_symbol("abc"));
-    let test_again = Null
-        .cons(test_list_2.clone())
-        .cons(SExp::make_symbol("quote"));
-    let mut ctx = Context::default();
-    assert_eq!(test_again.eval(&mut ctx).unwrap(), test_list_2);
+    let list = sexp![sym!("abc"), sym!("xyz")];
+    assert_eval_eq!(sexp![sym!("quote"), list.clone()], list);
 }
 
 #[test]
 fn r#if() {
-    let sym_1 = || SExp::from("one");
-    let sym_2 = || SExp::from("two");
-
-    let mut ctx = Context::default();
-    assert_eq!(
-        Null.cons(sym_2())
-            .cons(sym_1())
-            .cons(SExp::from(true))
-            .cons(SExp::make_symbol("if"))
-            .eval(&mut ctx)
-            .unwrap(),
-        sym_1()
-    );
-
-    let mut ctx = Context::default();
-    assert_eq!(
-        Null.cons(sym_2())
-            .cons(sym_1())
-            .cons(SExp::from(false))
-            .cons(SExp::make_symbol("if"))
-            .eval(&mut ctx)
-            .unwrap(),
-        sym_2()
-    );
+    // ensure the right consequent is returned
+    assert_eval_eq!(sexp![sym!("if"), true, "one", "two"], "one");
+    assert_eval_eq!(sexp![sym!("if"), false, "one", "two"], "two");
+    // ensure only the correct consequent is evaluated
+    assert!(eval!(sexp![sym!("if"), true, 4, sym!("potato")]).is_ok());
+    assert!(eval!(sexp![sym!("if"), true, sym!("potato"), 5]).is_err());
+    assert!(eval!(sexp![sym!("if"), false, 3, sym!("potato")]).is_err());
+    assert!(eval!(sexp![sym!("if"), false, sym!("potato"), "hooray"]).is_ok());
 }
 
 #[test]
 fn and() {
-    let and = || SExp::make_symbol("and");
-    let t = || SExp::from(true);
-    let f = || SExp::from(false);
-
-    let mut ctx = Context::default();
-    assert_eq!(Null.cons(and()).eval(&mut ctx).unwrap(), t());
-
-    let mut ctx = Context::default();
-    assert_eq!(
-        Null.cons(t()).cons(t()).cons(and()).eval(&mut ctx).unwrap(),
-        t()
-    );
-
-    let mut ctx = Context::default();
-    assert_eq!(
-        Null.cons(t()).cons(f()).cons(and()).eval(&mut ctx).unwrap(),
-        f()
-    );
-
-    let mut ctx = Context::default();
-    assert_eq!(
-        Null.cons(f()).cons(f()).cons(and()).eval(&mut ctx).unwrap(),
-        f()
-    );
-
-    let mut ctx = Context::default();
-    assert_eq!(
-        SExp::from((3,))
-            .cons(t())
-            .cons(and())
-            .eval(&mut ctx)
-            .unwrap(),
-        SExp::from(3.0)
-    );
-
-    let mut ctx = Context::default();
-    assert_eq!(
-        Null.cons(Null.cons(Null).cons(SExp::make_symbol("quote")))
-            .cons(and())
-            .eval(&mut ctx)
-            .unwrap(),
-        Null
-    );
-
-    let mut ctx = Context::default();
-    assert_eq!(
-        SExp::from((and(), ('a', ('b', (false, ('c',))))))
-            .eval(&mut ctx)
-            .unwrap(),
-        SExp::from(false)
-    );
+    // validate return value
+    assert_eval_eq!(sexp![sym!("and")], true);
+    assert_eval_eq!(sexp![sym!("and"), true, true], true);
+    assert_eval_eq!(sexp![sym!("and"), false, true], false);
+    assert_eval_eq!(sexp![sym!("and"), false, false], false);
+    assert_eval_eq!(sexp![sym!("and"), true, 3], 3);
+    assert_eval_eq!(sexp![sym!("and"), sexp![sym!("quote"), ()]], ());
+    assert_eval_eq!(sexp![sym!("and"), 'a', 'b', false, 'c'], false);
+    // ensure that evaluation occurs until a false is encountered
+    assert!(eval!(sexp![sym!("and"), false, sym!("potato")]).is_ok());
+    assert!(eval!(sexp![sym!("and"), true, sym!("potato")]).is_err());
 }
 
 #[test]
 fn or() {
-    let or = || SExp::make_symbol("or");
-    let t = || SExp::from(true);
-    let f = || SExp::from(false);
-
-    let mut ctx = Context::default();
-    assert_eq!(Null.cons(or()).eval(&mut ctx).unwrap(), f());
-
-    let mut ctx = Context::default();
-    assert_eq!(
-        Null.cons(t()).cons(t()).cons(or()).eval(&mut ctx).unwrap(),
-        t()
-    );
-
-    let mut ctx = Context::default();
-    assert_eq!(
-        Null.cons(t()).cons(f()).cons(or()).eval(&mut ctx).unwrap(),
-        t()
-    );
-
-    let mut ctx = Context::default();
-    assert_eq!(
-        Null.cons(f()).cons(f()).cons(or()).eval(&mut ctx).unwrap(),
-        f()
-    );
-
-    let mut ctx = Context::default();
-    assert_eq!(
-        SExp::from((or(), (3, (t(),)))).eval(&mut ctx).unwrap(),
-        SExp::from(3)
-    );
-
-    let mut ctx = Context::default();
-    assert_eq!(
-        Null.cons(Null.cons(Null).cons(SExp::make_symbol("quote")))
-            .cons(or())
-            .eval(&mut ctx)
-            .unwrap(),
-        Null
-    );
-
-    let mut ctx = Context::default();
-    assert_eq!(
-        SExp::from((or(), (false, ('a', ('b', ('c',))))))
-            .eval(&mut ctx)
-            .unwrap(),
-        SExp::from('a')
-    );
+    // validate return value
+    assert_eval_eq!(sexp![sym!("or")], false);
+    assert_eval_eq!(sexp![sym!("or"), true, true], true);
+    assert_eval_eq!(sexp![sym!("or"), false, true], true);
+    assert_eval_eq!(sexp![sym!("or"), true, false], true);
+    assert_eval_eq!(sexp![sym!("or"), false, false], false);
+    assert_eval_eq!(sexp![sym!("or"), 3, true], 3);
+    assert_eval_eq!(sexp![sym!("or"), sexp![sym!("quote"), ()], 5], ());
+    assert_eval_eq!(sexp![sym!("or"), false, 'a', 'b', 'c'], 'a');
+    // ensure that evaluation stops at first non-false value
+    assert!(eval!(sexp![sym!("or"), false, sym!("potato")]).is_err());
+    assert!(eval!(sexp![sym!("or"), true, sym!("potato")]).is_ok());
 }
 
 #[test]
