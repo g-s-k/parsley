@@ -3,6 +3,8 @@ use std::str::FromStr;
 use super::SExp::{self, *};
 use super::{utils, LispError, LispResult, Primitive};
 
+mod tests;
+
 impl FromStr for SExp {
     type Err = LispError;
 

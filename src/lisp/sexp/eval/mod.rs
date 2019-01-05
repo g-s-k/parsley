@@ -2,6 +2,7 @@ use super::SExp::{self, *};
 use super::{Context, LispError, LispResult, Primitive};
 
 mod helpers;
+mod tests;
 
 impl SExp {
     /// Evaluate an S-Expression in a context.

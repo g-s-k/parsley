@@ -5,6 +5,8 @@ use super::super::SExp::{self, Atom, Null, Pair};
 use super::utils::*;
 use super::Context;
 
+mod tests;
+
 impl Context {
     /// Base context - defines a number of useful functions and constants for
     /// use in the runtime.
