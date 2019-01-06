@@ -1,6 +1,6 @@
 #![cfg(test)]
 
-use super::SExp::{self, Atom, Null};
+use super::SExp::{self, Null};
 use super::*;
 
 macro_rules! sym {
@@ -86,117 +86,75 @@ fn or() {
 
 #[test]
 fn cond() {
-    let cond = || SExp::make_symbol("cond");
-    let else_ = || SExp::make_symbol("else");
-    let t = || SExp::from(true);
-    let f = || SExp::from(false);
-
-    let mut ctx = Context::default();
-    assert_eq!(
-        Null.cons(cond()).eval(&mut ctx).unwrap(),
-        Atom(Primitive::Void)
+    // validate empty value
+    assert_eval_eq!(sexp![sym!("cond")], Primitive::Void);
+    // validate else behavior
+    assert_eval_eq!(sexp![sym!("cond"), sexp![sym!("else"), 'a']], 'a');
+    // validate typical use cases
+    assert_eval_eq!(
+        sexp![sym!("cond"), sexp![true, 'b'], sexp![sym!("else"), 'a']],
+        'b'
     );
-
-    let mut ctx = Context::default();
-    assert_eq!(
-        SExp::from((cond(), ((else_(), ('a',)),)))
-            .eval(&mut ctx)
-            .unwrap(),
-        SExp::from('a')
+    assert_eval_eq!(
+        sexp![sym!("cond"), sexp![false, 'b'], sexp![sym!("else"), 'a']],
+        'a'
     );
-
-    let mut ctx = Context::default();
-    assert_eq!(
-        Null.cons(SExp::from(('a',)).cons(else_()))
-            .cons(SExp::from(('b',)).cons(t()))
-            .cons(cond())
-            .eval(&mut ctx)
-            .unwrap(),
-        SExp::from('b')
+    assert_eval_eq!(
+        sexp![
+            sym!("cond"),
+            sexp![false, 'c'],
+            sexp![true, 'b'],
+            sexp![true, 'd'],
+            sexp![sym!("else"), 'a']
+        ],
+        'b'
     );
-
-    let mut ctx = Context::default();
-    assert_eq!(
-        Null.cons(SExp::from(('a',)).cons(else_()))
-            .cons(SExp::from(('b',)).cons(f()))
-            .cons(cond())
-            .eval(&mut ctx)
-            .unwrap(),
-        SExp::from('a')
+    assert_eval_eq!(
+        sexp![
+            sym!("cond"),
+            sexp![false, 'c'],
+            sexp![false, 'b'],
+            sexp![false, 'd'],
+            sexp![sym!("else"), 'a']
+        ],
+        'a'
     );
-
-    let mut ctx = Context::default();
-    assert_eq!(
-        Null.cons(SExp::from(('a',)).cons(else_()))
-            .cons(SExp::from(('d',)).cons(t()))
-            .cons(SExp::from(('b',)).cons(t()))
-            .cons(SExp::from(('c',)).cons(f()))
-            .cons(cond())
-            .eval(&mut ctx)
-            .unwrap(),
-        SExp::from('b')
-    );
-
-    let mut ctx = Context::default();
-    assert_eq!(
-        Null.cons(SExp::from(('a',)).cons(else_()))
-            .cons(SExp::from(('d',)).cons(f()))
-            .cons(SExp::from(('b',)).cons(f()))
-            .cons(SExp::from(('c',)).cons(f()))
-            .cons(cond())
-            .eval(&mut ctx)
-            .unwrap(),
-        SExp::from('a')
-    );
+    // ensure that evaluation stops at first non-#f predicate
+    assert!(eval!(sexp![
+        sym!("cond"),
+        sexp![true, sym!("potato")],
+        sexp![sym!("else"), "good"]
+    ])
+    .is_err());
+    assert!(eval!(sexp![
+        sym!("cond"),
+        sexp![true, "good"],
+        sexp![sym!("else"), sym!("potato")]
+    ])
+    .is_ok());
 }
 
 #[test]
 fn begin() {
-    let begin = || SExp::make_symbol("begin");
-
-    let mut ctx = Context::default();
-    assert!(Null.cons(begin()).eval(&mut ctx).is_err());
-
-    let mut ctx = Context::default();
-    assert_eq!(
-        SExp::from((begin(), (0, (1,)))).eval(&mut ctx).unwrap(),
-        SExp::from(1)
-    )
+    assert!(eval!(sexp![sym!("begin")]).is_err());
+    assert_eval_eq!(sexp![sym!("begin"), 0, 1], 1);
 }
 
 #[test]
 fn r#let() {
-    let x = || SExp::make_symbol("x");
-    let y = || SExp::make_symbol("y");
-    let let_ = || SExp::make_symbol("let");
-
-    let mut ctx = Context::default();
-    assert!(Null.cons(let_()).eval(&mut ctx).is_err());
-
-    let mut ctx = Context::default();
-    assert!(Null.cons(Null).cons(let_()).eval(&mut ctx).is_err());
-
-    let mut ctx = Context::default();
-    assert_eq!(
-        Null.cons(x())
-            .cons(Null.cons(SExp::from((3_f64,)).cons(x())))
-            .cons(let_())
-            .eval(&mut ctx)
-            .unwrap(),
-        SExp::from(3)
-    );
-
-    let mut ctx = Context::default();
-    assert_eq!(
-        Null.cons(y())
-            .cons(x())
-            .cons(
-                Null.cons(SExp::from((5_f64,)).cons(y()))
-                    .cons(SExp::from((3_f64,)).cons(x()))
-            )
-            .cons(let_())
-            .eval(&mut ctx)
-            .unwrap(),
-        SExp::from(5)
+    // validate errors for insufficient arguments
+    assert!(eval!(sexp![sym!("let")]).is_err());
+    assert!(eval!(sexp![sym!("let"), ()]).is_err());
+    // very basic case
+    assert_eval_eq!(sexp![sym!("let"), sexp![sexp![sym!("x"), 3]], sym!("x")], 3);
+    // multiple body statements
+    assert_eval_eq!(
+        sexp![
+            sym!("let"),
+            sexp![sexp![sym!("x"), 3], sexp![sym!("y"), 5]],
+            sym!("x"),
+            sym!("y")
+        ],
+        5
     );
 }
