@@ -83,18 +83,22 @@ impl SExp {
             }),
             Pair {
                 head: head2,
-                tail:
-                    box Pair {
-                        head: defn,
-                        tail: box Null,
-                    },
+                tail: defn,
             } => match *head2 {
-                Atom(Primitive::Symbol(sym)) => {
-                    debug!("Defining a quanitity with symbol {}", &sym);
-                    let ev_defn = defn.eval(ctx)?;
-                    ctx.define(&sym, ev_defn);
-                    Ok(Atom(Primitive::Undefined))
-                }
+                Atom(Primitive::Symbol(sym)) => match *defn {
+                    Pair {
+                        head: the_defn,
+                        tail: box Null,
+                    } => {
+                        debug!("Defining a quanitity with symbol {}", &sym);
+                        let ev_defn = the_defn.eval(ctx)?;
+                        ctx.define(&sym, ev_defn);
+                        Ok(Atom(Primitive::Undefined))
+                    }
+                    exp => Err(LispError::SyntaxError {
+                        exp: exp.to_string(),
+                    }),
+                },
                 Pair {
                     head: box Atom(Primitive::Symbol(sym)),
                     tail: fn_params,
@@ -102,9 +106,7 @@ impl SExp {
                     debug!("Defining a function with \"define\" syntax.");
                     ctx.define(
                         &sym,
-                        Null.cons(*defn)
-                            .cons(*fn_params)
-                            .cons(SExp::make_symbol("lambda")),
+                        defn.cons(*fn_params).cons(SExp::make_symbol("lambda")),
                     );
                     Ok(Atom(Primitive::Undefined))
                 }
@@ -112,9 +114,6 @@ impl SExp {
                     exp: exp.to_string(),
                 }),
             },
-            exp => Err(LispError::SyntaxError {
-                exp: exp.to_string(),
-            }),
         }
     }
 

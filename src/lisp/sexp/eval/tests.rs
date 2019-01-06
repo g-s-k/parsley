@@ -158,3 +158,55 @@ fn r#let() {
         5
     );
 }
+
+#[test]
+fn define() {
+    // validate errors for insufficient/too many arguments
+    assert!(eval!(sexp![sym!("define")]).is_err());
+    assert!(eval!(sexp![sym!("define"), sym!("x")]).is_err());
+    assert!(eval!(sexp![sym!("define"), sym!("x"), 3, 7]).is_err());
+    // very basic case
+    assert_eval_eq!(sexp![sym!("define"), sym!("x"), 3], Primitive::Undefined);
+    assert_eval_eq!(
+        sexp![
+            sym!("begin"),
+            sexp![sym!("define"), sym!("x"), 3],
+            sym!("x")
+        ],
+        3
+    );
+    // functional form
+    assert_eval_eq!(
+        sexp![
+            sym!("define"),
+            sexp![sym!("x"), sym!("y")],
+            sexp![sym!("+"), 3, sym!("y")]
+        ],
+        Primitive::Undefined
+    );
+    assert_eval_eq!(
+        sexp![
+            sym!("begin"),
+            sexp![
+                sym!("define"),
+                sexp![sym!("x"), sym!("y"), sym!("z")],
+                sym!("y")
+            ],
+            sexp![sym!("x"), 4, 5]
+        ],
+        4
+    );
+    assert_eval_eq!(
+        sexp![
+            sym!("begin"),
+            sexp![
+                sym!("define"),
+                sexp![sym!("x"), sym!("y"), sym!("z")],
+                sym!("y"),
+                sym!("z")
+            ],
+            sexp![sym!("x"), 4, 5]
+        ],
+        5
+    );
+}
