@@ -72,11 +72,13 @@ fn mixed_type_list() {
 fn quote_syntax() {
     do_parse_and_assert(
         "'(a b c d)",
-        Null.cons(SExp::make_symbol("d"))
-            .cons(SExp::make_symbol("c"))
-            .cons(SExp::make_symbol("b"))
-            .cons(SExp::make_symbol("a"))
-            .cons(SExp::make_symbol("quote")),
+        Null.cons(
+            Null.cons(SExp::make_symbol("d"))
+                .cons(SExp::make_symbol("c"))
+                .cons(SExp::make_symbol("b"))
+                .cons(SExp::make_symbol("a")),
+        )
+        .cons(SExp::make_symbol("quote")),
     );
 
     do_parse_and_assert(

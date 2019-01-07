@@ -28,24 +28,21 @@ impl SExp {
     fn parse_str(s: &str) -> LispResult {
         let code = s.trim();
 
-        if code.starts_with('\'')
-            && code.len() > 1
-            && code.chars().skip(1).all(utils::is_symbol_char)
-        {
-            debug!("Matched quoted symbol: {}", code);
-            Ok(Null
-                .cons(Atom(code[1..].parse::<Primitive>()?))
-                .cons(SExp::make_symbol("quote")))
+        if code.starts_with('\'') {
+            match code.len() {
+                1 => Err(LispError::SyntaxError {
+                    exp: code.to_string(),
+                }),
+                n => {
+                    debug!("Matched quoted expression with length {} chars.", n - 1);
+                    Ok(Null
+                        .cons(SExp::parse_str(&code[1..])?)
+                        .cons(SExp::make_symbol("quote")))
+                }
+            }
         } else if code.chars().all(utils::is_atom_char) {
             debug!("Matched atom: {}", code);
             Ok(Atom(code.parse::<Primitive>()?))
-        } else if code.starts_with("'(") && code.ends_with(')') {
-            let tail = Box::new(if code.len() == 3 {
-                Null.cons(Null)
-            } else {
-                SExp::parse_str(&code[1..])?
-            });
-            Ok(tail.cons(SExp::make_symbol("quote")))
         } else if code.starts_with('(') && code.ends_with(')') {
             match utils::find_closing_delim(code.chars(), '(', ')') {
                 Some(idx) if idx == 1 => Ok(Null),

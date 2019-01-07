@@ -60,7 +60,7 @@ impl SExp {
                         "lambda" => tail.eval_lambda(),
                         "let" => tail.eval_let(ctx),
                         "or" => tail.eval_or(ctx),
-                        "quote" => Ok(tail.eval_quote()),
+                        "quote" => tail.eval_quote(),
                         "set!" => tail.eval_set(ctx),
                         "map" => tail.eval_map(ctx),
                         "foldl" => tail.eval_fold(ctx),

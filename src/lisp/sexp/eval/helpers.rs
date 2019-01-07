@@ -244,14 +244,14 @@ impl SExp {
         Ok(SExp::from(false))
     }
 
-    pub(super) fn eval_quote(self) -> Self {
+    pub(super) fn eval_quote(self) -> LispResult {
         trace!("Evaluating 'quote' expression: {}", self);
         match self {
             Pair {
                 head,
                 tail: box Null,
-            } => *head,
-            _ => self,
+            } => Ok(*head),
+            _ => Err(LispError::TypeError),
         }
     }
 
