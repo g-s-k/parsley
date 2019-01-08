@@ -1,17 +1,17 @@
 /// Multipurpose error type.
 #[derive(Debug, Fail)]
-pub enum LispError {
+pub enum Error {
     #[fail(display = "could not parse expression: {}", exp)]
-    SyntaxError { exp: String },
+    Syntax { exp: String },
     #[fail(display = "type error")]
-    TypeError,
+    Type,
     #[fail(display = "symbol is not defined: {}", sym)]
     UndefinedSymbol { sym: String },
     #[fail(
         display = "arity mismatch: expected {} params, given {}.",
         expected, given
     )]
-    ArityMismatch { expected: usize, given: usize },
+    Arity { expected: usize, given: usize },
     #[fail(display = "{} expects at least one argument.", symbol)]
     NoArgumentsProvided { symbol: String },
     #[fail(display = "Expected a list, got {}.", atom)]

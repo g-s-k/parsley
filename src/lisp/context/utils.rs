@@ -2,7 +2,7 @@
 //!
 //! Reduce code duplication for type/arity checking and value packaging.
 
-use super::super::{LispError, Primitive, SExp};
+use super::super::{Error, Primitive, SExp};
 
 /// Make a procedure that takes one numeric argument.
 ///
@@ -31,7 +31,7 @@ where
             head: box SExp::Atom(Primitive::Number(n)),
             ..
         } => Ok((f(n)).into()),
-        _ => Err(LispError::TypeError),
+        _ => Err(Error::Type),
     })
     .into()
 }
@@ -67,7 +67,7 @@ where
                     ..
                 },
         } => Ok((f(n1, n2)).into()),
-        _ => Err(LispError::TypeError),
+        _ => Err(Error::Type),
     })
     .into()
 }
@@ -102,7 +102,7 @@ where
             if let SExp::Atom(Primitive::Number(n)) = e {
                 Ok(f(val, n))
             } else {
-                Err(LispError::TypeError)
+                Err(Error::Type)
             }
         } else {
             a
@@ -147,7 +147,7 @@ where
                     if let SExp::Atom(Primitive::Number(n)) = e {
                         Ok(f(val, n))
                     } else {
-                        Err(LispError::TypeError)
+                        Err(Error::Type)
                     }
                 } else {
                     a
@@ -157,7 +157,7 @@ where
                 Err(err) => Err(err),
             }
         } else {
-            Err(LispError::TypeError)
+            Err(Error::Type)
         }
     })
     .into()

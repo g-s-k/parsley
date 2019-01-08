@@ -2,9 +2,9 @@ use std::fmt;
 use std::rc::Rc;
 use std::string::String as CoreString;
 
-use super::{LispResult, SExp};
+use super::{Result, SExp};
 
-use self::Primitive::*;
+use self::Primitive::{Boolean, Character, Number, Procedure, String, Symbol, Undefined, Void};
 
 mod from;
 
@@ -17,7 +17,7 @@ pub enum Primitive {
     Number(f64),
     String(CoreString),
     Symbol(CoreString),
-    Procedure(Rc<dyn Fn(SExp) -> LispResult>),
+    Procedure(Rc<dyn Fn(SExp) -> Result>),
 }
 
 impl fmt::Debug for Primitive {

@@ -1,43 +1,44 @@
 use std::str::FromStr;
 
-use super::SExp::{self, *};
-use super::{utils, LispError, LispResult, Primitive};
+use super::SExp::{self, Atom, Null, Pair};
+use super::{utils, Error, Primitive, Result};
 
 mod tests;
 
 impl FromStr for SExp {
-    type Err = LispError;
+    type Err = Error;
 
-    fn from_str(s: &str) -> LispResult {
+    fn from_str(s: &str) -> Result {
         let trimmed_str = s.trim();
 
+        // TODO: cover more cases where the string contains multiple expressions
         if trimmed_str.starts_with('(') {
             if let Some(idx) = utils::find_closing_delim(trimmed_str.chars(), '(', ')') {
                 if idx + 1 < trimmed_str.len() {
                     let fixed_str = format!("(begin {})", trimmed_str);
-                    return SExp::parse_str(&fixed_str);
+                    return Self::parse_str(&fixed_str);
                 }
             }
         }
 
-        SExp::parse_str(trimmed_str)
+        Self::parse_str(trimmed_str)
     }
 }
 
 impl SExp {
-    fn parse_str(s: &str) -> LispResult {
+    fn parse_str(s: &str) -> Result {
         let code = s.trim();
 
         if code.starts_with('\'') {
             match code.len() {
-                1 => Err(LispError::SyntaxError {
+                1 => Err(Error::Syntax {
                     exp: code.to_string(),
                 }),
                 n => {
                     debug!("Matched quoted expression with length {} chars.", n - 1);
                     Ok(Null
-                        .cons(SExp::parse_str(&code[1..])?)
-                        .cons(SExp::make_symbol("quote")))
+                        .cons(Self::parse_str(&code[1..])?)
+                        .cons(Self::make_symbol("quote")))
                 }
             }
         } else if code.chars().all(utils::is_atom_char) {
@@ -48,9 +49,9 @@ impl SExp {
                 Some(idx) if idx == 1 => Ok(Null),
                 Some(idx) => {
                     debug!("Matched list with length {} chars", idx + 1);
-                    SExp::parse_list_from_str(&code[1..idx])
+                    Self::parse_list_from_str(&code[1..idx])
                 }
-                None => Err(LispError::SyntaxError {
+                None => Err(Error::Syntax {
                     exp: code.to_string(),
                 }),
             }
@@ -60,7 +61,7 @@ impl SExp {
         }
     }
 
-    fn parse_list_from_str(s: &str) -> LispResult {
+    fn parse_list_from_str(s: &str) -> Result {
         let mut list_str = s.trim();
         let mut list_out = Null;
 
@@ -73,7 +74,7 @@ impl SExp {
             if list_str.ends_with(')') {
                 match utils::find_closing_delim(list_str.chars().rev(), ')', '(') {
                     None => {
-                        return Err(LispError::SyntaxError {
+                        return Err(Error::Syntax {
                             exp: list_str.to_string(),
                         });
                     }
@@ -89,50 +90,40 @@ impl SExp {
                         let (before, after) = list_str.split_at(new_idx);
                         list_str = before.trim();
                         list_out = Pair {
-                            head: Box::new(SExp::parse_str(after)?),
+                            head: Box::new(Self::parse_str(after)?),
                             tail: Box::new(list_out),
                         };
                     }
                 }
             } else {
                 if list_str.ends_with('"') {
-                    match list_str.chars().rev().skip(1).position(|e| e == '"') {
-                        Some(idx2) => {
-                            debug!("Matched string with length {} chars", idx2);
-                            let (rest, last) =
-                                list_str.split_at(list_str.len() - 2 - idx2);
-                            list_out = list_out.cons(Atom(last.parse::<Primitive>()?));
-                            list_str = rest.trim();
-                        }
-                        None => {
-                            return Err(LispError::SyntaxError {
-                                exp: list_str.to_string(),
-                            });
-                        }
+                    if let Some(idx2) = list_str.chars().rev().skip(1).position(|e| e == '"') {
+                        debug!("Matched string with length {} chars", idx2);
+                        let (rest, last) = list_str.split_at(list_str.len() - 2 - idx2);
+                        list_out = list_out.cons(Atom(last.parse::<Primitive>()?));
+                        list_str = rest.trim();
+                    } else {
+                        return Err(Error::Syntax {
+                            exp: list_str.to_string(),
+                        });
                     }
                 }
 
-                match list_str.chars().rev().position(|c| !utils::is_atom_char(c)) {
-                    Some(idx3) => {
-                        debug!(
-                            "Matched atom in first position with length {} chars",
-                            idx3
-                        );
-                        let (rest, last) = list_str.split_at(list_str.len() - idx3);
-                        list_out = Pair {
-                            head: Box::new(SExp::parse_str(last)?),
-                            tail: Box::new(list_out),
-                        };
-                        list_str = rest.trim();
-                    }
-                    _ => {
-                        debug!("Entire string is an atom.");
-                        list_out = Pair {
-                            head: Box::new(SExp::parse_str(list_str)?),
-                            tail: Box::new(list_out),
-                        };
-                        break;
-                    }
+                if let Some(idx3) = list_str.chars().rev().position(|c| !utils::is_atom_char(c)) {
+                    debug!("Matched atom in first position with length {} chars", idx3);
+                    let (rest, last) = list_str.split_at(list_str.len() - idx3);
+                    list_out = Pair {
+                        head: Box::new(Self::parse_str(last)?),
+                        tail: Box::new(list_out),
+                    };
+                    list_str = rest.trim();
+                } else {
+                    debug!("Entire string is an atom.");
+                    list_out = Pair {
+                        head: Box::new(Self::parse_str(list_str)?),
+                        tail: Box::new(list_out),
+                    };
+                    break;
                 }
             }
         }

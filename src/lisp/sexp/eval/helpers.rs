@@ -1,10 +1,10 @@
-use super::SExp::{self, *};
-use super::{Context, LispError, LispResult, Primitive};
+use super::SExp::{self, Atom, Null, Pair};
+use super::{Context, Error, Primitive, Result};
 
 impl SExp {
-    pub(super) fn eval_and(self, ctx: &mut Context) -> LispResult {
+    pub(super) fn eval_and(self, ctx: &mut Context) -> Result {
         debug!("Evaluating 'and' expression.");
-        let mut state = SExp::from(true);
+        let mut state = Self::from(true);
 
         for element in self {
             state = element.eval(ctx)?;
@@ -17,26 +17,25 @@ impl SExp {
         Ok(state)
     }
 
-    pub(super) fn eval_begin(self, ctx: &mut Context) -> LispResult {
-        match self {
-            Null => Err(LispError::NoArgumentsProvided {
+    pub(super) fn eval_begin(self, ctx: &mut Context) -> Result {
+        if let Null = self {
+            Err(Error::NoArgumentsProvided {
                 symbol: "begin".to_string(),
-            }),
-            _ => {
-                debug!("Evaluating \"begin\" sequence.");
-                match self.into_iter().map(|e| e.eval(ctx)).last() {
-                    Some(stuff) => stuff,
-                    None => Err(LispError::SyntaxError {
-                        exp: "something bad happened, idk".to_string(),
-                    }),
-                }
+            })
+        } else {
+            debug!("Evaluating \"begin\" sequence.");
+            match self.into_iter().map(|e| e.eval(ctx)).last() {
+                Some(stuff) => stuff,
+                None => Err(Error::Syntax {
+                    exp: "something bad happened, idk".to_string(),
+                }),
             }
         }
     }
 
-    pub(super) fn eval_cond(self, ctx: &mut Context) -> LispResult {
+    pub(super) fn eval_cond(self, ctx: &mut Context) -> Result {
         debug!("Evaluating conditional form.");
-        let else_ = SExp::make_symbol("else");
+        let else_ = Self::make_symbol("else");
 
         for case in self {
             match case {
@@ -62,7 +61,7 @@ impl SExp {
                     }
                 }
                 exp => {
-                    return Err(LispError::SyntaxError {
+                    return Err(Error::Syntax {
                         exp: exp.to_string(),
                     });
                 }
@@ -73,12 +72,12 @@ impl SExp {
         Ok(Atom(Primitive::Void))
     }
 
-    pub(super) fn eval_define(self, ctx: &mut Context) -> LispResult {
+    pub(super) fn eval_define(self, ctx: &mut Context) -> Result {
         match self {
-            Null => Err(LispError::NoArgumentsProvided {
+            Null => Err(Error::NoArgumentsProvided {
                 symbol: "define".to_string(),
             }),
-            Atom(a) => Err(LispError::NotAList {
+            Atom(a) => Err(Error::NotAList {
                 atom: a.to_string(),
             }),
             Pair {
@@ -95,7 +94,7 @@ impl SExp {
                         ctx.define(&sym, ev_defn);
                         Ok(Atom(Primitive::Undefined))
                     }
-                    exp => Err(LispError::SyntaxError {
+                    exp => Err(Error::Syntax {
                         exp: exp.to_string(),
                     }),
                 },
@@ -106,18 +105,18 @@ impl SExp {
                     debug!("Defining a function with \"define\" syntax.");
                     ctx.define(
                         &sym,
-                        defn.cons(*fn_params).cons(SExp::make_symbol("lambda")),
+                        defn.cons(*fn_params).cons(Self::make_symbol("lambda")),
                     );
                     Ok(Atom(Primitive::Undefined))
                 }
-                exp => Err(LispError::SyntaxError {
+                exp => Err(Error::Syntax {
                     exp: exp.to_string(),
                 }),
             },
         }
     }
 
-    pub(super) fn eval_if(self, ctx: &mut Context) -> LispResult {
+    pub(super) fn eval_if(self, ctx: &mut Context) -> Result {
         match self {
             Pair {
                 head: condition,
@@ -138,39 +137,51 @@ impl SExp {
                 })
                 .eval(ctx)
             }
-            exp => Err(LispError::SyntaxError {
+            exp => Err(Error::Syntax {
                 exp: exp.to_string(),
             }),
         }
     }
 
-    pub(super) fn eval_lambda(self) -> LispResult {
+    pub(super) fn eval_lambda(self) -> Result {
         match self {
-            Null => Err(LispError::NoArgumentsProvided {
+            Null => Err(Error::NoArgumentsProvided {
                 symbol: "lambda".to_string(),
             }),
-            Atom(a) => Err(LispError::NotAList {
+            Atom(a) => Err(Error::NotAList {
                 atom: a.to_string(),
             }),
             Pair {
-                head: box Pair { head: p_h, tail: p_t },
-                tail: box Pair { head: b_h, tail: b_t },
+                head:
+                    box Pair {
+                        head: p_h,
+                        tail: p_t,
+                    },
+                tail:
+                    box Pair {
+                        head: b_h,
+                        tail: b_t,
+                    },
             } => {
                 debug!("Creating procedure.");
-                let params = Pair { head: p_h, tail: p_t };
+                let params = Pair {
+                    head: p_h,
+                    tail: p_t,
+                };
                 let expected = params.iter().count();
-                let fn_body = Pair { head: b_h, tail: b_t };
-                Ok(SExp::from(move |args: SExp| {
+                let fn_body = Pair {
+                    head: b_h,
+                    tail: b_t,
+                };
+                Ok(Self::from(move |args: Self| {
                     info!("Formal parameters: {}", params);
                     // check arity
                     let given = args.iter().count();
                     if given != expected {
-                        return Err(LispError::ArityMismatch {
-                            expected, given
-                        })
+                        return Err(Error::Arity { expected, given });
                     }
                     // bind arguments to parameters
-                    let bound_params: SExp = params
+                    let bound_params: Self = params
                         .iter()
                         .zip(args.into_iter())
                         .map(|(p, a)| sexp![p.to_owned(), a])
@@ -180,18 +191,18 @@ impl SExp {
                     Ok(fn_body
                         .to_owned()
                         .cons(bound_params)
-                        .cons(SExp::make_symbol("let")))
+                        .cons(Self::make_symbol("let")))
                 }))
             }
-            exp => Err(LispError::SyntaxError {
+            exp => Err(Error::Syntax {
                 exp: exp.to_string(),
             }),
         }
     }
 
-    pub(super) fn eval_let(self, ctx: &mut Context) -> LispResult {
+    pub(super) fn eval_let(self, ctx: &mut Context) -> Result {
         match self {
-            Null => Err(LispError::NoArgumentsProvided {
+            Null => Err(Error::NoArgumentsProvided {
                 symbol: "let".to_string(),
             }),
             Pair {
@@ -218,14 +229,14 @@ impl SExp {
                             },
                         },
                         exp => {
-                            return Err(LispError::SyntaxError {
+                            return Err(Error::Syntax {
                                 exp: exp.to_string(),
                             });
                         }
                     }
                 }
 
-                let mut result = Err(LispError::NullList);
+                let mut result = Err(Error::NullList);
 
                 for statement in *statements {
                     result = statement.eval(ctx);
@@ -239,13 +250,13 @@ impl SExp {
 
                 result
             }
-            exp => Err(LispError::SyntaxError {
+            exp => Err(Error::Syntax {
                 exp: exp.to_string(),
             }),
         }
     }
 
-    pub(super) fn eval_or(self, ctx: &mut Context) -> LispResult {
+    pub(super) fn eval_or(self, ctx: &mut Context) -> Result {
         debug!("Evaluating 'or' expression.");
         for element in self {
             match element.eval(ctx)? {
@@ -256,23 +267,23 @@ impl SExp {
             }
         }
 
-        Ok(SExp::from(false))
+        Ok(false.into())
     }
 
-    pub(super) fn eval_quote(self) -> LispResult {
+    pub(super) fn eval_quote(self) -> Result {
         trace!("Evaluating 'quote' expression: {}", self);
         match self {
             Pair {
                 head,
                 tail: box Null,
             } => Ok(*head),
-            _ => Err(LispError::TypeError),
+            _ => Err(Error::Type),
         }
     }
 
-    pub(super) fn eval_set(self, ctx: &mut Context) -> LispResult {
+    pub(super) fn eval_set(self, ctx: &mut Context) -> Result {
         match self {
-            Null => Err(LispError::NoArgumentsProvided {
+            Null => Err(Error::NoArgumentsProvided {
                 symbol: "set!".to_string(),
             }),
             Pair {
@@ -283,13 +294,13 @@ impl SExp {
                         tail: box Null,
                     },
             } => ctx.set(&sym, *defn),
-            exp => Err(LispError::SyntaxError {
+            exp => Err(Error::Syntax {
                 exp: exp.to_string(),
             }),
         }
     }
 
-    pub(super) fn eval_map(self, ctx: &mut Context) -> LispResult {
+    pub(super) fn eval_map(self, ctx: &mut Context) -> Result {
         match self {
             Pair {
                 head,
@@ -303,13 +314,13 @@ impl SExp {
                 .into_iter()
                 .map(|e| Null.cons(e).cons((*head).to_owned()).eval(ctx))
                 .collect(),
-            exp => Err(LispError::SyntaxError {
+            exp => Err(Error::Syntax {
                 exp: exp.to_string(),
             }),
         }
     }
 
-    pub(super) fn eval_fold(self, ctx: &mut Context) -> LispResult {
+    pub(super) fn eval_fold(self, ctx: &mut Context) -> Result {
         match self {
             Pair {
                 head,
@@ -326,13 +337,13 @@ impl SExp {
                 Ok(acc) => Null.cons(e).cons(acc).cons((*head).to_owned()).eval(ctx),
                 err => err,
             }),
-            exp => Err(LispError::SyntaxError {
+            exp => Err(Error::Syntax {
                 exp: exp.to_string(),
             }),
         }
     }
 
-    pub(super) fn eval_filter(self, ctx: &mut Context) -> LispResult {
+    pub(super) fn eval_filter(self, ctx: &mut Context) -> Result {
         match self {
             Pair {
                 head: predicate,
@@ -350,13 +361,13 @@ impl SExp {
                     err => Some(err),
                 })
                 .collect(),
-            exp => Err(LispError::SyntaxError {
+            exp => Err(Error::Syntax {
                 exp: exp.to_string(),
             }),
         }
     }
 
-    pub(super) fn do_apply(self, ctx: &mut Context) -> LispResult {
+    pub(super) fn do_apply(self, ctx: &mut Context) -> Result {
         match self {
             Pair {
                 head: op,
@@ -366,7 +377,7 @@ impl SExp {
                         tail: box Null,
                     },
             } => args.eval(ctx)?.cons(*op).eval(ctx),
-            exp => Err(LispError::SyntaxError {
+            exp => Err(Error::Syntax {
                 exp: exp.to_string(),
             }),
         }

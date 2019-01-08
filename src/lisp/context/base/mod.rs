@@ -1,4 +1,4 @@
-use super::super::LispError;
+use super::super::Error;
 use super::super::Primitive::{Character, String as LispString};
 use super::super::SExp::{self, Atom, Null, Pair};
 
@@ -41,7 +41,7 @@ impl Context {
                             tail: box Null,
                         },
                 } => Ok((elem1 == elem2).into()),
-                exp => Err(LispError::SyntaxError {
+                exp => Err(Error::Syntax {
                     exp: exp.to_string(),
                 }),
             })
@@ -63,7 +63,7 @@ impl Context {
                 } => Ok(Null
                     .cons(elem2.cons(*elem1))
                     .cons(SExp::make_symbol("quote"))),
-                exp => Err(LispError::SyntaxError {
+                exp => Err(Error::Syntax {
                     exp: exp.to_string(),
                 }),
             })
@@ -73,7 +73,7 @@ impl Context {
             "car",
             (|e| match e {
                 Pair { head, .. } => head.car(),
-                _ => Err(LispError::TypeError),
+                _ => Err(Error::Type),
             })
             .into(),
         );
@@ -81,7 +81,7 @@ impl Context {
             "cdr",
             (|e| match e {
                 Pair { head, .. } => head.cdr(),
-                _ => Err(LispError::TypeError),
+                _ => Err(Error::Type),
             })
             .into(),
         );
@@ -89,7 +89,7 @@ impl Context {
             "type-of",
             (|e| match e {
                 Pair { head, .. } => Ok(head.type_of().into()),
-                _ => Err(LispError::TypeError),
+                _ => Err(Error::Type),
             })
             .into(),
         );
@@ -120,7 +120,7 @@ impl Context {
                     head: box Atom(LispString(s)),
                     tail: box Null,
                 } => Ok(s.chars().map(SExp::from).collect()),
-                _ => Err(LispError::TypeError),
+                _ => Err(Error::Type),
             })
             .into(),
         );
@@ -138,13 +138,13 @@ impl Context {
                                 s
                             }
                         }
-                        _ => Err(LispError::TypeError),
+                        _ => Err(Error::Type),
                     }) {
                         Ok(s) => Ok(Atom(LispString(s))),
                         Err(err) => Err(err),
                     }
                 }
-                _ => Err(LispError::TypeError),
+                _ => Err(Error::Type),
             })
             .into(),
         );

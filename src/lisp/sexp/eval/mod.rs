@@ -1,5 +1,5 @@
-use super::SExp::{self, *};
-use super::{Context, LispError, LispResult, Primitive};
+use super::SExp::{self, Atom, Null, Pair};
+use super::{Context, Error, Primitive, Result};
 
 mod helpers;
 mod tests;
@@ -30,11 +30,11 @@ impl SExp {
     /// let result = exp2.eval(&mut ctx);
     /// assert_eq!(result.unwrap(), SExp::from(10));
     /// ```
-    pub fn eval(self, ctx: &mut Context) -> LispResult {
+    pub fn eval(self, ctx: &mut Context) -> Result {
         match self {
-            Null => Err(LispError::NullList),
+            Null => Err(Error::NullList),
             Atom(Primitive::Symbol(sym)) => match ctx.get(&sym) {
-                None => Err(LispError::UndefinedSymbol { sym }),
+                None => Err(Error::UndefinedSymbol { sym }),
                 Some(exp) => match exp {
                     Null => Ok(Null),
                     _ => exp.eval(ctx),
@@ -45,7 +45,7 @@ impl SExp {
         }
     }
 
-    fn eval_pair(self, ctx: &mut Context) -> LispResult {
+    fn eval_pair(self, ctx: &mut Context) -> Result {
         match self {
             Pair { head, tail } => {
                 if let Atom(Primitive::Symbol(sym)) = *head {
@@ -65,7 +65,7 @@ impl SExp {
                         "map" => tail.eval_map(ctx),
                         "foldl" => tail.eval_fold(ctx),
                         "filter" => tail.eval_filter(ctx),
-                        _ => tail.cons(SExp::make_symbol(&sym)).eval_typical_pair(ctx),
+                        _ => tail.cons(Self::make_symbol(&sym)).eval_typical_pair(ctx),
                     }
                 } else {
                     tail.cons(*head).eval_typical_pair(ctx)
@@ -75,13 +75,13 @@ impl SExp {
         }
     }
 
-    fn eval_typical_pair(self, ctx: &mut Context) -> LispResult {
+    fn eval_typical_pair(self, ctx: &mut Context) -> Result {
         debug!("Evaluating normal list: {}", self);
         let evaluated = self
             .into_iter()
             .inspect(|e| trace!("Evaluating list member {}", e))
             .map(|e| e.eval(ctx))
-            .collect::<Result<SExp, LispError>>()?;
+            .collect::<Result>()?;
 
         trace!("Applying operation: {}", evaluated);
         evaluated.apply(ctx)

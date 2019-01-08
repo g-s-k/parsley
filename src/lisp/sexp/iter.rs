@@ -1,6 +1,6 @@
 use std::iter::FromIterator;
 
-use super::SExp::{self, *};
+use super::SExp::{self, Atom, Null, Pair};
 
 /// An iterator over an S-Expression. Returns list elements until the end of a chain of pairs.
 pub struct SExpIterator {
@@ -26,7 +26,7 @@ impl Iterator for SExpIterator {
 }
 
 impl IntoIterator for SExp {
-    type Item = SExp;
+    type Item = Self;
     type IntoIter = SExpIterator;
 
     fn into_iter(self) -> Self::IntoIter {

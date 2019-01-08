@@ -1,5 +1,5 @@
 use super::Primitive::Symbol;
-use super::SExp::{self, *};
+use super::SExp::{self, Atom, Null, Pair};
 use std::fmt;
 
 impl fmt::Display for SExp {

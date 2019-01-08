@@ -2,13 +2,13 @@ use std::rc::Rc;
 use std::str::FromStr;
 use std::string::String as CoreString;
 
-use super::super::{utils, LispError, LispResult, SExp};
-use super::Primitive::{self, *};
+use super::super::{utils, Error, Result, SExp};
+use super::Primitive::{self, Boolean, Character, Number, Procedure, String, Symbol};
 
 impl FromStr for Primitive {
-    type Err = LispError;
+    type Err = Error;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+    fn from_str(s: &str) -> ::std::result::Result<Self, Self::Err> {
         match s {
             "#t" => return Ok(Boolean(true)),
             "#f" => return Ok(Boolean(false)),
@@ -36,7 +36,7 @@ impl FromStr for Primitive {
             return Ok(Symbol(s.to_string()));
         }
 
-        Err(LispError::SyntaxError { exp: s.to_string() })
+        Err(Error::Syntax { exp: s.to_string() })
     }
 }
 
@@ -84,7 +84,7 @@ impl From<CoreString> for Primitive {
 
 impl<F> From<F> for Primitive
 where
-    F: Fn(SExp) -> LispResult + 'static,
+    F: Fn(SExp) -> Result + 'static,
 {
     fn from(f: F) -> Self {
         Procedure(Rc::new(f))

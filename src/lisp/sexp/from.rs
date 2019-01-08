@@ -1,5 +1,5 @@
 use super::super::Primitive;
-use super::SExp::{self, *};
+use super::SExp::{self, Atom, Null, Pair};
 
 #[macro_export]
 macro_rules! sexp {
@@ -37,7 +37,7 @@ where
 {
     fn from((v,): (T,)) -> Self {
         Pair {
-            head: Box::new(SExp::from(v)),
+            head: Box::new(Self::from(v)),
             tail: Box::new(Null),
         }
     }
@@ -49,8 +49,8 @@ where
 {
     fn from((v1, v2): (T, U)) -> Self {
         Pair {
-            head: Box::new(SExp::from(v1)),
-            tail: Box::new(SExp::from(v2)),
+            head: Box::new(Self::from(v1)),
+            tail: Box::new(Self::from(v2)),
         }
     }
 }

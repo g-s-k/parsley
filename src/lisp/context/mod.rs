@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use super::Primitive::Undefined;
 use super::SExp::{self, Atom};
-use super::{LispError, LispResult};
+use super::{Error, Result};
 
 mod base;
 mod math;
@@ -19,7 +19,7 @@ pub struct Context(Vec<HashMap<String, SExp>>);
 
 impl Default for Context {
     fn default() -> Self {
-        Context(vec![HashMap::new()])
+        Self(vec![HashMap::new()])
     }
 }
 
@@ -106,7 +106,7 @@ impl Context {
     /// assert!(ctx.set("x", SExp::from("potato")).is_ok());  // Ok because x is now defined
     /// assert_eq!(ctx.get("x"), Some(SExp::from("potato"))); // check that its value is now "potato"
     /// ```
-    pub fn set(&mut self, key: &str, value: SExp) -> LispResult {
+    pub fn set(&mut self, key: &str, value: SExp) -> Result {
         trace!("Re-binding the symbol {} to the value {}", key, value);
         for frame in self.0.iter_mut().rev() {
             if frame.contains_key(key) {
@@ -114,7 +114,7 @@ impl Context {
                 return Ok(Atom(Undefined));
             }
         }
-        Err(LispError::UndefinedSymbol {
+        Err(Error::UndefinedSymbol {
             sym: key.to_string(),
         })
     }

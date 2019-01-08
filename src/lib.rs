@@ -26,6 +26,8 @@
 //! ```
 
 #![feature(box_patterns)]
+#![deny(clippy::pedantic)]
+#![warn(clippy::use_self)] // buggy - thinks exported macro is only used in one file
 
 #[macro_use]
 extern crate failure_derive;
@@ -35,7 +37,7 @@ extern crate log;
 
 mod lisp;
 pub use self::lisp::context::utils as proc_utils;
-pub use self::lisp::{Context, LispError, LispResult, SExp};
+pub use self::lisp::{Context, Error, Result, SExp};
 
 /// Run a code snippet in an existing [Context](./struct.Context.html).
 ///
@@ -48,7 +50,7 @@ pub use self::lisp::{Context, LispError, LispResult, SExp};
 /// assert!(run_in("(define x 6)", &mut ctx).is_ok());
 /// assert_eq!(run_in("x", &mut ctx).unwrap(), SExp::from(6));
 /// ```
-pub fn run_in(code: &str, ctx: &mut Context) -> LispResult {
+pub fn run_in(code: &str, ctx: &mut Context) -> Result {
     code.parse::<SExp>()?.eval(ctx)
 }
 
@@ -62,11 +64,11 @@ pub fn run_in(code: &str, ctx: &mut Context) -> LispResult {
 /// assert!(run("null").is_ok());
 /// assert_eq!(run("null").unwrap(), SExp::Null);
 /// ```
-pub fn run(code: &str) -> LispResult {
+pub fn run(code: &str) -> Result {
     run_in(code, &mut Context::base())
 }
 
 /// Quick access to the important stuff.
 pub mod prelude {
-    pub use super::{run, run_in, Context, LispError, LispResult, SExp};
+    pub use super::{run, run_in, Context, SExp};
 }

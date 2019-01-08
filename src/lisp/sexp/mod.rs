@@ -6,11 +6,11 @@ mod eval;
 mod iter;
 mod parse;
 
-use super::{utils, Context, LispError, LispResult, Primitive};
+use super::{utils, Context, Error, Primitive, Result};
 
-use self::SExp::*;
+use self::SExp::{Atom, Null, Pair};
 
-/// An S-Expression. Can be parsed from a string via FromStr, or constructed
+/// An S-Expression. Can be parsed from a string via `FromStr`, or constructed
 /// programmatically.
 ///
 /// # Examples
@@ -32,7 +32,7 @@ pub enum SExp {
 }
 
 impl SExp {
-    fn apply(self, ctx: &mut Context) -> LispResult {
+    fn apply(self, ctx: &mut Context) -> Result {
         match self {
             Null | Atom(_) => Ok(self),
             Pair { head, tail } => match *head {
@@ -40,7 +40,7 @@ impl SExp {
                     trace!("Applying a procedure to the arguments {}", tail);
                     proc(*tail)?.eval(ctx)
                 }
-                Atom(Primitive::Symbol(sym)) => Err(LispError::NotAProcedure {
+                Atom(Primitive::Symbol(sym)) => Err(Error::NotAProcedure {
                     exp: sym.to_string(),
                 }),
                 Pair {
@@ -52,22 +52,22 @@ impl SExp {
         }
     }
 
-    pub(super) fn car(&self) -> LispResult {
+    pub(super) fn car(&self) -> Result {
         trace!("Getting the car of {}", self);
         match self {
-            Null => Err(LispError::NullList),
-            Atom(_) => Err(LispError::NotAList {
+            Null => Err(Error::NullList),
+            Atom(_) => Err(Error::NotAList {
                 atom: self.to_string(),
             }),
             Pair { head, .. } => Ok((**head).clone()),
         }
     }
 
-    pub(super) fn cdr(&self) -> LispResult {
+    pub(super) fn cdr(&self) -> Result {
         trace!("Getting the cdr of {}", self);
         match self {
-            Null => Err(LispError::NullList),
-            Atom(_) => Err(LispError::NotAList {
+            Null => Err(Error::NullList),
+            Atom(_) => Err(Error::NotAList {
                 atom: self.to_string(),
             }),
             Pair { tail, .. } => Ok((**tail).to_owned()),
