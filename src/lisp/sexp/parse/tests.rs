@@ -19,20 +19,20 @@ fn list_of_lists() {
 
 #[test]
 fn atom() {
-    do_parse_and_assert("hello", SExp::make_symbol("hello"));
+    do_parse_and_assert("hello", SExp::sym("hello"));
 }
 
 #[test]
 fn list_of_atoms() {
     do_parse_and_assert(
         "(a bc de fgh ijk l mnop)",
-        Null.cons(SExp::make_symbol("mnop"))
-            .cons(SExp::make_symbol("l"))
-            .cons(SExp::make_symbol("ijk"))
-            .cons(SExp::make_symbol("fgh"))
-            .cons(SExp::make_symbol("de"))
-            .cons(SExp::make_symbol("bc"))
-            .cons(SExp::make_symbol("a")),
+        Null.cons(SExp::sym("mnop"))
+            .cons(SExp::sym("l"))
+            .cons(SExp::sym("ijk"))
+            .cons(SExp::sym("fgh"))
+            .cons(SExp::sym("de"))
+            .cons(SExp::sym("bc"))
+            .cons(SExp::sym("a")),
     );
 }
 
@@ -73,17 +73,17 @@ fn quote_syntax() {
     do_parse_and_assert(
         "'(a b c d)",
         Null.cons(
-            Null.cons(SExp::make_symbol("d"))
-                .cons(SExp::make_symbol("c"))
-                .cons(SExp::make_symbol("b"))
-                .cons(SExp::make_symbol("a")),
+            Null.cons(SExp::sym("d"))
+                .cons(SExp::sym("c"))
+                .cons(SExp::sym("b"))
+                .cons(SExp::sym("a")),
         )
-        .cons(SExp::make_symbol("quote")),
+        .cons(SExp::sym("quote")),
     );
 
     do_parse_and_assert(
         "'potato",
-        Null.cons(SExp::make_symbol("potato"))
-            .cons(SExp::make_symbol("quote")),
+        Null.cons(SExp::sym("potato"))
+            .cons(SExp::sym("quote")),
     );
 }

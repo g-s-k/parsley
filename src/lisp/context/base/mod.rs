@@ -48,7 +48,7 @@ impl Context {
             .into(),
         );
         ret.define("null?", (|e| Ok((e == ((),).into()).into())).into());
-        ret.define("null", (SExp::make_symbol("quote"), ((),)).into());
+        ret.define("null", (SExp::sym("quote"), ((),)).into());
         ret.define("not", (|e| Ok((e == (false,).into()).into())).into());
         ret.define(
             "cons",
@@ -62,7 +62,7 @@ impl Context {
                         },
                 } => Ok(Null
                     .cons(elem2.cons(*elem1))
-                    .cons(SExp::make_symbol("quote"))),
+                    .cons(SExp::sym("quote"))),
                 exp => Err(Error::Syntax {
                     exp: exp.to_string(),
                 }),

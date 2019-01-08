@@ -4,8 +4,8 @@ use super::*;
 
 #[test]
 fn eq_test() {
-    let eq = || SExp::make_symbol("eq?");
-    let null = || SExp::make_symbol("null");
+    let eq = || SExp::sym("eq?");
+    let null = || SExp::sym("null");
 
     assert_eq!(
         SExp::from(vec![eq(), null(), null()])
@@ -56,14 +56,14 @@ fn eq_test() {
 
 #[test]
 fn null_test() {
-    let null = || SExp::make_symbol("null?");
-    let null_c = || SExp::make_symbol("null");
-    let quote = || SExp::make_symbol("quote");
+    let null = || SExp::sym("null?");
+    let null_c = || SExp::sym("null");
+    let quote = || SExp::sym("quote");
 
     assert_eq!(
         SExp::from(vec![
             null(),
-            (vec![quote(), SExp::make_symbol("test")]).into()
+            (vec![quote(), SExp::sym("test")]).into()
         ])
         .eval(&mut Context::base())
         .unwrap(),
@@ -95,7 +95,7 @@ fn null_test() {
 #[test]
 fn null_const() {
     assert_eq!(
-        SExp::make_symbol("null")
+        SExp::sym("null")
             .eval(&mut Context::base())
             .unwrap(),
         Null
@@ -104,7 +104,7 @@ fn null_const() {
 
 #[test]
 fn not() {
-    let not = || SExp::make_symbol("not");
+    let not = || SExp::sym("not");
 
     assert_eq!(
         SExp::from(vec![not(), false.into()])
@@ -121,7 +121,7 @@ fn not() {
     );
 
     assert_eq!(
-        SExp::from(vec![not(), SExp::make_symbol("null")])
+        SExp::from(vec![not(), SExp::sym("null")])
             .eval(&mut Context::base())
             .unwrap(),
         SExp::from(false)
@@ -137,10 +137,10 @@ fn not() {
 
 #[test]
 fn cons() {
-    let cons = || SExp::make_symbol("cons");
+    let cons = || SExp::sym("cons");
     let item_1 = || SExp::from(5.0);
     let item_2 = || SExp::from("abc");
-    let item_3 = || SExp::make_symbol("null");
+    let item_3 = || SExp::sym("null");
 
     // sanity check
     assert_eq!(
@@ -175,7 +175,7 @@ fn cons() {
 
 #[test]
 fn car() {
-    let car = || SExp::make_symbol("car");
+    let car = || SExp::sym("car");
 
     assert!(SExp::from(Null.cons(Null).cons(car()))
         .eval(&mut Context::base())
@@ -195,7 +195,7 @@ fn car() {
 
 #[test]
 fn cdr() {
-    let cdr = || SExp::make_symbol("cdr");
+    let cdr = || SExp::sym("cdr");
 
     assert!(SExp::from(Null.cons(Null).cons(cdr()))
         .eval(&mut Context::base())
@@ -215,15 +215,15 @@ fn cdr() {
 
 #[test]
 fn type_of() {
-    let tpf = || SExp::make_symbol("type-of");
+    let tpf = || SExp::sym("type-of");
 
     assert_eq!(
-        SExp::from(vec![tpf(), SExp::make_symbol("null")])
+        SExp::from(vec![tpf(), SExp::sym("null")])
             .eval(&mut Context::base())
             .unwrap(),
         SExp::from(vec![
             tpf(),
-            Null.cons(Null).cons(SExp::make_symbol("quote"))
+            Null.cons(Null).cons(SExp::sym("quote"))
         ])
         .eval(&mut Context::base())
         .unwrap(),
@@ -267,10 +267,10 @@ fn type_of() {
     );
 
     assert_eq!(
-        SExp::from(vec![tpf(), SExp::make_symbol("null?")])
+        SExp::from(vec![tpf(), SExp::sym("null?")])
             .eval(&mut Context::base())
             .unwrap(),
-        SExp::from(vec![tpf(), SExp::make_symbol("+")])
+        SExp::from(vec![tpf(), SExp::sym("+")])
             .eval(&mut Context::base())
             .unwrap(),
     );

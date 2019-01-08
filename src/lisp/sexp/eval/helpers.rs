@@ -35,7 +35,7 @@ impl SExp {
 
     pub(super) fn eval_cond(self, ctx: &mut Context) -> Result {
         debug!("Evaluating conditional form.");
-        let else_ = Self::make_symbol("else");
+        let else_ = Self::sym("else");
 
         for case in self {
             match case {
@@ -103,10 +103,7 @@ impl SExp {
                     tail: fn_params,
                 } => {
                     debug!("Defining a function with \"define\" syntax.");
-                    ctx.define(
-                        &sym,
-                        defn.cons(*fn_params).cons(Self::make_symbol("lambda")),
-                    );
+                    ctx.define(&sym, defn.cons(*fn_params).cons(Self::sym("lambda")));
                     Ok(Atom(Primitive::Undefined))
                 }
                 exp => Err(Error::Syntax {
@@ -184,14 +181,11 @@ impl SExp {
                     let bound_params: Self = params
                         .iter()
                         .zip(args.into_iter())
-                        .map(|(p, a)| sexp![p.to_owned(), a])
+                        .map(|(p, a)| Null.cons(a).cons(p.to_owned()))
                         .collect();
                     info!("Bound parameters: {}", bound_params);
                     // construct let binding
-                    Ok(fn_body
-                        .to_owned()
-                        .cons(bound_params)
-                        .cons(Self::make_symbol("let")))
+                    Ok(fn_body.to_owned().cons(bound_params).cons(Self::sym("let")))
                 }))
             }
             exp => Err(Error::Syntax {
@@ -355,11 +349,13 @@ impl SExp {
             } => list
                 .eval(ctx)?
                 .into_iter()
-                .filter_map(|e| match sexp![(*predicate).clone(), e.clone()].eval(ctx) {
-                    Ok(Atom(Primitive::Boolean(false))) => None,
-                    Ok(_) => Some(Ok(e)),
-                    err => Some(err),
-                })
+                .filter_map(
+                    |e| match Null.cons(e.clone()).cons((*predicate).clone()).eval(ctx) {
+                        Ok(Atom(Primitive::Boolean(false))) => None,
+                        Ok(_) => Some(Ok(e)),
+                        err => Some(err),
+                    },
+                )
                 .collect(),
             exp => Err(Error::Syntax {
                 exp: exp.to_string(),

@@ -14,7 +14,7 @@ impl SExp {
     /// ```
     /// use parsley::prelude::*;
     ///
-    /// let exp = SExp::from((SExp::make_symbol("eq?"), (0, (1,))));
+    /// let exp = SExp::from((SExp::sym("eq?"), (0, (1,))));
     /// let mut ctx = Context::base();
     /// let result = exp.eval(&mut ctx);
     /// assert_eq!(result.unwrap(), SExp::from(false));
@@ -22,8 +22,8 @@ impl SExp {
     /// ```
     /// use parsley::prelude::*;
     ///
-    /// let exp1 = SExp::from((SExp::make_symbol("define"), (SExp::make_symbol("x"), (10,))));
-    /// let exp2 = SExp::make_symbol("x");
+    /// let exp1 = SExp::from((SExp::sym("define"), (SExp::sym("x"), (10,))));
+    /// let exp2 = SExp::sym("x");
     ///
     /// let mut ctx = Context::base();
     /// exp1.eval(&mut ctx);
@@ -65,7 +65,7 @@ impl SExp {
                         "map" => tail.eval_map(ctx),
                         "foldl" => tail.eval_fold(ctx),
                         "filter" => tail.eval_filter(ctx),
-                        _ => tail.cons(Self::make_symbol(&sym)).eval_typical_pair(ctx),
+                        _ => tail.cons(Self::sym(&sym)).eval_typical_pair(ctx),
                     }
                 } else {
                     tail.cons(*head).eval_typical_pair(ctx)

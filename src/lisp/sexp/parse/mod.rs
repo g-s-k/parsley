@@ -38,7 +38,7 @@ impl SExp {
                     debug!("Matched quoted expression with length {} chars.", n - 1);
                     Ok(Null
                         .cons(Self::parse_str(&code[1..])?)
-                        .cons(Self::make_symbol("quote")))
+                        .cons(Self::sym("quote")))
                 }
             }
         } else if code.chars().all(utils::is_atom_char) {
