@@ -1,19 +1,22 @@
 use super::super::Primitive;
 use super::SExp::{self, Atom, Null, Pair};
 
+/// Construct an S-Expression from a list of expressions.
+///
+/// # Example
+/// ```
+/// use parsley::{sexp, SExp};
+///
+/// assert_eq!(
+///     sexp![5, "potato", true],
+///     SExp::from((5, ("potato", (true, ()))))
+/// );
+/// ```
 #[macro_export]
 macro_rules! sexp {
-    ( $( $x:expr ),* ) => {
-        {
-            let mut temp_vec = Vec::new();
-
-            $(
-                temp_vec.push(SExp::from($x));
-            )*
-
-            SExp::from(temp_vec)
-        }
-    };
+    ( $( $e:expr ),* ) => {{
+        $crate::SExp::from(&[ $( $crate::SExp::from($e) ),* ][..])
+    }};
 }
 
 impl<T> From<T> for SExp
@@ -60,7 +63,7 @@ where
     T: Into<SExp> + Clone,
 {
     fn from(ary: &[T]) -> Self {
-        ary.iter().rev().cloned().map(T::into).collect()
+        ary.iter().cloned().map(T::into).collect()
     }
 }
 

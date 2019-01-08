@@ -70,5 +70,5 @@ pub fn run(code: &str) -> Result {
 
 /// Quick access to the important stuff.
 pub mod prelude {
-    pub use super::{run, run_in, Context, SExp};
+    pub use super::{run, run_in, sexp, Context, SExp};
 }
