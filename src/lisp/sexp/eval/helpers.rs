@@ -153,24 +153,39 @@ impl SExp {
                 atom: a.to_string(),
             }),
             Pair {
-                head: params,
-                tail: fn_body,
+                head: box Pair { head: p_h, tail: p_t },
+                tail: box Pair { head: b_h, tail: b_t },
             } => {
                 debug!("Creating procedure.");
+                let params = Pair { head: p_h, tail: p_t };
+                let expected = params.iter().count();
+                let fn_body = Pair { head: b_h, tail: b_t };
                 Ok(SExp::from(move |args: SExp| {
-                    debug!("Formal parameters: {}", params);
+                    info!("Formal parameters: {}", params);
+                    // check arity
+                    let given = args.iter().count();
+                    if given != expected {
+                        return Err(LispError::ArityMismatch {
+                            expected, given
+                        })
+                    }
+                    // bind arguments to parameters
                     let bound_params: SExp = params
                         .iter()
                         .zip(args.into_iter())
                         .map(|(p, a)| sexp![p.to_owned(), a])
                         .collect();
-                    debug!("Bound parameters: {}", bound_params);
+                    info!("Bound parameters: {}", bound_params);
+                    // construct let binding
                     Ok(fn_body
                         .to_owned()
                         .cons(bound_params)
                         .cons(SExp::make_symbol("let")))
                 }))
             }
+            exp => Err(LispError::SyntaxError {
+                exp: exp.to_string(),
+            }),
         }
     }
 

@@ -15,9 +15,24 @@ macro_rules! eval {
     };
 }
 
+macro_rules! eval_base {
+    ( $e:expr ) => {
+        $e.eval(&mut Context::base())
+    };
+}
+
 macro_rules! assert_eval_eq {
     ( $lhs:expr, $rhs:expr ) => {
         assert_eq!(eval!($lhs).expect("Evaluation failed"), SExp::from($rhs))
+    };
+}
+
+macro_rules! assert_eval_base_eq {
+    ( $lhs:expr, $rhs:expr ) => {
+        assert_eq!(
+            eval_base!($lhs).expect("Evaluation failed"),
+            SExp::from($rhs)
+        )
     };
 }
 
@@ -208,5 +223,50 @@ fn define() {
             sexp![sym!("x"), 4, 5]
         ],
         5
+    );
+}
+
+#[test]
+fn lambda() {
+    // validate argument handling
+    assert!(eval!(sexp![sym!("lambda")]).is_err());
+    assert!(eval!(sexp![sym!("lambda"), sym!("x")]).is_err());
+    assert!(eval!(sexp![sym!("lambda"), sexp![sym!("x")]]).is_err());
+    assert!(eval!(sexp![
+        sexp![sym!("lambda"), sexp![sym!("x")], sym!("x")],
+        3,
+        4
+    ])
+    .is_err());
+    // validate behavior
+    assert_eval_eq!(
+        sexp![sexp![sym!("lambda"), sexp![sym!("x")], sym!("x")], 27],
+        27
+    );
+    assert_eval_eq!(
+        sexp![
+            sexp![
+                sym!("lambda"),
+                sexp![sym!("x"), sym!("y")],
+                "potato",
+                sym!("y"),
+                true,
+                sym!("x")
+            ],
+            27,
+            35
+        ],
+        27
+    );
+    assert_eval_base_eq!(
+        sexp![
+            sexp![
+                sym!("lambda"),
+                sexp![sym!("x")],
+                sexp![sym!("*"), sym!("x"), sym!("x")]
+            ],
+            11
+        ],
+        121
     );
 }

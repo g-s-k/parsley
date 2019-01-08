@@ -8,10 +8,10 @@ pub enum LispError {
     #[fail(display = "symbol is not defined: {}", sym)]
     UndefinedSymbol { sym: String },
     #[fail(
-        display = "too many arguments provided: expected {}, got {}.",
-        right_num, n_args
+        display = "arity mismatch: expected {} params, given {}.",
+        expected, given
     )]
-    TooManyArguments { n_args: usize, right_num: usize },
+    ArityMismatch { expected: usize, given: usize },
     #[fail(display = "{} expects at least one argument.", symbol)]
     NoArgumentsProvided { symbol: String },
     #[fail(display = "Expected a list, got {}.", atom)]
