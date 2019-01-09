@@ -11,5 +11,5 @@ jobs:
     - stage: test
       script: cargo test --verbose
     - stage: lint
-      before_script: rustup component add clippy-preview
+      before_script: rustup component add clippy
       script: cargo clippy -- -D warnings
