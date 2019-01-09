@@ -78,13 +78,13 @@ impl SExp {
     ///
     /// # Example
     /// ```
-    /// use parsley::SExp::{self, Null};
+    /// use parsley::prelude::*;
+    /// use parsley::SExp::Null;
     ///
-    /// let code = "(quote ())";
-    /// let list = Null.cons(Null).cons(SExp::sym("quote"));
+    /// let macro_list = sexp![SExp::sym("quote"), ()];
+    /// let cons_list = Null.cons(Null).cons(SExp::sym("quote"));
     ///
-    /// let parsed_code = code.parse::<SExp>().unwrap();
-    /// assert_eq!(parsed_code, list);
+    /// assert_eq!(macro_list, cons_list);
     /// ```
     pub fn cons(self, exp: Self) -> Self {
         Pair {
@@ -103,7 +103,7 @@ impl SExp {
     /// // A null list is an empty application
     /// assert!(SExp::Null.eval(&mut ctx).is_err());
     ///
-    /// // The symbol `null` (defined in `Context::base`) creates a null list
+    /// // The symbol `null` (defined in `Context::base`) creates a quoted null list
     /// let result = SExp::sym("null").eval(&mut ctx).unwrap();
     /// assert_eq!(result, SExp::Null);
     /// ```

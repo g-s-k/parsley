@@ -4,6 +4,62 @@ use super::{Context, Error, Primitive, Result};
 mod helpers;
 mod tests;
 
+/// Evaluate one or more S-Expressions, in the base context or your own custom one.
+///
+/// # Examples
+/// ```
+/// use parsley::prelude::*;
+/// assert!(eval!(sexp!["potato", true, 5]).is_ok());
+/// assert!(eval!(sexp![SExp::sym("potato"), true, 5]).is_err());
+/// ```
+/// ```
+/// use parsley::prelude::*;
+///
+/// let evaluated = eval!(
+///     sexp![
+///         SExp::sym("define"),
+///         sexp![SExp::sym("square"), SExp::sym("x")],
+///         sexp![SExp::sym("*"), SExp::sym("x"), SExp::sym("x")]
+///     ],
+///     sexp![SExp::sym("square"), 12]
+/// );
+///
+/// assert!(evaluated.is_ok());
+/// assert_eq!(evaluated.unwrap(), SExp::from(144));
+/// ```
+/// ```
+/// use parsley::prelude::*;
+/// let mut ctx = Context::base();
+///
+/// eval!(
+///     ctx;
+///     sexp![
+///         SExp::sym("define"),
+///         sexp![SExp::sym("potato"), SExp::sym("x"), SExp::sym("y")],
+///         SExp::sym("y")
+///     ]
+/// );
+/// let evaluated = eval!(ctx; sexp![SExp::sym("potato"), true, 5]);
+///
+/// assert!(evaluated.is_ok());
+/// assert_eq!(evaluated.unwrap(), SExp::from(5));
+/// ```
+#[macro_export]
+macro_rules! eval {
+    ( $expression:expr ) => {
+        $crate::eval!($crate::Context::base(); $expression)
+    };
+    ( $( $expression:expr ),* ) => {
+        $crate::eval!(
+            $crate::Context::base();
+            $crate::sexp![$crate::SExp::sym("begin"), $( $expression ),* ]
+        )
+    };
+    ( $context:expr; $expression:expr ) => {
+        $expression.eval(&mut $context)
+    };
+}
+
 impl SExp {
     /// Evaluate an S-Expression in a context.
     ///
@@ -13,22 +69,18 @@ impl SExp {
     /// # Examples
     /// ```
     /// use parsley::prelude::*;
-    ///
-    /// let exp = SExp::from((SExp::sym("eq?"), (0, (1,))));
-    /// let mut ctx = Context::base();
-    /// let result = exp.eval(&mut ctx);
+    /// let result = sexp![SExp::sym("eq?"), 0, 1].eval(&mut Context::base());
     /// assert_eq!(result.unwrap(), SExp::from(false));
     /// ```
     /// ```
     /// use parsley::prelude::*;
-    ///
-    /// let exp1 = SExp::from((SExp::sym("define"), (SExp::sym("x"), (10,))));
+    /// let exp1 = sexp![SExp::sym("define"), SExp::sym("x"), 10];
     /// let exp2 = SExp::sym("x");
     ///
     /// let mut ctx = Context::base();
+    ///
     /// exp1.eval(&mut ctx);
-    /// let result = exp2.eval(&mut ctx);
-    /// assert_eq!(result.unwrap(), SExp::from(10));
+    /// assert_eq!(exp2.eval(&mut ctx).unwrap(), SExp::from(10));
     /// ```
     pub fn eval(self, ctx: &mut Context) -> Result {
         match self {

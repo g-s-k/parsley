@@ -61,9 +61,11 @@ impl SExp {
     ///
     /// # Example
     /// ```
-    /// use parsley::SExp::{self, Null};
-    ///
-    /// assert_eq!(SExp::from(((),)).iter().next().unwrap(), &Null);
+    /// use parsley::prelude::*;
+    /// assert_eq!(
+    ///     sexp![()].iter().next().unwrap(),
+    ///     &SExp::Null
+    /// );
     /// ```
     pub fn iter(&self) -> SExpRefIterator {
         SExpRefIterator { exp: self }

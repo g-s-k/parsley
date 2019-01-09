@@ -161,15 +161,9 @@ impl SExp {
                     },
             } => {
                 debug!("Creating procedure.");
-                let params = Pair {
-                    head: p_h,
-                    tail: p_t,
-                };
+                let params = p_t.cons(*p_h);
                 let expected = params.iter().count();
-                let fn_body = Pair {
-                    head: b_h,
-                    tail: b_t,
-                };
+                let fn_body = b_t.cons(*b_h);
                 Ok(Self::from(move |args: Self| {
                     info!("Formal parameters: {}", params);
                     // check arity

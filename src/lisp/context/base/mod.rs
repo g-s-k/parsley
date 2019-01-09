@@ -19,7 +19,7 @@ impl Context {
     /// let null_const = ctx.get("null").unwrap();
     /// let null_fn = ctx.get("null?").unwrap();
     /// assert_eq!(
-    ///     SExp::from((null_fn, (null_const,))).eval(&mut ctx).unwrap(),
+    ///     sexp![null_fn, null_const].eval(&mut ctx).unwrap(),
     ///     SExp::from(true),
     /// );
     ///
