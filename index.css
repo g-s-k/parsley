@@ -1,0 +1,46 @@
+html, body {
+  height: 100%;
+  width: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: sans-serif;
+  display: flex;
+  flex-direction: column;
+}
+
+header.Banner {
+  height: 150px;
+  text-align: center;
+  padding: 20px;
+  background-image: linear-gradient(
+    15deg, CornflowerBlue,
+    MediumSpringGreen 60%,
+    transparent
+  );
+}
+
+header.Banner > h1.PageTitle {
+  font-size: 1.5em;
+}
+
+.PageBody, .Footer {
+  background-color: Snow;
+}
+
+div.PageBody {
+  flex: 1;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+}
+
+.PageBody > .LoadChart {
+  flex: 1;
+}
+
+footer.Footer {
+  padding: 16px 0;
+  text-align: center;
+}
