@@ -12,10 +12,6 @@ repository = "https://github.com/g-s-k/parsley"
 name = "parsley"
 path = "src/lib.rs"
 
-[[bin]]
-name = "parsley"
-path = "src/main.rs"
-
 [dependencies]
 failure = "0.1"
 failure_derive = "0.1"
