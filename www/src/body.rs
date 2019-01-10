@@ -19,8 +19,8 @@ impl Renderable<Body> for Body {
     fn view(&self) -> Html<Self> {
         html! {
             <div class="PageBody",>
-                <div class="LoadChart", />
-                </div>
+                <div class="Terminal", />
+            </div>
         }
     }
 }

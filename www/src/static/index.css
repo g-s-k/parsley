@@ -36,7 +36,7 @@ div.PageBody {
   flex-direction: column;
 }
 
-.PageBody > .LoadChart {
+.PageBody > .Terminal {
   flex: 1;
 }
 
