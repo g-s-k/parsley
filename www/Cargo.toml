@@ -5,4 +5,5 @@ authors = ["George Kaplan <george@georgekaplan.xyz>"]
 edition = "2018"
 
 [dependencies]
+parsley = { path = ".." }
 yew = { git = "https://github.com/DenisKolodin/yew" }
