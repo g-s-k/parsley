@@ -18,19 +18,12 @@ impl SExp {
     }
 
     pub(super) fn eval_begin(self, ctx: &mut Context) -> Result {
-        if let Null = self {
-            Err(Error::NoArgumentsProvided {
-                symbol: "begin".to_string(),
-            })
-        } else {
-            debug!("Evaluating \"begin\" sequence.");
-            match self.into_iter().map(|e| e.eval(ctx)).last() {
-                Some(stuff) => stuff,
-                None => Err(Error::Syntax {
-                    exp: "something bad happened, idk".to_string(),
-                }),
-            }
+        debug!("Evaluating \"begin\" sequence.");
+        let mut ret = Atom(Primitive::Undefined);
+        for expr in self {
+            ret = expr.eval(ctx)?;
         }
+        Ok(ret)
     }
 
     pub(super) fn eval_cond(self, ctx: &mut Context) -> Result {

@@ -46,17 +46,17 @@ mod tests;
 /// ```
 #[macro_export]
 macro_rules! eval {
-    ( $expression:expr ) => {
-        $crate::eval!($crate::Context::base(); $expression)
-    };
     ( $( $expression:expr ),* ) => {
-        $crate::eval!(
-            $crate::Context::base();
-            $crate::sexp![$crate::SExp::sym("begin"), $( $expression ),* ]
-        )
+        $crate::eval!($crate::Context::base(); $( $expression ),*)
     };
     ( $context:expr; $expression:expr ) => {
         $expression.eval(&mut $context)
+    };
+    ( $context:expr; $( $expression:expr ),* ) => {
+        $crate::sexp![
+            $crate::SExp::sym("begin"),
+            $( $expression ),*
+        ].eval(&mut $context)
     };
 }
 

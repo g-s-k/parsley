@@ -145,7 +145,7 @@ fn cond() {
 
 #[test]
 fn begin() {
-    assert!(eval(sexp![s("begin")]).is_err());
+    assert_eval_eq!(sexp![s("begin")], Primitive::Undefined);
     assert_eval_eq!(sexp![s("begin"), 0, 1], 1);
 }
 
