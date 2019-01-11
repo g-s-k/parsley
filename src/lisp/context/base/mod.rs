@@ -95,7 +95,7 @@ impl Context {
         );
 
         // Numerics
-        ret.define("zero?", (|e| Ok((e == 0.into()).into())).into());
+        ret.define("zero?", (|e: SExp| Ok((e.car()? == 0.into()).into())).into());
         ret.define("add1", make_unary_numeric(|e| e + 1.));
         ret.define("sub1", make_unary_numeric(|e| e - 1.));
         ret.define(
