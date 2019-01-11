@@ -1,0 +1,10 @@
+[package]
+name = "www"
+version = "0.1.0"
+authors = ["George Kaplan <george@georgekaplan.xyz>"]
+edition = "2018"
+
+[dependencies]
+parsley = { path = ".." }
+stdweb = "0.4.12"
+yew = { git = "https://github.com/DenisKolodin/yew" }

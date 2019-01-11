@@ -10,6 +10,9 @@ jobs:
   include:
     - stage: test
       script: cargo test --verbose
+    - stage: build_www
+      before_script: cargo install cargo-web
+      script: cd www && cargo web build
     - stage: lint
       before_script: rustup component add clippy
       script: cargo clippy -- -D warnings
