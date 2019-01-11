@@ -8,6 +8,7 @@ body {
   font-family: sans-serif;
   display: flex;
   flex-direction: column;
+  background-color: Snow;
 }
 
 header.Banner {
@@ -25,22 +26,70 @@ header.Banner > h1.PageTitle {
   font-size: 1.5em;
 }
 
-.PageBody, .Footer {
-  background-color: Snow;
-}
-
 div.PageBody {
   flex: 1;
   padding: 10px;
   display: flex;
   flex-direction: column;
+  justify-content: space-around;
+  align-items: center;
 }
 
-.PageBody > .LoadChart {
+.PageBody > .Terminal {
   flex: 1;
+  margin: 20px 0 10px;
+  padding: 0 0 20px 15px;
+  width: 50%;
+  min-width: 500px;
+  max-width: 1500px;
+  height: 80%;
+  max-height: 666px;
+  background-color: black;
+  box-shadow: 10px 10px 100px -5px darkslategray;
+  cursor: text;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.History {
+  white-space: pre-line;
+  overflow-y: scroll;
+  display: flex;
+  flex-direction: column-reverse;
+  line-height: 1.5;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.6);
+}
+
+.History, .InputLine, .InputLine > input {
+  font-size: 14pt;
+  color: white;
+  font-family: monospace;
+}
+
+.InputLine {
+  display: flex;
+  margin-top: 5px;
+  margin-right: 10px;
+}
+
+.InputLine > input {
+  flex: 1;
+  margin-left: 0.5rem;
+  background-color: transparent;
+  border: none;
+  outline: none;
 }
 
 footer.Footer {
   padding: 16px 0;
   text-align: center;
+  background-color: transparent;
 }
