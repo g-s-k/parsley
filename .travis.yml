@@ -11,8 +11,8 @@ jobs:
     - stage: test
       script: cargo test --verbose
     - stage: build_www
-      before_script: cargo install cargo-web --force
-      script: cd www && cargo web build && ls target
+      before_script: which cargo-web || cargo install cargo-web
+      script: cd www && cargo web deploy --release
       deploy:
         provider: pages
         skip-cleanup: true
