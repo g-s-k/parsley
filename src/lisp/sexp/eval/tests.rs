@@ -128,6 +128,15 @@ fn cond() {
         ],
         'a'
     );
+    // multiple consequent expressions
+    assert_eval_base_eq!(
+        sexp![
+            s("cond"),
+            sexp![true, 3, sexp![s("null?"), s("null")]],
+            sexp![s("else"), 3]
+        ],
+        true
+    );
     // ensure that evaluation stops at first non-#f predicate
     assert!(eval(sexp![
         s("cond"),

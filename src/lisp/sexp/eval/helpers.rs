@@ -34,22 +34,19 @@ impl SExp {
             match case {
                 Pair {
                     head: predicate,
-                    tail:
-                        box Pair {
-                            head: consequent,
-                            tail: box Null,
-                        },
+                    tail: consequent,
                 } => {
+                    let wrapped_consequent = consequent.cons(Self::sym("begin"));
                     // TODO: check if `else` clause is actually last
                     if *predicate == else_ {
-                        return consequent.eval(ctx);
+                        return wrapped_consequent.eval(ctx);
                     }
 
                     match predicate.eval(ctx) {
                         Ok(Atom(Primitive::Boolean(false))) => {
                             continue;
                         }
-                        Ok(_) => return consequent.eval(ctx),
+                        Ok(_) => return wrapped_consequent.eval(ctx),
                         err => return err,
                     }
                 }
