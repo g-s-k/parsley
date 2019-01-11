@@ -1,5 +1,7 @@
 use yew::prelude::*;
 
+mod terminal;
+
 pub struct Body;
 
 impl Component for Body {
@@ -19,7 +21,7 @@ impl Renderable<Body> for Body {
     fn view(&self) -> Html<Self> {
         html! {
             <div class="PageBody",>
-                <div class="Terminal", />
+                <terminal::Terminal: />
             </div>
         }
     }
