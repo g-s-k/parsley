@@ -12,7 +12,7 @@ jobs:
       script: cargo test --verbose
     - stage: build_www
       before_script: cargo install cargo-web --force
-      script: cd www && cargo web build
+      script: cd www && cargo web build && ls target
       deploy:
         provider: pages
         skip-cleanup: true
