@@ -13,6 +13,15 @@ jobs:
     - stage: build_www
       before_script: cargo install cargo-web
       script: cd www && cargo web build
+      deploy:
+        provider: pages
+        skip-cleanup: true
+        github-token: $GITHUB_TOKEN
+        local-dir: www/target/deploy
+        keep-history: true
+        on:
+          branch: master
     - stage: lint
       before_script: rustup component add clippy
       script: cargo clippy -- -D warnings
+
