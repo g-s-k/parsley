@@ -11,7 +11,7 @@ jobs:
     - stage: test
       script: cargo test --verbose
     - stage: build_www
-      before_script: cargo install cargo-web
+      before_script: cargo install cargo-web --force
       script: cd www && cargo web build
       deploy:
         provider: pages
