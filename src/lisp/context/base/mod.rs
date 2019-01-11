@@ -1,5 +1,5 @@
 use super::super::Error;
-use super::super::Primitive::{Character, String as LispString};
+use super::super::Primitive::{Character, String as LispString, Undefined};
 use super::super::SExp::{self, Atom, Null, Pair};
 
 use super::utils::*;
@@ -60,9 +60,7 @@ impl Context {
                             head: elem2,
                             tail: box Null,
                         },
-                } => Ok(Null
-                    .cons(elem2.cons(*elem1))
-                    .cons(SExp::sym("quote"))),
+                } => Ok(Null.cons(elem2.cons(*elem1)).cons(SExp::sym("quote"))),
                 exp => Err(Error::Syntax {
                     exp: exp.to_string(),
                 }),
@@ -93,9 +91,20 @@ impl Context {
             })
             .into(),
         );
+        ret.define(
+            "displayln",
+            (|e| {
+                println!("{}", e);
+                Ok(Atom(Undefined))
+            })
+            .into(),
+        );
 
         // Numerics
-        ret.define("zero?", (|e: SExp| Ok((e.car()? == 0.into()).into())).into());
+        ret.define(
+            "zero?",
+            (|e: SExp| Ok((e.car()? == 0.into()).into())).into(),
+        );
         ret.define("add1", make_unary_numeric(|e| e + 1.));
         ret.define("sub1", make_unary_numeric(|e| e - 1.));
         ret.define(
@@ -109,6 +118,7 @@ impl Context {
         ret.define("-", make_fold_from0_numeric(std::ops::Sub::sub));
         ret.define("*", make_fold_numeric(1., std::ops::Mul::mul));
         ret.define("/", make_fold_from0_numeric(std::ops::Div::div));
+        ret.define("remainder", make_binary_numeric(std::ops::Rem::rem));
         ret.define("pow", make_binary_numeric(f64::powf));
         ret.define("pi", std::f64::consts::PI.into());
 

@@ -33,7 +33,7 @@ impl Component for Terminal {
                     document.getElementById("theTerminalInput").focus();
                 }
                 false
-            },
+            }
             Msg::KeyUp(ref s) if s == "Enter" && !self.value.is_empty() => {
                 // save command
                 self.history.push_str(&format!("\n> {}", self.value));
