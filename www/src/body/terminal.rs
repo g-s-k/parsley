@@ -3,6 +3,9 @@ use stdweb::*;
 use yew::prelude::*;
 
 pub struct Terminal {
+    cmd_history: Vec<String>,
+    cmd_idx: usize,
+    cmd_tmp: Option<String>,
     context: Context,
     history: String,
     value: String,
@@ -20,6 +23,9 @@ impl Component for Terminal {
 
     fn create(_: Self::Properties, _: ComponentLink<Self>) -> Self {
         Terminal {
+            cmd_history: Vec::new(),
+            cmd_idx: 0,
+            cmd_tmp: None,
             context: Context::base(),
             history: String::with_capacity(99999),
             value: String::new(),
@@ -27,6 +33,9 @@ impl Component for Terminal {
     }
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
+        let hist_len = self.cmd_history.len();
+        let at_end_of_hist = self.cmd_idx == hist_len;
+
         match msg {
             Msg::Clicked => {
                 js! {
@@ -34,9 +43,33 @@ impl Component for Terminal {
                 }
                 false
             }
+            Msg::KeyUp(ref s) if s == "ArrowUp" && self.cmd_idx != 0 => {
+                if at_end_of_hist {
+                    self.cmd_tmp = Some(self.value.clone());
+                }
+                self.cmd_idx -= 1;
+                self.value = self.cmd_history[self.cmd_idx].clone();
+                true
+            }
+            Msg::KeyUp(ref s) if s == "ArrowDown" && !at_end_of_hist => {
+                self.cmd_idx += 1;
+                if self.cmd_idx == self.cmd_history.len() {
+                    if let Some(c) = &self.cmd_tmp {
+                        self.value = c.clone();
+                        self.cmd_tmp = None;
+                    } else {
+                        self.value = String::new();
+                    }
+                } else {
+                    self.value = self.cmd_history[self.cmd_idx].clone();
+                }
+                true
+            }
             Msg::KeyUp(ref s) if s == "Enter" && !self.value.is_empty() => {
                 // save command
                 self.history.push_str(&format!("\n> {}", self.value));
+                self.cmd_history.push(self.value.clone());
+                self.cmd_idx = self.cmd_history.len();
                 // evaluate
                 match run_in(&self.value, &mut self.context) {
                     Ok(result) => {
