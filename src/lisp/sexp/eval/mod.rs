@@ -102,6 +102,7 @@ impl SExp {
             Pair { head, tail } => {
                 if let Atom(Primitive::Symbol(sym)) = *head {
                     match sym.as_ref() {
+                        // lisp essentials
                         "eval" => (&tail).car().unwrap_or(*tail).eval(ctx)?.eval(ctx),
                         "apply" => tail.do_apply(ctx),
                         "and" => tail.eval_and(ctx),
@@ -114,6 +115,9 @@ impl SExp {
                         "or" => tail.eval_or(ctx),
                         "quote" => tail.eval_quote(),
                         "set!" => tail.eval_set(ctx),
+                        // i/o
+                        "println" => tail.do_println(ctx),
+                        // functional basics
                         "map" => tail.eval_map(ctx),
                         "foldl" => tail.eval_fold(ctx),
                         "filter" => tail.eval_filter(ctx),

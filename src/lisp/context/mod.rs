@@ -7,6 +7,7 @@ use super::{Error, Result};
 mod base;
 mod math;
 pub mod utils;
+mod write;
 
 /// Evaluation context for LISP expressions.
 ///
@@ -14,12 +15,17 @@ pub mod utils;
 /// `Context::default()` does not provide any definitions. To obtain an
 /// evaluation context with useful functions available, use
 /// [`Context::base()`](#method.base).
-#[derive(Debug, Clone)]
-pub struct Context(Vec<HashMap<String, SExp>>);
+pub struct Context {
+    data: Vec<HashMap<String, SExp>>,
+    out: Option<String>,
+}
 
 impl Default for Context {
     fn default() -> Self {
-        Self(vec![HashMap::new()])
+        Self {
+            data: vec![HashMap::new()],
+            out: None,
+        }
     }
 }
 
@@ -29,7 +35,7 @@ impl Context {
     /// See [Context::pop](#method.pop) for a usage example.
     pub fn push(&mut self) {
         trace!("Creating a new scope.");
-        self.0.push(HashMap::new());
+        self.data.push(HashMap::new());
     }
 
     /// Remove the most recently added scope.
@@ -51,9 +57,9 @@ impl Context {
     /// ```
     pub fn pop(&mut self) {
         trace!("Leaving nested scope.");
-        self.0.pop();
+        self.data.pop();
 
-        if self.0.is_empty() {
+        if self.data.is_empty() {
             self.push();
         }
     }
@@ -61,8 +67,8 @@ impl Context {
     /// Create a new definition in the current scope.
     pub fn define(&mut self, key: &str, value: SExp) {
         trace!("Binding the symbol {} to the value {}.", key, value);
-        let num_frames = self.0.len();
-        self.0[num_frames - 1].insert(key.to_string(), value);
+        let num_frames = self.data.len();
+        self.data[num_frames - 1].insert(key.to_string(), value);
     }
 
     /// Get the most recent definition for a symbol.
@@ -84,7 +90,7 @@ impl Context {
     /// ```
     pub fn get(&self, key: &str) -> Option<SExp> {
         trace!("Retrieving a definition for the key {}", key);
-        match self.0.iter().rev().find_map(|w| w.get(key)) {
+        match self.data.iter().rev().find_map(|w| w.get(key)) {
             Some(exp) => Some(exp.clone()),
             _ => None,
         }
@@ -108,7 +114,7 @@ impl Context {
     /// ```
     pub fn set(&mut self, key: &str, value: SExp) -> Result {
         trace!("Re-binding the symbol {} to the value {}", key, value);
-        for frame in self.0.iter_mut().rev() {
+        for frame in self.data.iter_mut().rev() {
             if frame.contains_key(key) {
                 frame.insert(key.to_string(), value);
                 return Ok(Atom(Undefined));

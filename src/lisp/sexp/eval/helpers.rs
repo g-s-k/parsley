@@ -1,3 +1,5 @@
+use std::fmt::Write;
+
 use super::SExp::{self, Atom, Null, Pair};
 use super::{Context, Error, Primitive, Result};
 
@@ -360,6 +362,23 @@ impl SExp {
             exp => Err(Error::Syntax {
                 exp: exp.to_string(),
             }),
+        }
+    }
+
+    pub(super) fn do_println(self, ctx: &mut Context) -> Result {
+        if let Pair {
+            head,
+            tail: box Null,
+        } = self {
+            let hevl = head.eval(ctx)?;
+            match write!(ctx, "{}\n", hevl) {
+                Ok(()) => Ok(Atom(Primitive::Undefined)),
+                Err(_) => Err(Error::Type),
+            }
+        } else {
+            Err(Error::Syntax {
+                exp: self.to_string()
+            })
         }
     }
 }

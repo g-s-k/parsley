@@ -1,5 +1,5 @@
 use super::super::Error;
-use super::super::Primitive::{Character, String as LispString, Undefined};
+use super::super::Primitive::{Character, String as LispString};
 use super::super::SExp::{self, Atom, Null, Pair};
 
 use super::utils::*;
@@ -88,14 +88,6 @@ impl Context {
             (|e| match e {
                 Pair { head, .. } => Ok(head.type_of().into()),
                 _ => Err(Error::Type),
-            })
-            .into(),
-        );
-        ret.define(
-            "displayln",
-            (|e| {
-                println!("{}", e);
-                Ok(Atom(Undefined))
             })
             .into(),
         );

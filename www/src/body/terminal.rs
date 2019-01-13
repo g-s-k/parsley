@@ -26,7 +26,7 @@ impl Component for Terminal {
             cmd_history: Vec::new(),
             cmd_idx: 0,
             cmd_tmp: None,
-            context: Context::base(),
+            context: Context::base().capturing(),
             history: String::with_capacity(99999),
             value: String::new(),
         }
@@ -73,6 +73,9 @@ impl Component for Terminal {
                 // evaluate
                 match run_in(&self.value, &mut self.context) {
                     Ok(result) => {
+                        let side_effects = self.context.get_output().unwrap_or_else(String::new);
+                        self.history.push_str(&format!("\n{}", side_effects));
+                        self.context.capture();
                         // save result, if it's not empty
                         let res = format!("{}", result);
                         if !res.is_empty() {
