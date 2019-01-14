@@ -93,17 +93,15 @@ impl SExp {
                 },
             },
             Atom(_) => Ok(self),
-            Pair { head, tail } => Self::eval_pair((*head, *tail), ctx),
-        }
-    }
-
-    fn eval_pair((head, tail): (Self, Self), ctx: &mut Context) -> Result {
-        match head.eval(ctx)? {
-            proc @ Atom(Primitive::CtxProcedure(_)) => tail.cons(proc).apply(ctx),
-            proc => {
-                let evaluated_args = tail.into_iter().map(|e| e.eval(ctx)).collect::<Result>()?;
-
-                evaluated_args.cons(proc).apply(ctx)
+            Pair { head, tail } => {
+                let proc = head.eval(ctx)?;
+                if let Atom(Primitive::CtxProcedure(_)) = proc {
+                    *tail
+                } else {
+                    tail.into_iter().map(|e| e.eval(ctx)).collect::<Result>()?
+                }
+                .cons(proc)
+                .apply(ctx)
             }
         }
     }
