@@ -38,11 +38,8 @@ impl SExp {
         match self {
             Null | Atom(_) => Ok(self),
             Pair { head, tail } => match *head {
-                Atom(Primitive::Procedure(proc)) => {
-                    trace!("Applying a procedure to the arguments {}", tail);
-                    proc(*tail)?.eval(ctx)
-                }
-                Atom(Primitive::CtxProcedure(proc)) => proc(*tail, ctx),
+                Atom(Primitive::Procedure { f, .. }) => f(*tail)?.eval(ctx),
+                Atom(Primitive::CtxProcedure { f, .. }) => f(*tail, ctx),
                 Atom(Primitive::Symbol(sym)) => Err(Error::NotAProcedure {
                     exp: sym.to_string(),
                 }),
@@ -55,25 +52,25 @@ impl SExp {
         }
     }
 
-    pub(super) fn car(&self) -> Result {
+    pub(super) fn car(self) -> Result {
         trace!("Getting the car of {}", self);
         match self {
             Null => Err(Error::NullList),
             Atom(_) => Err(Error::NotAList {
                 atom: self.to_string(),
             }),
-            Pair { head, .. } => Ok((**head).clone()),
+            Pair { head, .. } => Ok(*head),
         }
     }
 
-    pub(super) fn cdr(&self) -> Result {
+    pub(super) fn cdr(self) -> Result {
         trace!("Getting the cdr of {}", self);
         match self {
             Null => Err(Error::NullList),
             Atom(_) => Err(Error::NotAList {
                 atom: self.to_string(),
             }),
-            Pair { tail, .. } => Ok((**tail).to_owned()),
+            Pair { tail, .. } => Ok(*tail),
         }
     }
 
@@ -133,10 +130,23 @@ impl SExp {
         }
     }
 
-    pub fn ctx_proc<F>(f: F) -> Self
+    pub fn proc<F>(f: F, name: Option<&str>) -> Self
+    where
+        F: Fn(Self) -> Result + 'static,
+    {
+        Atom(Primitive::Procedure {
+            f: Rc::new(f),
+            name: name.map(String::from),
+        })
+    }
+
+    pub fn ctx_proc<F>(f: F, name: Option<&str>) -> Self
     where
         F: Fn(Self, &mut Context) -> Result + 'static,
     {
-        Atom(Primitive::CtxProcedure(Rc::new(f)))
+        Atom(Primitive::CtxProcedure {
+            f: Rc::new(f),
+            name: name.map(String::from),
+        })
     }
 }

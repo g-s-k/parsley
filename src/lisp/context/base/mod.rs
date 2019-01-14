@@ -7,6 +7,24 @@ use super::Context;
 
 mod tests;
 
+macro_rules! define_with {
+    ( $ctx:ident, $name:expr, $proc:expr, $tform:expr ) => {
+        $ctx.define($name, $tform($proc, Some($name)))
+    };
+}
+
+macro_rules! define_ctx {
+    ( $ctx:ident, $name:expr, $proc:expr ) => {
+        define_with!($ctx, $name, $proc, $crate::SExp::ctx_proc)
+    };
+}
+
+macro_rules! define {
+    ( $ctx:ident, $name:expr, $proc:expr ) => {
+        $ctx.define($name, $crate::SExp::proc($proc, Some($name)))
+    };
+}
+
 impl Context {
     /// Base context - defines a number of useful functions and constants for
     /// use in the runtime.
@@ -30,166 +48,119 @@ impl Context {
         let mut ret = Self::default();
 
         // The basics
-        ret.define(
-            "eval",
-            SExp::ctx_proc(|e, c| (&e).car().unwrap_or(e).eval(c)),
-        );
-        ret.define("apply", SExp::ctx_proc(SExp::do_apply));
-        ret.define("and", SExp::ctx_proc(SExp::eval_and));
-        ret.define("begin", SExp::ctx_proc(SExp::eval_begin));
-        ret.define("cond", SExp::ctx_proc(SExp::eval_cond));
-        ret.define("define", SExp::ctx_proc(SExp::eval_define));
-        ret.define("if", SExp::ctx_proc(SExp::eval_if));
-        ret.define("lambda", SExp::ctx_proc(SExp::eval_lambda));
-        ret.define("let", SExp::ctx_proc(SExp::eval_let));
-        ret.define("or", SExp::ctx_proc(SExp::eval_or));
-        ret.define("quote", SExp::ctx_proc(SExp::eval_quote));
-        ret.define("set", SExp::ctx_proc(SExp::eval_set));
-        ret.define(
-            "eq?",
-            (|e| match e {
-                Pair {
-                    head: elem1,
-                    tail:
-                        box Pair {
-                            head: elem2,
-                            tail: box Null,
-                        },
-                } => Ok((elem1 == elem2).into()),
-                exp => Err(Error::Syntax {
-                    exp: exp.to_string(),
-                }),
-            })
-            .into(),
-        );
-        ret.define("null?", (|e| Ok((e == ((),).into()).into())).into());
+        define_ctx!(ret, "eval", |e, c| e.car()?.eval(c)?.eval(c));
+        define_ctx!(ret, "apply", SExp::do_apply);
+        define_ctx!(ret, "and", SExp::eval_and);
+        define_ctx!(ret, "begin", SExp::eval_begin);
+        define_ctx!(ret, "cond", SExp::eval_cond);
+        define_ctx!(ret, "define", SExp::eval_define);
+        define_ctx!(ret, "if", SExp::eval_if);
+        define_ctx!(ret, "lambda", |e, c| SExp::eval_lambda(e, c, false));
+        define_ctx!(ret, "let", SExp::eval_let);
+        define_ctx!(ret, "named-lambda", |e, c| SExp::eval_lambda(e, c, true));
+        define_ctx!(ret, "or", SExp::eval_or);
+        define_ctx!(ret, "quote", SExp::eval_quote);
+        define_ctx!(ret, "set!", SExp::eval_set);
+        define!(ret, "eq?", |e| match e {
+            Pair {
+                head: elem1,
+                tail:
+                    box Pair {
+                        head: elem2,
+                        tail: box Null,
+                    },
+            } => Ok((elem1 == elem2).into()),
+            exp => Err(Error::Syntax {
+                exp: exp.to_string(),
+            }),
+        });
+        define!(ret, "null?", |e| Ok((e == ((),).into()).into()));
         ret.define("null", (SExp::sym("quote"), ((),)).into());
-        ret.define("void", (|_| Ok(Atom(Void))).into());
-        ret.define("list", Ok.into());
-        ret.define("not", (|e| Ok((e == (false,).into()).into())).into());
-        ret.define(
-            "cons",
-            (|e| match e {
-                Pair {
-                    head: elem1,
-                    tail:
-                        box Pair {
-                            head: elem2,
-                            tail: box Null,
-                        },
-                } => Ok(Null.cons(elem2.cons(*elem1)).cons(SExp::sym("quote"))),
-                exp => Err(Error::Syntax {
-                    exp: exp.to_string(),
-                }),
-            })
-            .into(),
-        );
-        ret.define(
-            "car",
-            (|e| match e {
-                Pair { head, .. } => head.car(),
-                _ => Err(Error::Type),
-            })
-            .into(),
-        );
-        ret.define(
-            "cdr",
-            (|e| match e {
-                Pair { head, .. } => head.cdr(),
-                _ => Err(Error::Type),
-            })
-            .into(),
-        );
-        ret.define(
+        define!(ret, "void", |_| Ok(Atom(Void)));
+        define!(ret, "list", Ok);
+        define!(ret, "not", |e| Ok((e == (false,).into()).into()));
+        define!(ret, "cons", |e| match e {
+            Pair {
+                head: elem1,
+                tail:
+                    box Pair {
+                        head: elem2,
+                        tail: box Null,
+                    },
+            } => Ok(Null.cons(elem2.cons(*elem1)).cons(SExp::sym("quote"))),
+            exp => Err(Error::Syntax {
+                exp: exp.to_string(),
+            }),
+        });
+        define_with!(ret, "car", SExp::car, make_unary_expr);
+        define_with!(ret, "cdr", SExp::cdr, make_unary_expr);
+        define_with!(
+            ret,
             "type-of",
-            (|e| match e {
-                Pair { head, .. } => Ok(head.type_of().into()),
-                _ => Err(Error::Type),
-            })
-            .into(),
+            |e| Ok(SExp::from(e.type_of())),
+            make_unary_expr
         );
 
         // i/o
-        ret.define(
-            "display",
-            SExp::ctx_proc(|e, c| SExp::do_print(e, c, false, false)),
-        );
-        ret.define(
-            "displayln",
-            SExp::ctx_proc(|e, c| SExp::do_print(e, c, true, false)),
-        );
-        ret.define(
-            "write",
-            SExp::ctx_proc(|e, c| SExp::do_print(e, c, false, true)),
-        );
-        ret.define(
-            "writeln",
-            SExp::ctx_proc(|e, c| SExp::do_print(e, c, true, true)),
-        );
+        define_ctx!(ret, "display", |e, c| SExp::do_print(e, c, false, false));
+        define_ctx!(ret, "displayln", |e, c| SExp::do_print(e, c, true, false));
+        define_ctx!(ret, "write", |e, c| SExp::do_print(e, c, false, true));
+        define_ctx!(ret, "writeln", |e, c| SExp::do_print(e, c, true, true));
 
         // functional goodness
-        ret.define("map", SExp::ctx_proc(SExp::eval_map));
-        ret.define("foldl", SExp::ctx_proc(SExp::eval_fold));
-        ret.define("filter", SExp::ctx_proc(SExp::eval_filter));
+        define_ctx!(ret, "map", SExp::eval_map);
+        define_ctx!(ret, "foldl", SExp::eval_fold);
+        define_ctx!(ret, "filter", SExp::eval_filter);
 
         // Numerics
-        ret.define(
-            "zero?",
-            (|e: SExp| Ok((e.car()? == 0.into()).into())).into(),
-        );
-        ret.define("add1", make_unary_numeric(|e| e + 1.));
-        ret.define("sub1", make_unary_numeric(|e| e - 1.));
-        ret.define(
+        define!(ret, "zero?", |e: SExp| Ok((e.car()? == 0.into()).into()));
+        define_with!(ret, "add1", |e| e + 1., make_unary_numeric);
+        define_with!(ret, "sub1", |e| e - 1., make_unary_numeric);
+        define_with!(
+            ret,
             "=",
-            make_binary_numeric(|l, r| (l - r).abs() < std::f64::EPSILON),
+            |l, r| (l - r).abs() < std::f64::EPSILON,
+            make_binary_numeric
         );
-        ret.define("<", make_binary_numeric(|l, r| l < r));
-        ret.define(">", make_binary_numeric(|l, r| l > r));
-        ret.define("abs", make_unary_numeric(f64::abs));
-        ret.define("+", make_fold_numeric(0., std::ops::Add::add));
-        ret.define("-", make_fold_from0_numeric(std::ops::Sub::sub));
-        ret.define("*", make_fold_numeric(1., std::ops::Mul::mul));
-        ret.define("/", make_fold_from0_numeric(std::ops::Div::div));
-        ret.define("remainder", make_binary_numeric(std::ops::Rem::rem));
-        ret.define("pow", make_binary_numeric(f64::powf));
+        define_with!(ret, "<", |l, r| l < r, make_binary_numeric);
+        define_with!(ret, ">", |l, r| l > r, make_binary_numeric);
+        define_with!(ret, "abs", f64::abs, make_unary_numeric);
+        ret.define("+", make_fold_numeric(0., std::ops::Add::add, Some("+")));
+        define_with!(ret, "-", std::ops::Sub::sub, make_fold_from0_numeric);
+        ret.define("*", make_fold_numeric(1., std::ops::Mul::mul, Some("*")));
+        define_with!(ret, "/", std::ops::Div::div, make_fold_from0_numeric);
+        define_with!(ret, "remainder", std::ops::Rem::rem, make_binary_numeric);
+        define_with!(ret, "pow", f64::powf, make_binary_numeric);
         ret.define("pi", std::f64::consts::PI.into());
 
         // Strings
-        ret.define(
-            "string->list",
-            (|e| match e {
-                Pair {
-                    head: box Atom(LispString(s)),
-                    tail: box Null,
-                } => Ok(s.chars().map(SExp::from).collect()),
-                _ => Err(Error::Type),
-            })
-            .into(),
-        );
-        ret.define(
-            "list->string",
-            (|e| match e {
-                Pair { .. } => {
-                    match e.into_iter().fold(Ok(String::new()), |s, e| match e {
-                        Atom(Character(ref c)) => {
-                            if let Ok(st) = s {
-                                let mut stri = st;
-                                stri.push(*c);
-                                Ok(stri)
-                            } else {
-                                s
-                            }
+        define!(ret, "string->list", |e| match e {
+            Pair {
+                head: box Atom(LispString(s)),
+                tail: box Null,
+            } => Ok(s.chars().map(SExp::from).collect()),
+            _ => Err(Error::Type),
+        });
+        define!(ret, "list->string", |e| match e {
+            Pair { .. } => {
+                match e.into_iter().fold(Ok(String::new()), |s, e| match e {
+                    Atom(Character(ref c)) => {
+                        if let Ok(st) = s {
+                            let mut stri = st;
+                            stri.push(*c);
+                            Ok(stri)
+                        } else {
+                            s
                         }
-                        _ => Err(Error::Type),
-                    }) {
-                        Ok(s) => Ok(Atom(LispString(s))),
-                        Err(err) => Err(err),
                     }
+                    _ => Err(Error::Type),
+                }) {
+                    Ok(s) => Ok(Atom(LispString(s))),
+                    Err(err) => Err(err),
                 }
-                _ => Err(Error::Type),
-            })
-            .into(),
-        );
+            }
+            _ => Err(Error::Type),
+        });
 
         ret
     }

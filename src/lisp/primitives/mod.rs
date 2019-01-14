@@ -19,8 +19,14 @@ pub enum Primitive {
     Number(f64),
     String(CoreString),
     Symbol(CoreString),
-    Procedure(Rc<dyn Fn(SExp) -> Result>),
-    CtxProcedure(Rc<dyn Fn(SExp, &mut Context) -> Result>),
+    Procedure {
+        f: Rc<dyn Fn(SExp) -> Result>,
+        name: Option<CoreString>,
+    },
+    CtxProcedure {
+        f: Rc<dyn Fn(SExp, &mut Context) -> Result>,
+        name: Option<CoreString>,
+    },
 }
 
 impl fmt::Debug for Primitive {
@@ -33,7 +39,12 @@ impl fmt::Debug for Primitive {
             Number(n) => write!(f, "{}", n),
             String(s) => write!(f, "\"{}\"", s),
             Symbol(s) => write!(f, "{}", s),
-            Procedure(_) | CtxProcedure(_) => write!(f, "#<procedure>"),
+            Procedure { name: Some(s), .. } | CtxProcedure { name: Some(s), .. } => {
+                write!(f, "#<procedure:{}>", s)
+            }
+            Procedure { name: None, .. } | CtxProcedure { name: None, .. } => {
+                write!(f, "#<procedure>")
+            }
         }
     }
 }
@@ -46,7 +57,12 @@ impl fmt::Display for Primitive {
             Character(c) => write!(f, "{}", c),
             Number(n) => write!(f, "{}", n),
             String(s) | Symbol(s) => f.write_str(s),
-            Procedure(_) | CtxProcedure(_) => write!(f, "#<procedure>"),
+            Procedure { name: Some(s), .. } | CtxProcedure { name: Some(s), .. } => {
+                write!(f, "#<procedure:{}>", s)
+            }
+            Procedure { name: None, .. } | CtxProcedure { name: None, .. } => {
+                write!(f, "#<procedure>")
+            }
         }
     }
 }
@@ -74,7 +90,7 @@ impl Primitive {
             Number(_) => "number",
             String(_) => "string",
             Symbol(_) => "symbol",
-            Procedure(_) | CtxProcedure(_) => "procedure",
+            Procedure { .. } | CtxProcedure{ .. } => "procedure",
         }
     }
 }

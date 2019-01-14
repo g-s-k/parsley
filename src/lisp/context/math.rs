@@ -1,6 +1,12 @@
 use super::utils::*;
 use super::Context;
 
+macro_rules! define_with {
+    ( $ctx:ident, $name:expr, $proc:expr, $tform:expr ) => {
+        $ctx.define($name, $tform($proc, Some($name)))
+    };
+}
+
 impl Context {
     /// Math functions that are less commonly used. Intended to be layered on top of the base context.
     ///
@@ -21,44 +27,44 @@ impl Context {
     /// ```
     pub fn math(mut self) -> Self {
         // identification
-        self.define("is-nan", make_unary_numeric(f64::is_nan));
-        self.define("is-infinite", make_unary_numeric(f64::is_infinite));
-        self.define("is-finite", make_unary_numeric(f64::is_finite));
-        self.define("is-positive", make_unary_numeric(f64::is_sign_positive));
-        self.define("is-negative", make_unary_numeric(f64::is_sign_negative));
+        define_with!(self, "is-nan", f64::is_nan, make_unary_numeric);
+        define_with!(self, "is-infinite", f64::is_infinite, make_unary_numeric);
+        define_with!(self, "is-finite", f64::is_finite, make_unary_numeric);
+        define_with!(self, "is-positive", f64::is_sign_positive, make_unary_numeric);
+        define_with!(self, "is-negative", f64::is_sign_negative, make_unary_numeric);
 
         // rounding etc.
-        self.define("floor", make_unary_numeric(f64::floor));
-        self.define("ceil", make_unary_numeric(f64::ceil));
-        self.define("round", make_unary_numeric(f64::round));
-        self.define("trunc", make_unary_numeric(f64::trunc));
-        self.define("fract", make_unary_numeric(f64::fract));
-        self.define("sign", make_unary_numeric(f64::signum));
+        define_with!(self, "floor", f64::floor, make_unary_numeric);
+        define_with!(self, "ceil", f64::ceil, make_unary_numeric);
+        define_with!(self, "round", f64::round, make_unary_numeric);
+        define_with!(self, "trunc", f64::trunc, make_unary_numeric);
+        define_with!(self, "fract", f64::fract, make_unary_numeric);
+        define_with!(self, "sign", f64::signum, make_unary_numeric);
 
         // exponents, roots, and logs
-        self.define("recip", make_unary_numeric(f64::recip));
-        self.define("sqrt", make_unary_numeric(f64::sqrt));
-        self.define("cube-root", make_unary_numeric(f64::cbrt));
-        self.define("exp", make_unary_numeric(f64::exp));
-        self.define("log", make_unary_numeric(f64::ln));
-        self.define("exp-2", make_unary_numeric(f64::exp2));
-        self.define("log-2", make_unary_numeric(f64::log2));
-        self.define("log-10", make_unary_numeric(f64::log10));
-        self.define("log-n", make_binary_numeric(f64::log));
+        define_with!(self, "recip", f64::recip, make_unary_numeric);
+        define_with!(self, "sqrt", f64::sqrt, make_unary_numeric);
+        define_with!(self, "cube-root", f64::cbrt, make_unary_numeric);
+        define_with!(self, "exp", f64::exp, make_unary_numeric);
+        define_with!(self, "log", f64::ln, make_unary_numeric);
+        define_with!(self, "exp-2", f64::exp2, make_unary_numeric);
+        define_with!(self, "log-2", f64::log2, make_unary_numeric);
+        define_with!(self, "log-10", f64::log10, make_unary_numeric);
+        define_with!(self, "log-n", f64::log, make_binary_numeric);
 
         // trigonometry
-        self.define("hypot", make_binary_numeric(f64::hypot));
-        self.define("sin", make_unary_numeric(f64::sin));
-        self.define("cos", make_unary_numeric(f64::cos));
-        self.define("tan", make_unary_numeric(f64::tan));
-        self.define("asin", make_unary_numeric(f64::asin));
-        self.define("acos", make_unary_numeric(f64::acos));
-        self.define("atan", make_unary_numeric(f64::atan));
-        self.define("atan2", make_binary_numeric(f64::atan2));
+        define_with!(self, "hypot", f64::hypot, make_binary_numeric);
+        define_with!(self, "sin", f64::sin, make_unary_numeric);
+        define_with!(self, "cos", f64::cos, make_unary_numeric);
+        define_with!(self, "tan", f64::tan, make_unary_numeric);
+        define_with!(self, "asin", f64::asin, make_unary_numeric);
+        define_with!(self, "acos", f64::acos, make_unary_numeric);
+        define_with!(self, "atan", f64::atan, make_unary_numeric);
+        define_with!(self, "atan2", f64::atan2, make_binary_numeric);
 
         // unit conversions
-        self.define("to-degrees", make_unary_numeric(f64::to_degrees));
-        self.define("to-radians", make_unary_numeric(f64::to_radians));
+        define_with!(self, "to-degrees", f64::to_degrees, make_unary_numeric);
+        define_with!(self, "to-radians", f64::to_radians, make_unary_numeric);
 
         self
     }

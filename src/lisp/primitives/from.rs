@@ -87,6 +87,9 @@ where
     F: Fn(SExp) -> Result + 'static,
 {
     fn from(f: F) -> Self {
-        Procedure(Rc::new(f))
+        Procedure {
+            f: Rc::new(f),
+            name: None,
+        }
     }
 }

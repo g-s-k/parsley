@@ -1,4 +1,5 @@
 use std::fmt::Write;
+use std::rc::Rc;
 
 use super::SExp::{self, Atom, Null, Pair};
 use super::{Context, Error, Primitive, Result};
@@ -141,7 +142,7 @@ impl SExp {
         }
     }
 
-    pub(crate) fn eval_lambda(self, _: &mut Context) -> Result {
+    pub(crate) fn eval_lambda(self, _: &mut Context, is_named: bool) -> Result {
         match self {
             Null => Err(Error::NoArgumentsProvided {
                 symbol: "lambda".to_string(),
@@ -162,25 +163,36 @@ impl SExp {
                     },
             } => {
                 debug!("Creating procedure.");
-                let params = p_t.cons(*p_h);
+                let (name, params) = if is_named {
+                    if let Atom(Primitive::Symbol(s)) = *p_h {
+                        (Some(s), *p_t)
+                    } else {
+                        return Err(Error::Type);
+                    }
+                } else {
+                    (None, p_t.cons(*p_h))
+                };
                 let expected = params.iter().count();
                 let fn_body = b_t.cons(*b_h);
-                Ok(Self::from(move |args: Self| {
-                    info!("Formal parameters: {}", params);
-                    // check arity
-                    let given = args.iter().count();
-                    if given != expected {
-                        return Err(Error::Arity { expected, given });
-                    }
-                    // bind arguments to parameters
-                    let bound_params: Self = params
-                        .iter()
-                        .zip(args.into_iter())
-                        .map(|(p, a)| Null.cons(a).cons(p.to_owned()))
-                        .collect();
-                    info!("Bound parameters: {}", bound_params);
-                    // construct let binding
-                    Ok(fn_body.to_owned().cons(bound_params).cons(Self::sym("let")))
+                Ok(Atom(Primitive::Procedure {
+                    f: Rc::new(move |args: Self| {
+                        info!("Formal parameters: {}", params);
+                        // check arity
+                        let given = args.iter().count();
+                        if given != expected {
+                            return Err(Error::Arity { expected, given });
+                        }
+                        // bind arguments to parameters
+                        let bound_params: Self = params
+                            .iter()
+                            .zip(args.into_iter())
+                            .map(|(p, a)| Null.cons(a).cons(p.to_owned()))
+                            .collect();
+                        info!("Bound parameters: {}", bound_params);
+                        // construct let binding
+                        Ok(fn_body.to_owned().cons(bound_params).cons(Self::sym("let")))
+                    }),
+                    name,
                 }))
             }
             exp => Err(Error::Syntax {

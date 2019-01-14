@@ -95,7 +95,7 @@ impl SExp {
             Atom(_) => Ok(self),
             Pair { head, tail } => {
                 let proc = head.eval(ctx)?;
-                if let Atom(Primitive::CtxProcedure(_)) = proc {
+                if let Atom(Primitive::CtxProcedure{ .. }) = proc {
                     *tail
                 } else {
                     tail.into_iter().map(|e| e.eval(ctx)).collect::<Result>()?

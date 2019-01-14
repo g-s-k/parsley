@@ -22,18 +22,20 @@ use super::super::{Error, Primitive, SExp};
 ///     SExp::from(42),
 /// );
 /// ```
-pub fn make_unary_numeric<T>(f: impl Fn(f64) -> T + 'static) -> SExp
+pub fn make_unary_numeric<T>(f: impl Fn(f64) -> T + 'static, name: Option<&str>) -> SExp
 where
     T: Into<SExp>,
 {
-    (move |e| match e {
-        SExp::Pair {
-            head: box SExp::Atom(Primitive::Number(n)),
-            ..
-        } => Ok((f(n)).into()),
-        _ => Err(Error::Type),
-    })
-    .into()
+    SExp::proc(
+        move |e| match e {
+            SExp::Pair {
+                head: box SExp::Atom(Primitive::Number(n)),
+                ..
+            } => Ok((f(n)).into()),
+            _ => Err(Error::Type),
+        },
+        name,
+    )
 }
 
 /// Make a procedure that takes two numeric arguments.
@@ -54,22 +56,24 @@ where
 ///     SExp::from(true),
 /// );
 /// ```
-pub fn make_binary_numeric<T>(f: impl Fn(f64, f64) -> T + 'static) -> SExp
+pub fn make_binary_numeric<T>(f: impl Fn(f64, f64) -> T + 'static, name: Option<&str>) -> SExp
 where
     T: Into<SExp>,
 {
-    (move |e| match e {
-        SExp::Pair {
-            head: box SExp::Atom(Primitive::Number(n1)),
-            tail:
-                box SExp::Pair {
-                    head: box SExp::Atom(Primitive::Number(n2)),
-                    ..
-                },
-        } => Ok((f(n1, n2)).into()),
-        _ => Err(Error::Type),
-    })
-    .into()
+    SExp::proc(
+        move |e| match e {
+            SExp::Pair {
+                head: box SExp::Atom(Primitive::Number(n1)),
+                tail:
+                    box SExp::Pair {
+                        head: box SExp::Atom(Primitive::Number(n2)),
+                        ..
+                    },
+            } => Ok((f(n1, n2)).into()),
+            _ => Err(Error::Type),
+        },
+        name,
+    )
 }
 
 /// Make a variadic procedure that takes a list of numeric arguments and folds
@@ -92,26 +96,28 @@ where
 ///     SExp::from(10),
 /// );
 /// ```
-pub fn make_fold_numeric<F, T>(init: T, f: F) -> SExp
+pub fn make_fold_numeric<F, T>(init: T, f: F, name: Option<&str>) -> SExp
 where
     F: Fn(T, f64) -> T + 'static,
     T: Into<SExp> + Clone + 'static,
 {
-    (move |exp: SExp| match exp.into_iter().fold(Ok(init.to_owned()), |a, e| {
-        if let Ok(val) = a {
-            if let SExp::Atom(Primitive::Number(n)) = e {
-                Ok(f(val, n))
+    SExp::proc(
+        move |exp: SExp| match exp.into_iter().fold(Ok(init.to_owned()), |a, e| {
+            if let Ok(val) = a {
+                if let SExp::Atom(Primitive::Number(n)) = e {
+                    Ok(f(val, n))
+                } else {
+                    Err(Error::Type)
+                }
             } else {
-                Err(Error::Type)
+                a
             }
-        } else {
-            a
-        }
-    }) {
-        Ok(v) => Ok(v.into()),
-        Err(err) => Err(err),
-    })
-    .into()
+        }) {
+            Ok(v) => Ok(v.into()),
+            Err(err) => Err(err),
+        },
+        name,
+    )
 }
 
 /// Make a variadic procedure that takes a list of numeric arguments, reserves
@@ -135,30 +141,49 @@ where
 ///     SExp::from(-2),
 /// );
 /// ```
-pub fn make_fold_from0_numeric<F>(f: F) -> SExp
+pub fn make_fold_from0_numeric<F>(f: F, name: Option<&str>) -> SExp
 where
     F: Fn(f64, f64) -> f64 + 'static,
 {
-    (move |exp: SExp| {
-        let mut i = exp.into_iter();
-        if let Some(SExp::Atom(Primitive::Number(first))) = i.next() {
-            match i.fold(Ok(first), |a, e| {
-                if let Ok(val) = a {
-                    if let SExp::Atom(Primitive::Number(n)) = e {
-                        Ok(f(val, n))
+    SExp::proc(
+        move |exp: SExp| {
+            let mut i = exp.into_iter();
+            if let Some(SExp::Atom(Primitive::Number(first))) = i.next() {
+                match i.fold(Ok(first), |a, e| {
+                    if let Ok(val) = a {
+                        if let SExp::Atom(Primitive::Number(n)) = e {
+                            Ok(f(val, n))
+                        } else {
+                            Err(Error::Type)
+                        }
                     } else {
-                        Err(Error::Type)
+                        a
                     }
-                } else {
-                    a
+                }) {
+                    Ok(v) => Ok(v.into()),
+                    Err(err) => Err(err),
                 }
-            }) {
-                Ok(v) => Ok(v.into()),
-                Err(err) => Err(err),
+            } else {
+                Err(Error::Type)
             }
-        } else {
-            Err(Error::Type)
-        }
-    })
-    .into()
+        },
+        name,
+    )
+}
+
+pub fn make_unary_expr<F>(f: F, name: Option<&str>) -> SExp
+where
+    F: Fn(SExp) -> crate::Result + 'static,
+{
+    SExp::proc(
+        move |exp| match exp {
+            SExp::Pair {
+                head,
+                tail: box SExp::Null,
+            } => f(*head),
+            SExp::Pair { .. } => Err(Error::Type),
+            _ => Err(Error::Type),
+        },
+        name,
+    )
 }
