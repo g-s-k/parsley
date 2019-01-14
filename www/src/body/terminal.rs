@@ -1,3 +1,6 @@
+use std::fmt::Write;
+use std::mem::replace;
+
 use parsley::prelude::*;
 use stdweb::*;
 use yew::prelude::*;
@@ -66,28 +69,35 @@ impl Component for Terminal {
                 true
             }
             Msg::KeyUp(ref s) if s == "Enter" && !self.value.is_empty() => {
-                // save command
-                self.history.push_str(&format!("\n> {}", self.value));
-                self.cmd_history.push(self.value.clone());
-                self.cmd_idx = self.cmd_history.len();
+                // show command in history
+                writeln!(self.history, "> {}", self.value).unwrap();
                 // evaluate
-                match run_in(&self.value, &mut self.context) {
+                let evaled = run_in(&self.value, &mut self.context);
+                // print side effects
+                let side_effects = self.context.get_output().unwrap_or_else(String::new);
+                if !side_effects.is_empty() {
+                    self.history.push_str(&side_effects);
+                }
+                self.context.capture();
+                // show actual output
+                match evaled {
                     Ok(result) => {
-                        let side_effects = self.context.get_output().unwrap_or_else(String::new);
-                        self.history.push_str(&format!("\n{}", side_effects));
-                        self.context.capture();
-                        // save result, if it's not empty
+                        // print result, if it's not empty
                         let res = format!("{}", result);
                         if !res.is_empty() {
-                            self.history.push_str(&format!("\n{}", res));
+                            writeln!(self.history, "{}", res).unwrap();
                         }
                     }
                     Err(error) => {
                         // save error
-                        self.history.push_str(&format!("\n{}", error));
+                        writeln!(self.history, "{}", error).unwrap();
                     }
                 }
-                self.value = String::new();
+                // save command and create buffer for new one
+                self.cmd_tmp = None;
+                self.cmd_history
+                    .push(replace(&mut self.value, String::new()));
+                self.cmd_idx = self.cmd_history.len();
                 true
             }
             Msg::GotInput(s) => {
