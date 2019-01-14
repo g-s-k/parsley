@@ -1,5 +1,5 @@
 use super::Primitive::Symbol;
-use super::SExp::{self, Atom, Null, Pair};
+use super::SExp::{self, Atom, Null, Pair, Vector};
 use std::fmt;
 
 impl fmt::Debug for SExp {
@@ -7,6 +7,14 @@ impl fmt::Debug for SExp {
         match self {
             Null => write!(f, "()",),
             Atom(a) => write!(f, "{:?}", a),
+            Vector(v) => write!(
+                f,
+                "#({})",
+                v.iter()
+                    .map(|e| format!("{:?}", e))
+                    .collect::<Vec<_>>()
+                    .join(" ")
+            ),
             Pair { head, tail } => match &**head {
                 Atom(Symbol(q)) if q == "quote" => match &**tail {
                     Pair { head: h2, tail: t2 } if **t2 == Null => write!(f, "'{}", h2),
@@ -33,6 +41,14 @@ impl fmt::Display for SExp {
         match self {
             Null => write!(f, "()",),
             Atom(a) => write!(f, "{}", a),
+            Vector(v) => write!(
+                f,
+                "#({})",
+                v.iter()
+                    .map(SExp::to_string)
+                    .collect::<Vec<_>>()
+                    .join(" ")
+            ),
             Pair { head, tail } => match &**head {
                 Atom(Symbol(q)) if q == "quote" => match &**tail {
                     Pair { head: h2, tail: t2 } if **t2 == Null => write!(f, "'{}", h2),

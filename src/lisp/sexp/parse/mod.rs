@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use super::SExp::{self, Atom, Null, Pair};
+use super::SExp::{self, Atom, Null, Pair, Vector};
 use super::{utils, Error, Primitive, Result};
 
 mod tests;
@@ -51,6 +51,18 @@ impl SExp {
                     debug!("Matched list with length {} chars", idx + 1);
                     Self::parse_list_from_str(&code[1..idx])
                 }
+                None => Err(Error::Syntax {
+                    exp: code.to_string(),
+                }),
+            }
+        } else if code.starts_with("#(") && code.ends_with(')') {
+            match utils::find_closing_delim(code[1..].chars(), '(', ')') {
+                Some(idx) if idx == 1 => Ok(Vector(Vec::new())),
+                Some(idx) => Ok(Vector(
+                    Self::parse_list_from_str(&code[2..idx + 1])?
+                        .into_iter()
+                        .collect::<Vec<_>>(),
+                )),
                 None => Err(Error::Syntax {
                     exp: code.to_string(),
                 }),

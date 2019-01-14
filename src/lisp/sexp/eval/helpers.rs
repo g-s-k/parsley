@@ -1,7 +1,7 @@
 use std::fmt::Write;
 use std::rc::Rc;
 
-use super::SExp::{self, Atom, Null, Pair};
+use super::SExp::{self, Atom, Null, Pair, Vector};
 use super::{Context, Error, Primitive, Result};
 
 fn unescape(s: &str) -> String {
@@ -58,7 +58,7 @@ impl SExp {
 
                 hvl.eval_case(ctx)
             }
-            Atom(_) => Ok(Atom(Primitive::Undefined)),
+            Atom(_) | Vector(_) => Ok(Atom(Primitive::Undefined)),
             Null => Err(Error::ArityMin {
                 expected: 1,
                 given: 0,
@@ -109,6 +109,9 @@ impl SExp {
             }),
             Atom(a) => Err(Error::NotAList {
                 atom: a.to_string(),
+            }),
+            Vector(_) => Err(Error::NotAList {
+                atom: self.to_string(),
             }),
             Pair {
                 head: head2,

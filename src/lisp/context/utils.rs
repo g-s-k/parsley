@@ -181,7 +181,8 @@ where
                 head: box arg,
                 tail: box SExp::Null,
             }
-            | arg @ SExp::Atom(_) => f(arg),
+            | arg @ SExp::Atom(_)
+            | arg @ SExp::Vector(_) => f(arg),
             SExp::Pair { .. } => Err(Error::Arity {
                 expected: 1,
                 given: 2,

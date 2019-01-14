@@ -10,7 +10,7 @@ mod parse;
 
 use super::{utils, Context, Error, Primitive, Result};
 
-use self::SExp::{Atom, Null, Pair};
+use self::SExp::{Atom, Null, Pair, Vector};
 
 /// An S-Expression. Can be parsed from a string via `FromStr`, or constructed
 /// programmatically.
@@ -31,12 +31,13 @@ pub enum SExp {
     Null,
     Atom(Primitive),
     Pair { head: Box<SExp>, tail: Box<SExp> },
+    Vector(Vec<SExp>),
 }
 
 impl SExp {
     fn apply(self, ctx: &mut Context) -> Result {
         match self {
-            Null | Atom(_) => Ok(self),
+            Null | Atom(_) | Vector(_) => Ok(self),
             Pair { head, tail } => match *head {
                 Atom(Primitive::Procedure { f, .. }) => f(*tail)?.eval(ctx),
                 Atom(Primitive::CtxProcedure { f, .. }) => f(*tail, ctx),
@@ -56,7 +57,7 @@ impl SExp {
         trace!("Getting the car of {}", self);
         match self {
             Null => Err(Error::NullList),
-            Atom(_) => Err(Error::NotAList {
+            Atom(_) | Vector(_) => Err(Error::NotAList {
                 atom: self.to_string(),
             }),
             Pair { head, .. } => Ok(*head),
@@ -67,7 +68,7 @@ impl SExp {
         trace!("Getting the cdr of {}", self);
         match self {
             Null => Err(Error::NullList),
-            Atom(_) => Err(Error::NotAList {
+            Atom(_) | Vector(_) => Err(Error::NotAList {
                 atom: self.to_string(),
             }),
             Pair { tail, .. } => Ok(*tail),
@@ -127,6 +128,7 @@ impl SExp {
             Null => "null",
             Atom(p) => p.type_of(),
             Pair { .. } => "list",
+            Vector(_) => "vector",
         }
     }
 
