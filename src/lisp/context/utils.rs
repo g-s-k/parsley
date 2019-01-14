@@ -17,7 +17,7 @@ use super::super::{Error, Primitive, SExp};
 /// let times_six = |x| x * 6.;
 ///
 /// assert_eq!(
-///     SExp::from((make_unary_numeric(times_six), (7,)))
+///     SExp::from((make_unary_numeric(times_six, None), (7,)))
 ///         .eval(&mut Context::default()).unwrap(),
 ///     SExp::from(42),
 /// );
@@ -51,7 +51,7 @@ where
 /// let my_gte = |a, b| a >= b;
 ///
 /// assert_eq!(
-///     SExp::from((make_binary_numeric(my_gte), (555, (444,))))
+///     SExp::from((make_binary_numeric(my_gte, None), (555, (444,))))
 ///         .eval(&mut Context::default()).unwrap(),
 ///     SExp::from(true),
 /// );
@@ -88,7 +88,7 @@ where
 /// use parsley::proc_utils::*;
 ///
 /// let my_adder = |accumulator, current| accumulator + current;
-/// let my_add_proc = make_fold_numeric(0., my_adder);
+/// let my_add_proc = make_fold_numeric(0., my_adder, None);
 ///
 /// assert_eq!(
 ///     SExp::from((my_add_proc, vec![1, 2, 3, 4]))
@@ -133,7 +133,7 @@ where
 /// use parsley::proc_utils::*;
 ///
 /// let my_subtract = |accumulator, current| accumulator - current;
-/// let my_sub_proc = make_fold_from0_numeric(my_subtract);
+/// let my_sub_proc = make_fold_from0_numeric(my_subtract, None);
 ///
 /// assert_eq!(
 ///     SExp::from((my_sub_proc, vec![1, 2, -3, 4]))
