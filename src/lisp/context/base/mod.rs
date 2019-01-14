@@ -1,5 +1,5 @@
 use super::super::Error;
-use super::super::Primitive::{Character, String as LispString};
+use super::super::Primitive::{Character, String as LispString, Void};
 use super::super::SExp::{self, Atom, Null, Pair};
 
 use super::utils::*;
@@ -31,6 +31,21 @@ impl Context {
 
         // The basics
         ret.define(
+            "eval",
+            SExp::ctx_proc(|e, c| (&e).car().unwrap_or(e).eval(c)),
+        );
+        ret.define("apply", SExp::ctx_proc(SExp::do_apply));
+        ret.define("and", SExp::ctx_proc(SExp::eval_and));
+        ret.define("begin", SExp::ctx_proc(SExp::eval_begin));
+        ret.define("cond", SExp::ctx_proc(SExp::eval_cond));
+        ret.define("define", SExp::ctx_proc(SExp::eval_define));
+        ret.define("if", SExp::ctx_proc(SExp::eval_if));
+        ret.define("lambda", SExp::ctx_proc(SExp::eval_lambda));
+        ret.define("let", SExp::ctx_proc(SExp::eval_let));
+        ret.define("or", SExp::ctx_proc(SExp::eval_or));
+        ret.define("quote", SExp::ctx_proc(SExp::eval_quote));
+        ret.define("set", SExp::ctx_proc(SExp::eval_set));
+        ret.define(
             "eq?",
             (|e| match e {
                 Pair {
@@ -49,6 +64,8 @@ impl Context {
         );
         ret.define("null?", (|e| Ok((e == ((),).into()).into())).into());
         ret.define("null", (SExp::sym("quote"), ((),)).into());
+        ret.define("void", (|_| Ok(Atom(Void))).into());
+        ret.define("list", Ok.into());
         ret.define("not", (|e| Ok((e == (false,).into()).into())).into());
         ret.define(
             "cons",
@@ -91,6 +108,29 @@ impl Context {
             })
             .into(),
         );
+
+        // i/o
+        ret.define(
+            "display",
+            SExp::ctx_proc(|e, c| SExp::do_print(e, c, false, false)),
+        );
+        ret.define(
+            "displayln",
+            SExp::ctx_proc(|e, c| SExp::do_print(e, c, true, false)),
+        );
+        ret.define(
+            "write",
+            SExp::ctx_proc(|e, c| SExp::do_print(e, c, false, true)),
+        );
+        ret.define(
+            "writeln",
+            SExp::ctx_proc(|e, c| SExp::do_print(e, c, true, true)),
+        );
+
+        // functional goodness
+        ret.define("map", SExp::ctx_proc(SExp::eval_map));
+        ret.define("foldl", SExp::ctx_proc(SExp::eval_fold));
+        ret.define("filter", SExp::ctx_proc(SExp::eval_filter));
 
         // Numerics
         ret.define(

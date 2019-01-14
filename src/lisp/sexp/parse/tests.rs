@@ -83,7 +83,6 @@ fn quote_syntax() {
 
     do_parse_and_assert(
         "'potato",
-        Null.cons(SExp::sym("potato"))
-            .cons(SExp::sym("quote")),
+        Null.cons(SExp::sym("potato")).cons(SExp::sym("quote")),
     );
 }

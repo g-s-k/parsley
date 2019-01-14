@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 #[macro_use]
 mod from;
 
@@ -40,6 +42,7 @@ impl SExp {
                     trace!("Applying a procedure to the arguments {}", tail);
                     proc(*tail)?.eval(ctx)
                 }
+                Atom(Primitive::CtxProcedure(proc)) => proc(*tail, ctx),
                 Atom(Primitive::Symbol(sym)) => Err(Error::NotAProcedure {
                     exp: sym.to_string(),
                 }),
@@ -128,5 +131,12 @@ impl SExp {
             Atom(p) => p.type_of(),
             Pair { .. } => "list",
         }
+    }
+
+    pub fn ctx_proc<F>(f: F) -> Self
+    where
+        F: Fn(Self, &mut Context) -> Result + 'static,
+    {
+        Atom(Primitive::CtxProcedure(Rc::new(f)))
     }
 }

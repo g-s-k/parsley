@@ -2,9 +2,11 @@ use std::fmt;
 use std::rc::Rc;
 use std::string::String as CoreString;
 
-use super::{Result, SExp};
+use super::{Context, Result, SExp};
 
-use self::Primitive::{Boolean, Character, Number, Procedure, String, Symbol, Undefined, Void};
+use self::Primitive::{
+    Boolean, Character, CtxProcedure, Number, Procedure, String, Symbol, Undefined, Void,
+};
 
 mod from;
 
@@ -18,6 +20,7 @@ pub enum Primitive {
     String(CoreString),
     Symbol(CoreString),
     Procedure(Rc<dyn Fn(SExp) -> Result>),
+    CtxProcedure(Rc<dyn Fn(SExp, &mut Context) -> Result>),
 }
 
 impl fmt::Debug for Primitive {
@@ -30,7 +33,7 @@ impl fmt::Debug for Primitive {
             Number(n) => write!(f, "{}", n),
             String(s) => write!(f, "\"{}\"", s),
             Symbol(s) => write!(f, "{}", s),
-            Procedure(_) => write!(f, "#<procedure>"),
+            Procedure(_) | CtxProcedure(_) => write!(f, "#<procedure>"),
         }
     }
 }
@@ -38,13 +41,12 @@ impl fmt::Debug for Primitive {
 impl fmt::Display for Primitive {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Void => f.write_str("#<void>"),
-            Undefined => Ok(()),
+            Undefined | Void => Ok(()),
             Boolean(b) => f.write_str(if *b { "#t" } else { "#f" }),
             Character(c) => write!(f, "{}", c),
             Number(n) => write!(f, "{}", n),
             String(s) | Symbol(s) => f.write_str(s),
-            Procedure(_) => f.write_str("#<procedure>"),
+            Procedure(_) | CtxProcedure(_) => write!(f, "#<procedure>"),
         }
     }
 }
@@ -72,7 +74,7 @@ impl Primitive {
             Number(_) => "number",
             String(_) => "string",
             Symbol(_) => "symbol",
-            Procedure(_) => "procedure",
+            Procedure(_) | CtxProcedure(_) => "procedure",
         }
     }
 }

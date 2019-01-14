@@ -8,25 +8,12 @@ fn s(n: &str) -> SExp {
 }
 
 fn eval(e: SExp) -> Result {
-    e.eval(&mut Context::default())
-}
-
-fn eval_base(e: SExp) -> Result {
     e.eval(&mut Context::base())
 }
 
 macro_rules! assert_eval_eq {
     ( $lhs:expr, $rhs:expr ) => {
         assert_eq!(eval($lhs).expect("Evaluation failed"), SExp::from($rhs))
-    };
-}
-
-macro_rules! assert_eval_base_eq {
-    ( $lhs:expr, $rhs:expr ) => {
-        assert_eq!(
-            eval_base($lhs).expect("Evaluation failed"),
-            SExp::from($rhs)
-        )
     };
 }
 
@@ -129,7 +116,7 @@ fn cond() {
         'a'
     );
     // multiple consequent expressions
-    assert_eval_base_eq!(
+    assert_eval_eq!(
         sexp![
             s("cond"),
             sexp![true, 3, sexp![s("null?"), s("null")]],
@@ -185,31 +172,16 @@ fn define() {
     assert!(eval(sexp![s("define"), s("x"), 3, 7]).is_err());
     // very basic case
     assert_eval_eq!(sexp![s("define"), s("x"), 3], Primitive::Undefined);
-    assert_eval_eq!(
-        sexp![
-            s("begin"),
-            sexp![s("define"), s("x"), 3],
-            s("x")
-        ],
-        3
-    );
+    assert_eval_eq!(sexp![s("begin"), sexp![s("define"), s("x"), 3], s("x")], 3);
     // functional form
     assert_eval_eq!(
-        sexp![
-            s("define"),
-            sexp![s("x"), s("y")],
-            sexp![s("+"), 3, s("y")]
-        ],
+        sexp![s("define"), sexp![s("x"), s("y")], sexp![s("+"), 3, s("y")]],
         Primitive::Undefined
     );
     assert_eval_eq!(
         sexp![
             s("begin"),
-            sexp![
-                s("define"),
-                sexp![s("x"), s("y"), s("z")],
-                s("y")
-            ],
+            sexp![s("define"), sexp![s("x"), s("y"), s("z")], s("y")],
             sexp![s("x"), 4, 5]
         ],
         4
@@ -217,12 +189,7 @@ fn define() {
     assert_eval_eq!(
         sexp![
             s("begin"),
-            sexp![
-                s("define"),
-                sexp![s("x"), s("y"), s("z")],
-                s("y"),
-                s("z")
-            ],
+            sexp![s("define"), sexp![s("x"), s("y"), s("z")], s("y"), s("z")],
             sexp![s("x"), 4, 5]
         ],
         5
@@ -235,17 +202,9 @@ fn lambda() {
     assert!(eval(sexp![s("lambda")]).is_err());
     assert!(eval(sexp![s("lambda"), s("x")]).is_err());
     assert!(eval(sexp![s("lambda"), sexp![s("x")]]).is_err());
-    assert!(eval(sexp![
-        sexp![s("lambda"), sexp![s("x")], s("x")],
-        3,
-        4
-    ])
-    .is_err());
+    assert!(eval(sexp![sexp![s("lambda"), sexp![s("x")], s("x")], 3, 4]).is_err());
     // validate behavior
-    assert_eval_eq!(
-        sexp![sexp![s("lambda"), sexp![s("x")], s("x")], 27],
-        27
-    );
+    assert_eval_eq!(sexp![sexp![s("lambda"), sexp![s("x")], s("x")], 27], 27);
     assert_eval_eq!(
         sexp![
             sexp![
@@ -261,13 +220,9 @@ fn lambda() {
         ],
         27
     );
-    assert_eval_base_eq!(
+    assert_eval_eq!(
         sexp![
-            sexp![
-                s("lambda"),
-                sexp![s("x")],
-                sexp![s("*"), s("x"), s("x")]
-            ],
+            sexp![s("lambda"), sexp![s("x")], sexp![s("*"), s("x"), s("x")]],
             11
         ],
         121

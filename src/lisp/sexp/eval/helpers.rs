@@ -3,7 +3,7 @@ use std::fmt::Write;
 use super::SExp::{self, Atom, Null, Pair};
 use super::{Context, Error, Primitive, Result};
 
-fn unescape(s: String) -> String {
+fn unescape(s: &str) -> String {
     s.replace("\\n", "\n")
         .replace("\\t", "\t")
         .replace("\\\\", "\\")
@@ -13,7 +13,7 @@ fn unescape(s: String) -> String {
 }
 
 impl SExp {
-    pub(super) fn eval_and(self, ctx: &mut Context) -> Result {
+    pub(crate) fn eval_and(self, ctx: &mut Context) -> Result {
         debug!("Evaluating 'and' expression.");
         let mut state = Self::from(true);
 
@@ -28,7 +28,7 @@ impl SExp {
         Ok(state)
     }
 
-    pub(super) fn eval_begin(self, ctx: &mut Context) -> Result {
+    pub(crate) fn eval_begin(self, ctx: &mut Context) -> Result {
         debug!("Evaluating \"begin\" sequence.");
         let mut ret = Atom(Primitive::Undefined);
         for expr in self {
@@ -37,7 +37,7 @@ impl SExp {
         Ok(ret)
     }
 
-    pub(super) fn eval_cond(self, ctx: &mut Context) -> Result {
+    pub(crate) fn eval_cond(self, ctx: &mut Context) -> Result {
         debug!("Evaluating conditional form.");
         let else_ = Self::sym("else");
 
@@ -73,7 +73,7 @@ impl SExp {
         Ok(Atom(Primitive::Void))
     }
 
-    pub(super) fn eval_define(self, ctx: &mut Context) -> Result {
+    pub(crate) fn eval_define(self, ctx: &mut Context) -> Result {
         match self {
             Null => Err(Error::NoArgumentsProvided {
                 symbol: "define".to_string(),
@@ -114,7 +114,7 @@ impl SExp {
         }
     }
 
-    pub(super) fn eval_if(self, ctx: &mut Context) -> Result {
+    pub(crate) fn eval_if(self, ctx: &mut Context) -> Result {
         match self {
             Pair {
                 head: condition,
@@ -141,7 +141,7 @@ impl SExp {
         }
     }
 
-    pub(super) fn eval_lambda(self) -> Result {
+    pub(crate) fn eval_lambda(self, _: &mut Context) -> Result {
         match self {
             Null => Err(Error::NoArgumentsProvided {
                 symbol: "lambda".to_string(),
@@ -189,7 +189,7 @@ impl SExp {
         }
     }
 
-    pub(super) fn eval_let(self, ctx: &mut Context) -> Result {
+    pub(crate) fn eval_let(self, ctx: &mut Context) -> Result {
         match self {
             Null => Err(Error::NoArgumentsProvided {
                 symbol: "let".to_string(),
@@ -245,7 +245,7 @@ impl SExp {
         }
     }
 
-    pub(super) fn eval_or(self, ctx: &mut Context) -> Result {
+    pub(crate) fn eval_or(self, ctx: &mut Context) -> Result {
         debug!("Evaluating 'or' expression.");
         for element in self {
             match element.eval(ctx)? {
@@ -259,7 +259,7 @@ impl SExp {
         Ok(false.into())
     }
 
-    pub(super) fn eval_quote(self) -> Result {
+    pub(crate) fn eval_quote(self, _: &mut Context) -> Result {
         trace!("Evaluating 'quote' expression: {}", self);
         match self {
             Pair {
@@ -270,7 +270,7 @@ impl SExp {
         }
     }
 
-    pub(super) fn eval_set(self, ctx: &mut Context) -> Result {
+    pub(crate) fn eval_set(self, ctx: &mut Context) -> Result {
         match self {
             Null => Err(Error::NoArgumentsProvided {
                 symbol: "set!".to_string(),
@@ -289,7 +289,7 @@ impl SExp {
         }
     }
 
-    pub(super) fn eval_map(self, ctx: &mut Context) -> Result {
+    pub(crate) fn eval_map(self, ctx: &mut Context) -> Result {
         match self {
             Pair {
                 head,
@@ -309,7 +309,7 @@ impl SExp {
         }
     }
 
-    pub(super) fn eval_fold(self, ctx: &mut Context) -> Result {
+    pub(crate) fn eval_fold(self, ctx: &mut Context) -> Result {
         match self {
             Pair {
                 head,
@@ -332,7 +332,7 @@ impl SExp {
         }
     }
 
-    pub(super) fn eval_filter(self, ctx: &mut Context) -> Result {
+    pub(crate) fn eval_filter(self, ctx: &mut Context) -> Result {
         match self {
             Pair {
                 head: predicate,
@@ -358,7 +358,7 @@ impl SExp {
         }
     }
 
-    pub(super) fn do_apply(self, ctx: &mut Context) -> Result {
+    pub(crate) fn do_apply(self, ctx: &mut Context) -> Result {
         match self {
             Pair {
                 head: op,
@@ -374,7 +374,7 @@ impl SExp {
         }
     }
 
-    pub(super) fn do_print(self, ctx: &mut Context, newline: bool, debug: bool) -> Result {
+    pub(crate) fn do_print(self, ctx: &mut Context, newline: bool, debug: bool) -> Result {
         if let Pair {
             head,
             tail: box Null,
@@ -382,7 +382,7 @@ impl SExp {
         {
             let ending = if newline { "\n" } else { "" };
             let hevl = head.eval(ctx)?;
-            let unescaped = unescape(if debug {
+            let unescaped = unescape(&if debug {
                 format!("{:?}{}", hevl, ending)
             } else {
                 format!("{}{}", hevl, ending)

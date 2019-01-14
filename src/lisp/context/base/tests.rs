@@ -61,12 +61,9 @@ fn null_test() {
     let quote = || SExp::sym("quote");
 
     assert_eq!(
-        SExp::from(vec![
-            null(),
-            (vec![quote(), SExp::sym("test")]).into()
-        ])
-        .eval(&mut Context::base())
-        .unwrap(),
+        SExp::from(vec![null(), (vec![quote(), SExp::sym("test")]).into()])
+            .eval(&mut Context::base())
+            .unwrap(),
         SExp::from(false)
     );
 
@@ -94,12 +91,7 @@ fn null_test() {
 
 #[test]
 fn null_const() {
-    assert_eq!(
-        SExp::sym("null")
-            .eval(&mut Context::base())
-            .unwrap(),
-        Null
-    );
+    assert_eq!(SExp::sym("null").eval(&mut Context::base()).unwrap(), Null);
 }
 
 #[test]
@@ -221,12 +213,9 @@ fn type_of() {
         SExp::from(vec![tpf(), SExp::sym("null")])
             .eval(&mut Context::base())
             .unwrap(),
-        SExp::from(vec![
-            tpf(),
-            Null.cons(Null).cons(SExp::sym("quote"))
-        ])
-        .eval(&mut Context::base())
-        .unwrap(),
+        SExp::from(vec![tpf(), Null.cons(Null).cons(SExp::sym("quote"))])
+            .eval(&mut Context::base())
+            .unwrap(),
     );
 
     // ha, get it

@@ -27,7 +27,6 @@
 
 #![feature(box_patterns)]
 #![deny(clippy::pedantic)]
-#![warn(clippy::use_self)] // buggy - thinks exported macro is only used in one file
 
 #[macro_use]
 extern crate failure_derive;
@@ -44,7 +43,7 @@ pub use self::lisp::{Context, Error, Result, SExp};
 /// # Example
 /// ```
 /// use parsley::prelude::*;
-/// let mut ctx = Context::default();
+/// let mut ctx = Context::base();
 ///
 /// assert!(run_in("x", &mut ctx).is_err());
 /// assert!(run_in("(define x 6)", &mut ctx).is_ok());

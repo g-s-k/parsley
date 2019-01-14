@@ -93,56 +93,18 @@ impl SExp {
                 },
             },
             Atom(_) => Ok(self),
-            Pair { .. } => self.eval_pair(ctx),
+            Pair { head, tail } => Self::eval_pair((*head, *tail), ctx),
         }
     }
 
-    fn eval_pair(self, ctx: &mut Context) -> Result {
-        match self {
-            Pair { head, tail } => {
-                if let Atom(Primitive::Symbol(sym)) = *head {
-                    match sym.as_ref() {
-                        // lisp essentials
-                        "eval" => (&tail).car().unwrap_or(*tail).eval(ctx)?.eval(ctx),
-                        "apply" => tail.do_apply(ctx),
-                        "and" => tail.eval_and(ctx),
-                        "begin" => tail.eval_begin(ctx),
-                        "cond" => tail.eval_cond(ctx),
-                        "define" => tail.eval_define(ctx),
-                        "if" => tail.eval_if(ctx),
-                        "lambda" => tail.eval_lambda(),
-                        "let" => tail.eval_let(ctx),
-                        "or" => tail.eval_or(ctx),
-                        "quote" => tail.eval_quote(),
-                        "set!" => tail.eval_set(ctx),
-                        // i/o
-                        "display" => tail.do_print(ctx, false, false),
-                        "displayln" => tail.do_print(ctx, true, false),
-                        "write" => tail.do_print(ctx, false, true),
-                        "writeln" => tail.do_print(ctx, true, true),
-                        // functional basics
-                        "map" => tail.eval_map(ctx),
-                        "foldl" => tail.eval_fold(ctx),
-                        "filter" => tail.eval_filter(ctx),
-                        _ => tail.cons(Self::sym(&sym)).eval_typical_pair(ctx),
-                    }
-                } else {
-                    tail.cons(*head).eval_typical_pair(ctx)
-                }
+    fn eval_pair((head, tail): (Self, Self), ctx: &mut Context) -> Result {
+        match head.eval(ctx)? {
+            proc @ Atom(Primitive::CtxProcedure(_)) => tail.cons(proc).apply(ctx),
+            proc => {
+                let evaluated_args = tail.into_iter().map(|e| e.eval(ctx)).collect::<Result>()?;
+
+                evaluated_args.cons(proc).apply(ctx)
             }
-            _ => self.eval_typical_pair(ctx),
         }
-    }
-
-    fn eval_typical_pair(self, ctx: &mut Context) -> Result {
-        debug!("Evaluating normal list: {}", self);
-        let evaluated = self
-            .into_iter()
-            .inspect(|e| trace!("Evaluating list member {}", e))
-            .map(|e| e.eval(ctx))
-            .collect::<Result>()?;
-
-        trace!("Applying operation: {}", evaluated);
-        evaluated.apply(ctx)
     }
 }
