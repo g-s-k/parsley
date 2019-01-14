@@ -89,13 +89,14 @@ impl SExp {
                 None => Err(Error::UndefinedSymbol { sym }),
                 Some(exp) => match exp {
                     Null => Ok(Null),
+                    Atom(Primitive::Undefined) => Err(Error::UndefinedSymbol { sym }),
                     _ => exp.eval(ctx),
                 },
             },
             Atom(_) => Ok(self),
             Pair { head, tail } => {
                 let proc = head.eval(ctx)?;
-                if let Atom(Primitive::CtxProcedure{ .. }) = proc {
+                if let Atom(Primitive::CtxProcedure { .. }) = proc {
                     *tail
                 } else {
                     tail.into_iter().map(|e| e.eval(ctx)).collect::<Result>()?

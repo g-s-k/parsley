@@ -96,6 +96,10 @@ impl SExp {
                         ctx.define(&sym, ev_defn);
                         Ok(Atom(Primitive::Undefined))
                     }
+                    Null => {
+                        ctx.define(&sym, Atom(Primitive::Undefined));
+                        Ok(Atom(Primitive::Undefined))
+                    }
                     exp => Err(Error::Syntax {
                         exp: exp.to_string(),
                     }),

@@ -168,7 +168,7 @@ fn r#let() {
 fn define() {
     // validate errors for insufficient/too many arguments
     assert!(eval(sexp![s("define")]).is_err());
-    assert!(eval(sexp![s("define"), s("x")]).is_err());
+    assert!(eval(sexp![s("define"), s("x")]).is_ok());
     assert!(eval(sexp![s("define"), s("x"), 3, 7]).is_err());
     // very basic case
     assert_eval_eq!(sexp![s("define"), s("x"), 3], Primitive::Undefined);
