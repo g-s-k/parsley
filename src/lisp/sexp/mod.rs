@@ -24,7 +24,7 @@ use self::SExp::{Atom, Null, Pair};
 /// let parsed = "\"abcdefg\"".parse::<SExp>().unwrap();
 /// assert_eq!(parsed, SExp::from("abcdefg"));
 /// ```
-#[derive(Debug, PartialEq, Clone)]
+#[derive(PartialEq, Clone)]
 pub enum SExp {
     Null,
     Atom(Primitive),

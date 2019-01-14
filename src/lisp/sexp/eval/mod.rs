@@ -116,7 +116,10 @@ impl SExp {
                         "quote" => tail.eval_quote(),
                         "set!" => tail.eval_set(ctx),
                         // i/o
-                        "println" => tail.do_println(ctx),
+                        "display" => tail.do_print(ctx, false, false),
+                        "displayln" => tail.do_print(ctx, true, false),
+                        "write" => tail.do_print(ctx, false, true),
+                        "writeln" => tail.do_print(ctx, true, true),
                         // functional basics
                         "map" => tail.eval_map(ctx),
                         "foldl" => tail.eval_fold(ctx),

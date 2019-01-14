@@ -23,9 +23,9 @@ pub enum Primitive {
 impl fmt::Debug for Primitive {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Void => write!(f, "#<void>"),
-            Undefined => write!(f, "#<undefined>"),
-            Boolean(b) => write!(f, "<boolean {}>", b),
+            Void => f.write_str("#<void>"),
+            Undefined => f.write_str("#<undefined>"),
+            Boolean(b) => f.write_str(if *b { "#t" } else { "#f" }),
             Character(c) => write!(f, "#\\{}", c),
             Number(n) => write!(f, "{}", n),
             String(s) => write!(f, "\"{}\"", s),
@@ -38,14 +38,13 @@ impl fmt::Debug for Primitive {
 impl fmt::Display for Primitive {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Void => write!(f, "#<void>"),
-            Undefined => write!(f, ""),
-            Boolean(b) => write!(f, "{}", if *b { "#t" } else { "#f" }),
-            Character(c) => write!(f, "#\\{}", c),
+            Void => f.write_str("#<void>"),
+            Undefined => Ok(()),
+            Boolean(b) => f.write_str(if *b { "#t" } else { "#f" }),
+            Character(c) => write!(f, "{}", c),
             Number(n) => write!(f, "{}", n),
-            String(s) => write!(f, "\"{}\"", s),
-            Symbol(s) => write!(f, "{}", s),
-            Procedure(_) => write!(f, "#<procedure>"),
+            String(s) | Symbol(s) => f.write_str(s),
+            Procedure(_) => f.write_str("#<procedure>"),
         }
     }
 }

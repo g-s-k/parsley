@@ -3,6 +3,15 @@ use std::fmt::Write;
 use super::SExp::{self, Atom, Null, Pair};
 use super::{Context, Error, Primitive, Result};
 
+fn unescape(s: String) -> String {
+    s.replace("\\n", "\n")
+        .replace("\\t", "\t")
+        .replace("\\\\", "\\")
+        .replace("\\r", "\r")
+        .replace("\\0", "\0")
+        .replace("\\\"", "\"")
+}
+
 impl SExp {
     pub(super) fn eval_and(self, ctx: &mut Context) -> Result {
         debug!("Evaluating 'and' expression.");
@@ -365,19 +374,26 @@ impl SExp {
         }
     }
 
-    pub(super) fn do_println(self, ctx: &mut Context) -> Result {
+    pub(super) fn do_print(self, ctx: &mut Context, newline: bool, debug: bool) -> Result {
         if let Pair {
             head,
             tail: box Null,
-        } = self {
+        } = self
+        {
+            let ending = if newline { "\n" } else { "" };
             let hevl = head.eval(ctx)?;
-            match write!(ctx, "{}\n", hevl) {
+            let unescaped = unescape(if debug {
+                format!("{:?}{}", hevl, ending)
+            } else {
+                format!("{}{}", hevl, ending)
+            });
+            match write!(ctx, "{}", unescaped) {
                 Ok(()) => Ok(Atom(Primitive::Undefined)),
                 Err(_) => Err(Error::Type),
             }
         } else {
             Err(Error::Syntax {
-                exp: self.to_string()
+                exp: self.to_string(),
             })
         }
     }
