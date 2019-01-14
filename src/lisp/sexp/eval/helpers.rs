@@ -38,6 +38,38 @@ impl SExp {
         Ok(ret)
     }
 
+    pub(crate) fn eval_case(self, ctx: &mut Context) -> Result {
+        match self {
+            Pair { head, tail } => {
+                let else_ = Self::sym("else");
+                let hvl = head.eval(ctx)?;
+
+                for case in *tail {
+                    if let Pair {
+                        head: objs,
+                        tail: body,
+                    } = case
+                    {
+                        if *objs == else_ {
+                            return body.eval_begin(ctx);
+                        }
+
+                        if let Some(_) = objs.into_iter().find(|e| *e == hvl) {
+                            return body.eval_begin(ctx);
+                        }
+                    }
+                }
+
+                hvl.eval_case(ctx)
+            }
+            Atom(_) => Ok(Atom(Primitive::Undefined)),
+            Null => Err(Error::ArityMin {
+                expected: 1,
+                given: 0,
+            }),
+        }
+    }
+
     pub(crate) fn eval_cond(self, ctx: &mut Context) -> Result {
         debug!("Evaluating conditional form.");
         let else_ = Self::sym("else");

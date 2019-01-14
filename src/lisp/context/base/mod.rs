@@ -52,6 +52,7 @@ impl Context {
         define_ctx!(ret, "apply", SExp::do_apply);
         define_ctx!(ret, "and", SExp::eval_and);
         define_ctx!(ret, "begin", SExp::eval_begin);
+        define_ctx!(ret, "case", SExp::eval_case);
         define_ctx!(ret, "cond", SExp::eval_cond);
         define_ctx!(ret, "define", SExp::eval_define);
         define_ctx!(ret, "if", SExp::eval_if);
