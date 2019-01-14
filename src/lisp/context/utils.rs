@@ -178,11 +178,18 @@ where
     SExp::proc(
         move |exp| match exp {
             SExp::Pair {
-                head,
+                head: box arg,
                 tail: box SExp::Null,
-            } => f(*head),
-            SExp::Pair { .. } => Err(Error::Type),
-            _ => Err(Error::Type),
+            }
+            | arg @ SExp::Atom(_) => f(arg),
+            SExp::Pair { .. } => Err(Error::Arity {
+                expected: 1,
+                given: 2,
+            }),
+            SExp::Null => Err(Error::Arity {
+                expected: 1,
+                given: 0,
+            }),
         },
         name,
     )

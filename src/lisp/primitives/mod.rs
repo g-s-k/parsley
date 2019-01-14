@@ -90,7 +90,7 @@ impl Primitive {
             Number(_) => "number",
             String(_) => "string",
             Symbol(_) => "symbol",
-            Procedure { .. } | CtxProcedure{ .. } => "procedure",
+            Procedure { .. } | CtxProcedure { .. } => "procedure",
         }
     }
 }

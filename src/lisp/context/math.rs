@@ -30,8 +30,18 @@ impl Context {
         define_with!(self, "is-nan", f64::is_nan, make_unary_numeric);
         define_with!(self, "is-infinite", f64::is_infinite, make_unary_numeric);
         define_with!(self, "is-finite", f64::is_finite, make_unary_numeric);
-        define_with!(self, "is-positive", f64::is_sign_positive, make_unary_numeric);
-        define_with!(self, "is-negative", f64::is_sign_negative, make_unary_numeric);
+        define_with!(
+            self,
+            "is-positive",
+            f64::is_sign_positive,
+            make_unary_numeric
+        );
+        define_with!(
+            self,
+            "is-negative",
+            f64::is_sign_negative,
+            make_unary_numeric
+        );
 
         // rounding etc.
         define_with!(self, "floor", f64::floor, make_unary_numeric);

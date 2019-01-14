@@ -50,11 +50,7 @@ impl SExp {
                         tail: body,
                     } = case
                     {
-                        if *objs == else_ {
-                            return body.eval_begin(ctx);
-                        }
-
-                        if let Some(_) = objs.into_iter().find(|e| *e == hvl) {
+                        if *objs == else_ || objs.iter().any(|e| *e == hvl) {
                             return body.eval_begin(ctx);
                         }
                     }

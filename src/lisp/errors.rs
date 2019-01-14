@@ -17,6 +17,11 @@ pub enum Error {
         expected, given
     )]
     ArityMin { expected: usize, given: usize },
+    #[fail(
+        display = "arity mismatch: expected at most {} params, given {}.",
+        expected, given
+    )]
+    ArityMax { expected: usize, given: usize },
     #[fail(display = "{} expects at least one argument.", symbol)]
     NoArgumentsProvided { symbol: String },
     #[fail(display = "Expected a list, got {}.", atom)]
