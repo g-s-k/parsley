@@ -1,6 +1,4 @@
-use super::super::Primitive::{
-    Character, Env, Number, Procedure, String as LispString, Void,
-};
+use super::super::Primitive::{Character, Env, Number, Procedure, String as LispString, Void};
 use super::super::SExp::{self, Atom, Null, Pair, Vector};
 use super::super::{Env as Environment, Error};
 
@@ -11,7 +9,8 @@ mod tests;
 
 macro_rules! define_with {
     ( $ctx:ident, $name:expr, $proc:expr, $tform:expr ) => {
-        $ctx.lang.insert($name.to_string(), $tform($proc, Some($name)))
+        $ctx.lang
+            .insert($name.to_string(), $tform($proc, Some($name)))
     };
 }
 
@@ -23,13 +22,17 @@ macro_rules! define_ctx {
 
 macro_rules! define {
     ( $ctx:ident, $name:expr, $proc:expr ) => {
-        $ctx.lang.insert($name.to_string(), $crate::SExp::proc($proc, Some($name)))
+        $ctx.lang
+            .insert($name.to_string(), $crate::SExp::proc($proc, Some($name)))
     };
 }
 
 macro_rules! tup_ctx_env {
     ( $name:expr, $proc:expr ) => {
-        ($name.to_string(), $crate::SExp::ctx_proc($proc, Some($name)))
+        (
+            $name.to_string(),
+            $crate::SExp::ctx_proc($proc, Some($name)),
+        )
     };
 }
 
@@ -92,7 +95,8 @@ impl Context {
             }),
         });
         define!(ret, "null?", |e| Ok((e == ((),).into()).into()));
-        ret.lang.insert("null".to_string(), (SExp::sym("quote"), ((),)).into());
+        ret.lang
+            .insert("null".to_string(), (SExp::sym("quote"), ((),)).into());
         define!(ret, "void", |_| Ok(Atom(Void)));
         define!(ret, "list", Ok);
         define!(ret, "not", |e| Ok((e == (false,).into()).into()));
@@ -104,7 +108,7 @@ impl Context {
                         head: elem2,
                         tail: box Null,
                     },
-            } => Ok(Null.cons(elem2.cons(*elem1)).cons(SExp::sym("quote"))),
+            } => Ok(elem2.cons(*elem1)),
             exp => Err(Error::Syntax {
                 exp: exp.to_string(),
             }),
@@ -142,13 +146,20 @@ impl Context {
         define_with!(ret, "<", |l, r| l < r, make_binary_numeric);
         define_with!(ret, ">", |l, r| l > r, make_binary_numeric);
         define_with!(ret, "abs", f64::abs, make_unary_numeric);
-        ret.lang.insert("+".to_string(), make_fold_numeric(0., std::ops::Add::add, Some("+")));
+        ret.lang.insert(
+            "+".to_string(),
+            make_fold_numeric(0., std::ops::Add::add, Some("+")),
+        );
         define_with!(ret, "-", std::ops::Sub::sub, make_fold_from0_numeric);
-        ret.lang.insert("*".to_string(), make_fold_numeric(1., std::ops::Mul::mul, Some("*")));
+        ret.lang.insert(
+            "*".to_string(),
+            make_fold_numeric(1., std::ops::Mul::mul, Some("*")),
+        );
         define_with!(ret, "/", std::ops::Div::div, make_fold_from0_numeric);
         define_with!(ret, "remainder", std::ops::Rem::rem, make_binary_numeric);
         define_with!(ret, "pow", f64::powf, make_binary_numeric);
-        ret.lang.insert("pi".to_string(), std::f64::consts::PI.into());
+        ret.lang
+            .insert("pi".to_string(), std::f64::consts::PI.into());
 
         // Vectors
         define_with!(

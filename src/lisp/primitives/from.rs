@@ -3,8 +3,8 @@ use std::str::FromStr;
 use std::string::String as CoreString;
 
 use super::super::{utils, Error, Result, SExp};
-use super::Primitive::{self, Boolean, Character, Number, Procedure, String, Symbol};
 use super::proc::Procedure::Basic;
+use super::Primitive::{self, Boolean, Character, Number, Procedure, String, Symbol};
 
 impl FromStr for Primitive {
     type Err = Error;

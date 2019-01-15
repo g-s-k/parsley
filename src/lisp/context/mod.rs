@@ -76,7 +76,11 @@ impl Context {
     }
 
     fn get_user(&self, key: &str) -> Option<SExp> {
-        self.user.iter().rev().find_map(|w| w.get(key)).map(Clone::clone)
+        self.user
+            .iter()
+            .rev()
+            .find_map(|w| w.get(key))
+            .map(Clone::clone)
     }
 
     /// Get the most recent definition for a symbol.

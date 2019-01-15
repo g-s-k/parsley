@@ -17,7 +17,6 @@ fn unescape(s: &str) -> String {
 
 impl SExp {
     pub(crate) fn eval_and(self, ctx: &mut Context) -> Result {
-        debug!("Evaluating 'and' expression.");
         let mut state = Self::from(true);
 
         for element in self {
@@ -32,7 +31,6 @@ impl SExp {
     }
 
     pub(crate) fn eval_begin(self, ctx: &mut Context) -> Result {
-        debug!("Evaluating \"begin\" sequence.");
         let mut ret = Atom(Primitive::Undefined);
         for expr in self {
             ret = expr.eval(ctx)?;
@@ -69,7 +67,6 @@ impl SExp {
     }
 
     pub(crate) fn eval_cond(self, ctx: &mut Context) -> Result {
-        debug!("Evaluating conditional form.");
         let else_ = Self::sym("else");
 
         for case in self {
@@ -78,17 +75,16 @@ impl SExp {
                     head: predicate,
                     tail: consequent,
                 } => {
-                    let wrapped_consequent = consequent.cons(Self::sym("begin"));
                     // TODO: check if `else` clause is actually last
                     if *predicate == else_ {
-                        return wrapped_consequent.eval(ctx);
+                        return consequent.eval_begin(ctx);
                     }
 
                     match predicate.eval(ctx) {
                         Ok(Atom(Primitive::Boolean(false))) => {
                             continue;
                         }
-                        Ok(_) => return wrapped_consequent.eval(ctx),
+                        Ok(_) => return consequent.eval_begin(ctx),
                         err => return err,
                     }
                 }
@@ -124,7 +120,6 @@ impl SExp {
                         head: the_defn,
                         tail: box Null,
                     } => {
-                        debug!("Defining a quanitity with symbol {}", &sym);
                         let ev_defn = the_defn.eval(ctx)?;
                         ctx.define(&sym, ev_defn);
                         Ok(Atom(Primitive::Undefined))
@@ -241,7 +236,10 @@ impl SExp {
         let params_as_set = params.iter().filter_map(Self::sym_to_str).collect();
         let syms_to_close = fn_body
             .iter()
-            .flat_map(|e| e.iter().flat_map(|e| e.iter().flat_map(Self::iter)))
+            .flat_map(|e| {
+                e.iter()
+                    .flat_map(|e| e.iter().flat_map(|e| e.iter().flat_map(Self::iter)))
+            })
             .filter_map(Self::sym_to_str)
             .collect::<HashSet<_>>()
             .difference(&params_as_set)
@@ -268,7 +266,7 @@ impl SExp {
                 result
             })),
             name,
-            env: Some(env),
+            env: if env.is_empty() { None } else { Some(env) },
         })
     }
 
@@ -281,7 +279,6 @@ impl SExp {
                 head: defn_list,
                 tail: statements,
             } => {
-                debug!("Creating a local binding.");
                 ctx.push();
 
                 for defn in *defn_list {
@@ -329,7 +326,6 @@ impl SExp {
     }
 
     pub(crate) fn eval_or(self, ctx: &mut Context) -> Result {
-        debug!("Evaluating 'or' expression.");
         for element in self {
             match element.eval(ctx)? {
                 Atom(Primitive::Boolean(false)) => (),
@@ -343,7 +339,6 @@ impl SExp {
     }
 
     pub(crate) fn eval_quote(self, _: &mut Context) -> Result {
-        trace!("Evaluating 'quote' expression: {}", self);
         match self {
             Pair {
                 head,

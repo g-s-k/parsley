@@ -1,5 +1,5 @@
-use super::super::{Context, Error, Primitive, Result};
 use super::super::primitives::proc::Procedure::Ctx;
+use super::super::{Context, Error, Primitive, Result};
 use super::SExp::{self, Atom, Null, Pair, Vector};
 
 mod helpers;

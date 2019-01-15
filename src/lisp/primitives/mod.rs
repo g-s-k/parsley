@@ -38,12 +38,8 @@ impl fmt::Debug for Primitive {
             String(s) => write!(f, "\"{}\"", s),
             Symbol(s) => write!(f, "{}", s),
             Env(_) => write!(f, "#<environment>"),
-            Procedure { name: Some(s), .. } => {
-                write!(f, "#<procedure:{}>", s)
-            }
-            Procedure { name: None, .. } => {
-                write!(f, "#<procedure>")
-            }
+            Procedure { name: Some(s), .. } => write!(f, "#<procedure:{}>", s),
+            Procedure { name: None, .. } => write!(f, "#<procedure>"),
         }
     }
 }
@@ -57,12 +53,8 @@ impl fmt::Display for Primitive {
             Number(n) => write!(f, "{}", n),
             String(s) | Symbol(s) => f.write_str(s),
             Env(_) => write!(f, "#<environment>"),
-            Procedure { name: Some(s), .. } => {
-                write!(f, "#<procedure:{}>", s)
-            }
-            Procedure { name: None, .. } => {
-                write!(f, "#<procedure>")
-            }
+            Procedure { name: Some(s), .. } => write!(f, "#<procedure:{}>", s),
+            Procedure { name: None, .. } => write!(f, "#<procedure>"),
         }
     }
 }

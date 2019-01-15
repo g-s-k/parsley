@@ -43,7 +43,7 @@ impl SExp {
                 Atom(Primitive::Procedure { f, env, .. }) => {
                     ctx.overlay_env(env);
                     let result = match f {
-                        Basic(p) => p(*tail)?.eval(ctx),
+                        Basic(p) => p(*tail),
                         Ctx(p) => p(*tail, ctx),
                     };
                     ctx.overlay_env(None);
