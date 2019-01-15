@@ -14,14 +14,18 @@ mod write;
 /// evaluation context with useful functions available, use
 /// [`Context::base()`](#method.base).
 pub struct Context {
-    data: Vec<Env>,
+    pub(crate) core: Env,
+    pub lang: Env,
+    user: Vec<Env>,
     out: Option<String>,
 }
 
 impl Default for Context {
     fn default() -> Self {
         Self {
-            data: vec![Env::new()],
+            core: Self::core(),
+            lang: Env::new(),
+            user: vec![Env::new()],
             out: None,
         }
     }
@@ -33,7 +37,7 @@ impl Context {
     /// See [Context::pop](#method.pop) for a usage example.
     pub fn push(&mut self) {
         trace!("Creating a new scope.");
-        self.data.push(Env::new());
+        self.user.push(Env::new());
     }
 
     /// Remove the most recently added scope.
@@ -55,9 +59,9 @@ impl Context {
     /// ```
     pub fn pop(&mut self) {
         trace!("Leaving nested scope.");
-        self.data.pop();
+        self.user.pop();
 
-        if self.data.is_empty() {
+        if self.user.is_empty() {
             self.push();
         }
     }
@@ -65,8 +69,8 @@ impl Context {
     /// Create a new definition in the current scope.
     pub fn define(&mut self, key: &str, value: SExp) {
         trace!("Binding the symbol {} to the value {}.", key, value);
-        let num_frames = self.data.len();
-        self.data[num_frames - 1].insert(key.to_string(), value);
+        let num_frames = self.user.len();
+        self.user[num_frames - 1].insert(key.to_string(), value);
     }
 
     /// Get the most recent definition for a symbol.
@@ -87,11 +91,23 @@ impl Context {
     /// assert_eq!(ctx.get("x"), Some(SExp::from(3)));
     /// ```
     pub fn get(&self, key: &str) -> Option<SExp> {
-        trace!("Retrieving a definition for the key {}", key);
-        match self.data.iter().rev().find_map(|w| w.get(key)) {
-            Some(exp) => Some(exp.clone()),
-            _ => None,
+        // first check core (reserved keywords)
+        if let Some(exp) = self.core.get(key) {
+            return Some(exp.clone());
         }
+
+        // then check user definitions (could have overridden library definitions)
+        if let Some(exp) = self.user.iter().rev().find_map(|w| w.get(key)) {
+            return Some(exp.clone());
+        }
+
+        // then check the stdlib
+        if let Some(exp) = self.lang.get(key) {
+            return Some(exp.clone());
+        }
+
+        // otherwise fail
+        None
     }
 
     /// Re-bind an existing definition to a new value.
@@ -112,7 +128,7 @@ impl Context {
     /// ```
     pub fn set(&mut self, key: &str, value: SExp) -> Result {
         trace!("Re-binding the symbol {} to the value {}", key, value);
-        for frame in self.data.iter_mut().rev() {
+        for frame in self.user.iter_mut().rev() {
             if frame.contains_key(key) {
                 frame.insert(key.to_string(), value);
                 return Ok(Atom(Undefined));
