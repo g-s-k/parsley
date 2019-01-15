@@ -219,46 +219,57 @@ impl SExp {
                 } else {
                     (None, p_t.cons(*p_h))
                 };
-                let expected = params.iter().count();
                 let fn_body = b_t.cons(*b_h);
-                let params_as_set = params.iter().filter_map(Self::sym_to_str).collect();
-                let syms_to_close = fn_body
-                    .iter()
-                    .flat_map(|e| e.iter().flat_map(|e| e.iter().flat_map(Self::iter)))
-                    .filter_map(Self::sym_to_str)
-                    .collect::<HashSet<_>>()
-                    .difference(&params_as_set)
-                    .into_iter()
-                    .cloned()
-                    .collect::<Vec<_>>();
-                let env = ctx.close(syms_to_close);
-                Ok(Atom(Primitive::Procedure {
-                    f: Ctx(Rc::new(move |args: Self, the_ctx: &mut Context| {
-                        // check arity
-                        let given = args.iter().count();
-                        if given != expected {
-                            return Err(Error::Arity { expected, given });
-                        }
-                        // bind arguments to parameters
-                        the_ctx.push();
-                        params
-                            .iter()
-                            .filter_map(Self::sym_to_str)
-                            .zip(args.into_iter())
-                            .for_each(|(p, v)| the_ctx.define(p, v));
-                        // evaluate each body expression
-                        let result = fn_body.to_owned().eval_begin(the_ctx);
-                        the_ctx.pop();
-                        result
-                    })),
-                    name,
-                    env: Some(env),
-                }))
+                Ok(Self::make_proc(name, params, fn_body, ctx))
             }
+            Pair {
+                head: box Null,
+                tail:
+                    box Pair {
+                        head: b_h,
+                        tail: b_t,
+                    },
+            } => Ok(Self::make_proc(None, Null, b_t.cons(*b_h), ctx)),
             exp => Err(Error::Syntax {
                 exp: exp.to_string(),
             }),
         }
+    }
+
+    fn make_proc(name: Option<String>, params: Self, fn_body: Self, ctx: &mut Context) -> Self {
+        let expected = params.iter().count();
+        let params_as_set = params.iter().filter_map(Self::sym_to_str).collect();
+        let syms_to_close = fn_body
+            .iter()
+            .flat_map(|e| e.iter().flat_map(|e| e.iter().flat_map(Self::iter)))
+            .filter_map(Self::sym_to_str)
+            .collect::<HashSet<_>>()
+            .difference(&params_as_set)
+            .cloned()
+            .collect::<Vec<_>>();
+        let env = ctx.close(syms_to_close);
+        Atom(Primitive::Procedure {
+            f: Ctx(Rc::new(move |args: Self, the_ctx: &mut Context| {
+                // check arity
+                let given = args.iter().count();
+                if given != expected {
+                    return Err(Error::Arity { expected, given });
+                }
+                // bind arguments to parameters
+                the_ctx.push();
+                params
+                    .iter()
+                    .filter_map(Self::sym_to_str)
+                    .zip(args.into_iter())
+                    .for_each(|(p, v)| the_ctx.define(p, v));
+                // evaluate each body expression
+                let result = fn_body.to_owned().eval_begin(the_ctx);
+                the_ctx.pop();
+                result
+            })),
+            name,
+            env: Some(env),
+        })
     }
 
     pub(crate) fn eval_let(self, ctx: &mut Context) -> Result {
