@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 pub mod context;
 mod errors;
 mod primitives;
@@ -11,3 +13,6 @@ pub use self::sexp::SExp;
 
 /// A shorthand Result type.
 pub type Result = ::std::result::Result<SExp, Error>;
+
+/// A type to represent an execution environment.
+type Env = HashMap<String, SExp>;

@@ -1,8 +1,6 @@
-use std::collections::HashMap;
-
 use super::Primitive::Undefined;
 use super::SExp::{self, Atom};
-use super::{Error, Result};
+use super::{Env, Error, Result};
 
 mod base;
 mod math;
@@ -16,14 +14,14 @@ mod write;
 /// evaluation context with useful functions available, use
 /// [`Context::base()`](#method.base).
 pub struct Context {
-    data: Vec<HashMap<String, SExp>>,
+    data: Vec<Env>,
     out: Option<String>,
 }
 
 impl Default for Context {
     fn default() -> Self {
         Self {
-            data: vec![HashMap::new()],
+            data: vec![Env::new()],
             out: None,
         }
     }
@@ -35,7 +33,7 @@ impl Context {
     /// See [Context::pop](#method.pop) for a usage example.
     pub fn push(&mut self) {
         trace!("Creating a new scope.");
-        self.data.push(HashMap::new());
+        self.data.push(Env::new());
     }
 
     /// Remove the most recently added scope.

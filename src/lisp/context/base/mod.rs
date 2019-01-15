@@ -1,6 +1,8 @@
 use super::super::Error;
-use super::super::Primitive::{Character, String as LispString, Void};
-use super::super::SExp::{self, Atom, Null, Pair};
+use super::super::Primitive::{
+    Character, CtxProcedure, Number, Procedure, String as LispString, Void,
+};
+use super::super::SExp::{self, Atom, Null, Pair, Vector};
 
 use super::utils::*;
 use super::Context;
@@ -133,6 +135,55 @@ impl Context {
         define_with!(ret, "remainder", std::ops::Rem::rem, make_binary_numeric);
         define_with!(ret, "pow", f64::powf, make_binary_numeric);
         ret.define("pi", std::f64::consts::PI.into());
+
+        // Vectors
+        define_with!(
+            ret,
+            "make-vector",
+            |e| match e {
+                Atom(Number(n)) => Ok(Vector(vec![Null; n.floor() as usize])),
+                _ => Err(Error::Type),
+            },
+            make_unary_expr
+        );
+        define_with!(
+            ret,
+            "vector-copy",
+            |v| match v {
+                Vector(vec) => Ok(Vector(vec.clone())),
+                _ => Err(Error::Type),
+            },
+            make_unary_expr
+        );
+        define_with!(
+            ret,
+            "vector?",
+            |e| match e {
+                Vector(_) => Ok(true.into()),
+                _ => Ok(false.into()),
+            },
+            make_unary_expr
+        );
+        define_with!(
+            ret,
+            "vector-length",
+            |v| match v {
+                Vector(vec) => Ok((vec.len() as f64).into()),
+                _ => Err(Error::Type),
+            },
+            make_unary_expr
+        );
+
+        // Procedures
+        define_with!(
+            ret,
+            "procedure?",
+            |e| match e {
+                Atom(Procedure { .. }) | Atom(CtxProcedure { .. }) => Ok(true.into()),
+                _ => Ok(false.into()),
+            },
+            make_unary_expr
+        );
 
         // Strings
         define!(ret, "string->list", |e| match e {

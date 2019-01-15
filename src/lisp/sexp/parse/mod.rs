@@ -59,7 +59,7 @@ impl SExp {
             match utils::find_closing_delim(code[1..].chars(), '(', ')') {
                 Some(idx) if idx == 1 => Ok(Vector(Vec::new())),
                 Some(idx) => Ok(Vector(
-                    Self::parse_list_from_str(&code[2..idx + 1])?
+                    Self::parse_list_from_str(&code[2..=idx])?
                         .into_iter()
                         .collect::<Vec<_>>(),
                 )),

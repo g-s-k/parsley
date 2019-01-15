@@ -44,10 +44,7 @@ impl fmt::Display for SExp {
             Vector(v) => write!(
                 f,
                 "#({})",
-                v.iter()
-                    .map(SExp::to_string)
-                    .collect::<Vec<_>>()
-                    .join(" ")
+                v.iter().map(Self::to_string).collect::<Vec<_>>().join(" ")
             ),
             Pair { head, tail } => match &**head {
                 Atom(Symbol(q)) if q == "quote" => match &**tail {
