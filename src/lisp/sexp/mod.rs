@@ -58,7 +58,7 @@ impl SExp {
         }
     }
 
-    pub(super) fn set_car(&mut self, new: SExp) -> Result {
+    pub(super) fn set_car(&mut self, new: Self) -> Result {
         match self {
             Null => Err(Error::NullList),
             Atom(_) | Vector(_) => {
@@ -73,7 +73,7 @@ impl SExp {
         }
     }
 
-    pub(super) fn set_cdr(&mut self, new: SExp) -> Result {
+    pub(super) fn set_cdr(&mut self, new: Self) -> Result {
         match self {
             Null => Err(Error::NullList),
             Atom(_) | Vector(_) => {
