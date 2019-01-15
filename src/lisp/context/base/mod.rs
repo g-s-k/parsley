@@ -1,6 +1,6 @@
 use super::super::Error;
 use super::super::Primitive::{
-    Character, CtxProcedure, Number, Procedure, String as LispString, Void,
+    Character, CtxProcedure, Env, Number, Procedure, String as LispString, Void,
 };
 use super::super::SExp::{self, Atom, Null, Pair, Vector};
 
@@ -180,6 +180,17 @@ impl Context {
             "procedure?",
             |e| match e {
                 Atom(Procedure { .. }) | Atom(CtxProcedure { .. }) => Ok(true.into()),
+                _ => Ok(false.into()),
+            },
+            make_unary_expr
+        );
+
+        // Environments
+        define_with!(
+            ret,
+            "environment?",
+            |e| match e {
+                Atom(Env(_)) => Ok(true.into()),
                 _ => Ok(false.into()),
             },
             make_unary_expr

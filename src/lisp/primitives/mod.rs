@@ -2,10 +2,10 @@ use std::fmt;
 use std::rc::Rc;
 use std::string::String as CoreString;
 
-use super::{Context, Result, SExp};
+use super::{Context, Env as Environment, Result, SExp};
 
 use self::Primitive::{
-    Boolean, Character, CtxProcedure, Number, Procedure, String, Symbol, Undefined, Void,
+    Boolean, Character, CtxProcedure, Env, Number, Procedure, String, Symbol, Undefined, Void,
 };
 
 mod from;
@@ -19,6 +19,7 @@ pub enum Primitive {
     Number(f64),
     String(CoreString),
     Symbol(CoreString),
+    Env(Environment),
     Procedure {
         f: Rc<dyn Fn(SExp) -> Result>,
         name: Option<CoreString>,
@@ -39,6 +40,7 @@ impl fmt::Debug for Primitive {
             Number(n) => write!(f, "{}", n),
             String(s) => write!(f, "\"{}\"", s),
             Symbol(s) => write!(f, "{}", s),
+            Env(_) => write!(f, "#<environment>"),
             Procedure { name: Some(s), .. } | CtxProcedure { name: Some(s), .. } => {
                 write!(f, "#<procedure:{}>", s)
             }
@@ -57,6 +59,7 @@ impl fmt::Display for Primitive {
             Character(c) => write!(f, "{}", c),
             Number(n) => write!(f, "{}", n),
             String(s) | Symbol(s) => f.write_str(s),
+            Env(_) => write!(f, "#<environment>"),
             Procedure { name: Some(s), .. } | CtxProcedure { name: Some(s), .. } => {
                 write!(f, "#<procedure:{}>", s)
             }
@@ -75,6 +78,7 @@ impl PartialEq for Primitive {
             (Character(c1), Character(c2)) => c1 == c2,
             (Number(n1), Number(n2)) => n1 == n2,
             (String(s1), String(s2)) | (Symbol(s1), Symbol(s2)) => s1 == s2,
+            (Env(e1), Env(e2)) => e1 == e2,
             _ => false,
         }
     }
@@ -90,6 +94,7 @@ impl Primitive {
             Number(_) => "number",
             String(_) => "string",
             Symbol(_) => "symbol",
+            Env(_) => "environment",
             Procedure { .. } | CtxProcedure { .. } => "procedure",
         }
     }
