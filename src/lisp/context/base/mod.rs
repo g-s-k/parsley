@@ -98,7 +98,7 @@ impl Context {
         });
         define!(ret, "null?", |e| Ok((e == ((),).into()).into()));
         ret.lang
-            .insert("null".to_string(), (SExp::sym("quote"), ((),)).into());
+            .insert("null".to_string(), Null);
         define!(ret, "void", |_| Ok(Atom(Void)));
         define!(ret, "list", Ok);
         define!(ret, "not", |e| Ok((e == (false,).into()).into()));
