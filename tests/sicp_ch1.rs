@@ -56,16 +56,14 @@ fn sicp_1_3() {
 (define (biggest-2-of-3 x y z)
  (if
   (> y x)
-  (if (> z x) (cons z (cons y null)) (cons x (cons y null)))
-  (if (> z y) (cons z (cons x null)) (cons x (cons y null)))
+  (if (> z x) (list z y) (list x y))
+  (if (> z y) (list z x) (list x y))
   )
  )
 
 (define (big-2-sum-sqrs x y z)
- (begin
-  (define big-2 (biggest-2-of-3 x y z))
-  (sumsqr (car big-2) (car (cdr big-2)))
-  )
+ (define big-2 (biggest-2-of-3 x y z))
+ (sumsqr (car big-2) (car (cdr big-2)))
  )
 "#;
 

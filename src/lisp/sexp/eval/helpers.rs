@@ -233,7 +233,10 @@ impl SExp {
 
     fn make_proc(name: Option<String>, params: Self, fn_body: Self, ctx: &mut Context) -> Self {
         let expected = params.iter().count();
-        let mut params_as_set = params.iter().filter_map(Self::sym_to_str).collect::<HashSet<_>>();
+        let mut params_as_set = params
+            .iter()
+            .filter_map(Self::sym_to_str)
+            .collect::<HashSet<_>>();
         if let Some(ref n) = name {
             params_as_set.insert(n);
         }
@@ -256,12 +259,17 @@ impl SExp {
                 if given != expected {
                     return Err(Error::Arity { expected, given });
                 }
+                // evaluate arguments
+                let evalled_args = args
+                    .into_iter()
+                    .map(|e| e.eval(the_ctx))
+                    .collect::<Result>()?;
                 // bind arguments to parameters
                 the_ctx.push();
                 params
                     .iter()
                     .filter_map(Self::sym_to_str)
-                    .zip(args.into_iter())
+                    .zip(evalled_args.into_iter())
                     .for_each(|(p, v)| the_ctx.define(p, v));
                 // evaluate each body expression
                 let result = fn_body.to_owned().eval_begin(the_ctx);

@@ -69,10 +69,8 @@ impl Context {
     /// use parsley::prelude::*;
     /// let mut ctx = Context::base();
     ///
-    /// let null_const = ctx.get("null").unwrap();
-    /// let null_fn = ctx.get("null?").unwrap();
     /// assert_eq!(
-    ///     sexp![null_fn, null_const].eval(&mut ctx).unwrap(),
+    ///     sexp![SExp::sym("null?"), SExp::sym("null")].eval(&mut ctx).unwrap(),
     ///     SExp::from(true),
     /// );
     ///
