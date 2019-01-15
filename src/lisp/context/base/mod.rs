@@ -95,8 +95,7 @@ impl Context {
             }),
         });
         define!(ret, "null?", |e| Ok((e == ((),).into()).into()));
-        ret.lang
-            .insert("null".to_string(), Null);
+        ret.lang.insert("null".to_string(), Null);
         define!(ret, "void", |_| Ok(Atom(Void)));
         define!(ret, "list", Ok);
         define!(ret, "not", |e| Ok((e == (false,).into()).into()));
@@ -123,30 +122,34 @@ impl Context {
                         head: box new,
                         tail: box Null,
                     },
-            } => if let Some(mut val) = c.get(&s) {
-                let new_val = new.eval(c)?;
-                val.set_car(new_val)?;
-                c.set(&s, val)
-            } else {
-                Err(Error::UndefinedSymbol { sym: s })
-            },
+            } => {
+                if let Some(mut val) = c.get(&s) {
+                    let new_val = new.eval(c)?;
+                    val.set_car(new_val)?;
+                    c.set(&s, val)
+                } else {
+                    Err(Error::UndefinedSymbol { sym: s })
+                }
+            }
             _ => Err(Error::Type),
         });
         define_ctx!(ret, "set-cdr!", |e, c| match e {
             Pair {
                 head: box Atom(Symbol(s)),
                 tail:
-                box Pair {
-                    head: box new,
-                    tail: box Null,
-                },
-            } => if let Some(mut val) = c.get(&s) {
-                let new_val = new.eval(c)?;
-                val.set_cdr(new_val)?;
-                c.set(&s, val)
-            } else {
-                Err(Error::UndefinedSymbol { sym: s })
-            },
+                    box Pair {
+                        head: box new,
+                        tail: box Null,
+                    },
+            } => {
+                if let Some(mut val) = c.get(&s) {
+                    let new_val = new.eval(c)?;
+                    val.set_cdr(new_val)?;
+                    c.set(&s, val)
+                } else {
+                    Err(Error::UndefinedSymbol { sym: s })
+                }
+            }
             _ => Err(Error::Type),
         });
         define_with!(

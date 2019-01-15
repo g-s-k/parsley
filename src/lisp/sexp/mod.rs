@@ -61,11 +61,9 @@ impl SExp {
     pub(super) fn set_car(&mut self, new: Self) -> Result {
         match self {
             Null => Err(Error::NullList),
-            Atom(_) | Vector(_) => {
-                Err(Error::NotAList {
-                    atom: self.to_string(),
-                })
-            }
+            Atom(_) | Vector(_) => Err(Error::NotAList {
+                atom: self.to_string(),
+            }),
             Pair { head, .. } => {
                 *head = Box::new(new);
                 Ok(Atom(Primitive::Undefined))
@@ -76,11 +74,9 @@ impl SExp {
     pub(super) fn set_cdr(&mut self, new: Self) -> Result {
         match self {
             Null => Err(Error::NullList),
-            Atom(_) | Vector(_) => {
-                Err(Error::NotAList {
-                    atom: self.to_string(),
-                })
-            }
+            Atom(_) | Vector(_) => Err(Error::NotAList {
+                atom: self.to_string(),
+            }),
             Pair { tail, .. } => {
                 *tail = Box::new(new);
                 Ok(Atom(Primitive::Undefined))
