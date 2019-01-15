@@ -1,5 +1,5 @@
 use super::super::Primitive::{
-    Character, CtxProcedure, Env, Number, Procedure, String as LispString, Void,
+    Character, Env, Number, Procedure, String as LispString, Void,
 };
 use super::super::SExp::{self, Atom, Null, Pair, Vector};
 use super::super::{Env as Environment, Error};
@@ -193,7 +193,7 @@ impl Context {
             ret,
             "procedure?",
             |e| match e {
-                Atom(Procedure { .. }) | Atom(CtxProcedure { .. }) => Ok(true.into()),
+                Atom(Procedure { .. }) => Ok(true.into()),
                 _ => Ok(false.into()),
             },
             make_unary_expr

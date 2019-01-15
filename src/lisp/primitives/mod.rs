@@ -1,14 +1,14 @@
 use std::fmt;
-use std::rc::Rc;
 use std::string::String as CoreString;
 
-use super::{Context, Env as Environment, Result, SExp};
+use super::Env as Environment;
 
 use self::Primitive::{
-    Boolean, Character, CtxProcedure, Env, Number, Procedure, String, Symbol, Undefined, Void,
+    Boolean, Character, Env, Number, Procedure, String, Symbol, Undefined, Void,
 };
 
 mod from;
+pub mod proc;
 
 #[derive(Clone)]
 pub enum Primitive {
@@ -21,12 +21,9 @@ pub enum Primitive {
     Symbol(CoreString),
     Env(Environment),
     Procedure {
-        f: Rc<dyn Fn(SExp) -> Result>,
+        f: self::proc::Procedure,
         name: Option<CoreString>,
-    },
-    CtxProcedure {
-        f: Rc<dyn Fn(SExp, &mut Context) -> Result>,
-        name: Option<CoreString>,
+        env: Option<Environment>,
     },
 }
 
@@ -41,10 +38,10 @@ impl fmt::Debug for Primitive {
             String(s) => write!(f, "\"{}\"", s),
             Symbol(s) => write!(f, "{}", s),
             Env(_) => write!(f, "#<environment>"),
-            Procedure { name: Some(s), .. } | CtxProcedure { name: Some(s), .. } => {
+            Procedure { name: Some(s), .. } => {
                 write!(f, "#<procedure:{}>", s)
             }
-            Procedure { name: None, .. } | CtxProcedure { name: None, .. } => {
+            Procedure { name: None, .. } => {
                 write!(f, "#<procedure>")
             }
         }
@@ -60,10 +57,10 @@ impl fmt::Display for Primitive {
             Number(n) => write!(f, "{}", n),
             String(s) | Symbol(s) => f.write_str(s),
             Env(_) => write!(f, "#<environment>"),
-            Procedure { name: Some(s), .. } | CtxProcedure { name: Some(s), .. } => {
+            Procedure { name: Some(s), .. } => {
                 write!(f, "#<procedure:{}>", s)
             }
-            Procedure { name: None, .. } | CtxProcedure { name: None, .. } => {
+            Procedure { name: None, .. } => {
                 write!(f, "#<procedure>")
             }
         }
@@ -95,7 +92,7 @@ impl Primitive {
             String(_) => "string",
             Symbol(_) => "symbol",
             Env(_) => "environment",
-            Procedure { .. } | CtxProcedure { .. } => "procedure",
+            Procedure { .. } => "procedure",
         }
     }
 }

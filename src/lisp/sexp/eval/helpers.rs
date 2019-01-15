@@ -1,8 +1,10 @@
+use std::collections::HashSet;
 use std::fmt::Write;
 use std::rc::Rc;
 
+use super::super::super::primitives::proc::Procedure::Ctx;
+use super::super::super::{Context, Error, Primitive, Result};
 use super::SExp::{self, Atom, Null, Pair, Vector};
-use super::{Context, Error, Primitive, Result};
 
 fn unescape(s: &str) -> String {
     s.replace("\\n", "\n")
@@ -140,7 +142,10 @@ impl SExp {
                     tail: fn_params,
                 } => {
                     debug!("Defining a function with \"define\" syntax.");
-                    ctx.define(&sym, defn.cons(*fn_params).cons(Self::sym("lambda")));
+                    let new_fn = defn
+                        .cons(fn_params.cons(Atom(Primitive::Symbol(sym.clone()))))
+                        .eval_lambda(ctx, true)?;
+                    ctx.define(&sym, new_fn);
                     Ok(Atom(Primitive::Undefined))
                 }
                 exp => Err(Error::Syntax {
@@ -177,7 +182,15 @@ impl SExp {
         }
     }
 
-    pub(crate) fn eval_lambda(self, _: &mut Context, is_named: bool) -> Result {
+    fn sym_to_str(&self) -> Option<&str> {
+        if let Atom(Primitive::Symbol(s)) = self {
+            Some(s)
+        } else {
+            None
+        }
+    }
+
+    pub(crate) fn eval_lambda(self, ctx: &mut Context, is_named: bool) -> Result {
         match self {
             Null => Err(Error::NoArgumentsProvided {
                 symbol: "lambda".to_string(),
@@ -197,7 +210,6 @@ impl SExp {
                         tail: b_t,
                     },
             } => {
-                debug!("Creating procedure.");
                 let (name, params) = if is_named {
                     if let Atom(Primitive::Symbol(s)) = *p_h {
                         (Some(s), *p_t)
@@ -209,25 +221,38 @@ impl SExp {
                 };
                 let expected = params.iter().count();
                 let fn_body = b_t.cons(*b_h);
+                let params_as_set = params.iter().filter_map(Self::sym_to_str).collect();
+                let syms_to_close = fn_body
+                    .iter()
+                    .flat_map(|e| e.iter().flat_map(|e| e.iter().flat_map(Self::iter)))
+                    .filter_map(Self::sym_to_str)
+                    .collect::<HashSet<_>>()
+                    .difference(&params_as_set)
+                    .into_iter()
+                    .cloned()
+                    .collect::<Vec<_>>();
+                let env = ctx.close(syms_to_close);
                 Ok(Atom(Primitive::Procedure {
-                    f: Rc::new(move |args: Self| {
-                        info!("Formal parameters: {}", params);
+                    f: Ctx(Rc::new(move |args: Self, the_ctx: &mut Context| {
                         // check arity
                         let given = args.iter().count();
                         if given != expected {
                             return Err(Error::Arity { expected, given });
                         }
                         // bind arguments to parameters
-                        let bound_params: Self = params
+                        the_ctx.push();
+                        params
                             .iter()
+                            .filter_map(Self::sym_to_str)
                             .zip(args.into_iter())
-                            .map(|(p, a)| Null.cons(a).cons(p.to_owned()))
-                            .collect();
-                        info!("Bound parameters: {}", bound_params);
-                        // construct let binding
-                        Ok(fn_body.to_owned().cons(bound_params).cons(Self::sym("let")))
-                    }),
+                            .for_each(|(p, v)| the_ctx.define(p, v));
+                        // evaluate each body expression
+                        let result = fn_body.to_owned().eval_begin(the_ctx);
+                        the_ctx.pop();
+                        result
+                    })),
                     name,
+                    env: Some(env),
                 }))
             }
             exp => Err(Error::Syntax {

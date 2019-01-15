@@ -17,6 +17,7 @@ pub struct Context {
     pub(crate) core: Env,
     pub lang: Env,
     user: Vec<Env>,
+    overlay: Option<Env>,
     out: Option<String>,
 }
 
@@ -26,6 +27,7 @@ impl Default for Context {
             core: Self::core(),
             lang: Env::new(),
             user: vec![Env::new()],
+            overlay: None,
             out: None,
         }
     }
@@ -73,6 +75,10 @@ impl Context {
         self.user[num_frames - 1].insert(key.to_string(), value);
     }
 
+    fn get_user(&self, key: &str) -> Option<SExp> {
+        self.user.iter().rev().find_map(|w| w.get(key)).map(Clone::clone)
+    }
+
     /// Get the most recent definition for a symbol.
     ///
     /// This starts at the current scope and walks upward toward the global
@@ -96,9 +102,16 @@ impl Context {
             return Some(exp.clone());
         }
 
+        // then check the overlay
+        if let Some(env) = &self.overlay {
+            if let Some(exp) = env.get(key) {
+                return Some(exp.clone());
+            }
+        }
+
         // then check user definitions (could have overridden library definitions)
-        if let Some(exp) = self.user.iter().rev().find_map(|w| w.get(key)) {
-            return Some(exp.clone());
+        if let Some(exp) = self.get_user(key) {
+            return Some(exp);
         }
 
         // then check the stdlib
@@ -137,5 +150,21 @@ impl Context {
         Err(Error::UndefinedSymbol {
             sym: key.to_string(),
         })
+    }
+
+    pub fn close(&self, vars: Vec<&str>) -> Env {
+        let mut out = Env::new();
+
+        for var in vars {
+            if let Some(exp) = self.get_user(var) {
+                out.insert(var.to_string(), exp);
+            }
+        }
+
+        out
+    }
+
+    pub fn overlay_env(&mut self, env: Option<Env>) {
+        self.overlay = env;
     }
 }

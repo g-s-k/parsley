@@ -8,6 +8,7 @@ mod eval;
 mod iter;
 mod parse;
 
+use super::primitives::proc::Procedure::{Basic, Ctx};
 use super::{utils, Context, Error, Primitive, Result};
 
 use self::SExp::{Atom, Null, Pair, Vector};
@@ -39,8 +40,15 @@ impl SExp {
         match self {
             Null | Atom(_) | Vector(_) => Ok(self),
             Pair { head, tail } => match *head {
-                Atom(Primitive::Procedure { f, .. }) => f(*tail)?.eval(ctx),
-                Atom(Primitive::CtxProcedure { f, .. }) => f(*tail, ctx),
+                Atom(Primitive::Procedure { f, env, .. }) => {
+                    ctx.overlay_env(env);
+                    let result = match f {
+                        Basic(p) => p(*tail)?.eval(ctx),
+                        Ctx(p) => p(*tail, ctx),
+                    };
+                    ctx.overlay_env(None);
+                    result
+                }
                 Atom(Primitive::Symbol(sym)) => Err(Error::NotAProcedure {
                     exp: sym.to_string(),
                 }),
@@ -137,8 +145,9 @@ impl SExp {
         F: Fn(Self) -> Result + 'static,
     {
         Atom(Primitive::Procedure {
-            f: Rc::new(f),
+            f: Basic(Rc::new(f)),
             name: name.map(String::from),
+            env: None,
         })
     }
 
@@ -146,9 +155,10 @@ impl SExp {
     where
         F: Fn(Self, &mut Context) -> Result + 'static,
     {
-        Atom(Primitive::CtxProcedure {
-            f: Rc::new(f),
+        Atom(Primitive::Procedure {
+            f: Ctx(Rc::new(f)),
             name: name.map(String::from),
+            env: None,
         })
     }
 }

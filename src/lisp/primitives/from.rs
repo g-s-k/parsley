@@ -4,6 +4,7 @@ use std::string::String as CoreString;
 
 use super::super::{utils, Error, Result, SExp};
 use super::Primitive::{self, Boolean, Character, Number, Procedure, String, Symbol};
+use super::proc::Procedure::Basic;
 
 impl FromStr for Primitive {
     type Err = Error;
@@ -88,8 +89,9 @@ where
 {
     fn from(f: F) -> Self {
         Procedure {
-            f: Rc::new(f),
+            f: Basic(Rc::new(f)),
             name: None,
+            env: None,
         }
     }
 }

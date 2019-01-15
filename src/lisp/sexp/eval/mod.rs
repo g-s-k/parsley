@@ -1,5 +1,6 @@
+use super::super::{Context, Error, Primitive, Result};
+use super::super::primitives::proc::Procedure::Ctx;
 use super::SExp::{self, Atom, Null, Pair, Vector};
-use super::{Context, Error, Primitive, Result};
 
 mod helpers;
 mod tests;
@@ -96,7 +97,7 @@ impl SExp {
             Atom(_) | Vector(_) => Ok(self),
             Pair { head, tail } => {
                 let proc = head.eval(ctx)?;
-                if let Atom(Primitive::CtxProcedure { .. }) = proc {
+                if let Atom(Primitive::Procedure { f: Ctx(_), .. }) = proc {
                     *tail
                 } else {
                     tail.into_iter().map(|e| e.eval(ctx)).collect::<Result>()?
