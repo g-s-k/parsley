@@ -1,4 +1,4 @@
-use super::super::primitives::proc::Procedure::Ctx;
+use super::super::primitives::proc::Procedure::{Basic, Ctx};
 use super::super::{Context, Error, Primitive, Result};
 use super::SExp::{self, Atom, Null, Pair, Vector};
 
@@ -87,12 +87,8 @@ impl SExp {
         match self {
             Null => Err(Error::NullList),
             Atom(Primitive::Symbol(sym)) => match ctx.get(&sym) {
-                None => Err(Error::UndefinedSymbol { sym }),
-                Some(exp) => match exp {
-                    Null => Ok(Null),
-                    Atom(Primitive::Undefined) => Err(Error::UndefinedSymbol { sym }),
-                    _ => exp.eval(ctx),
-                },
+                None | Some(Atom(Primitive::Undefined)) => Err(Error::UndefinedSymbol { sym }),
+                Some(exp) => Ok(exp),
             },
             Atom(_) | Vector(_) => Ok(self),
             Pair { head, tail } => {
@@ -105,6 +101,31 @@ impl SExp {
                 .cons(proc)
                 .apply(ctx)
             }
+        }
+    }
+
+    fn apply(self, ctx: &mut Context) -> Result {
+        match self {
+            Null | Atom(_) | Vector(_) => Ok(self),
+            Pair { head, tail } => match *head {
+                Atom(Primitive::Procedure { f, env, .. }) => {
+                    ctx.overlay_env(env);
+                    let result = match f {
+                        Basic(p) => p(*tail),
+                        Ctx(p) => p(*tail, ctx),
+                    };
+                    ctx.overlay_env(None);
+                    result
+                }
+                Atom(Primitive::Symbol(sym)) => Err(Error::NotAProcedure {
+                    exp: sym.to_string(),
+                }),
+                Pair {
+                    head: proc,
+                    tail: tail2,
+                } => tail2.cons(proc.eval(ctx)?).eval(ctx),
+                _ => Ok(tail.cons(*head)),
+            },
         }
     }
 }

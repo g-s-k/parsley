@@ -36,31 +36,6 @@ pub enum SExp {
 }
 
 impl SExp {
-    fn apply(self, ctx: &mut Context) -> Result {
-        match self {
-            Null | Atom(_) | Vector(_) => Ok(self),
-            Pair { head, tail } => match *head {
-                Atom(Primitive::Procedure { f, env, .. }) => {
-                    ctx.overlay_env(env);
-                    let result = match f {
-                        Basic(p) => p(*tail),
-                        Ctx(p) => p(*tail, ctx),
-                    };
-                    ctx.overlay_env(None);
-                    result
-                }
-                Atom(Primitive::Symbol(sym)) => Err(Error::NotAProcedure {
-                    exp: sym.to_string(),
-                }),
-                Pair {
-                    head: proc,
-                    tail: tail2,
-                } => tail2.cons(proc.eval(ctx)?).eval(ctx),
-                _ => Ok(tail.cons(*head)),
-            },
-        }
-    }
-
     pub(super) fn car(self) -> Result {
         trace!("Getting the car of {}", self);
         match self {
@@ -80,6 +55,36 @@ impl SExp {
                 atom: self.to_string(),
             }),
             Pair { tail, .. } => Ok(*tail),
+        }
+    }
+
+    pub(super) fn set_car(&mut self, new: SExp) -> Result {
+        match self {
+            Null => Err(Error::NullList),
+            Atom(_) | Vector(_) => {
+                Err(Error::NotAList {
+                    atom: self.to_string(),
+                })
+            }
+            Pair { head, .. } => {
+                *head = Box::new(new);
+                Ok(Atom(Primitive::Undefined))
+            }
+        }
+    }
+
+    pub(super) fn set_cdr(&mut self, new: SExp) -> Result {
+        match self {
+            Null => Err(Error::NullList),
+            Atom(_) | Vector(_) => {
+                Err(Error::NotAList {
+                    atom: self.to_string(),
+                })
+            }
+            Pair { tail, .. } => {
+                *tail = Box::new(new);
+                Ok(Atom(Primitive::Undefined))
+            }
         }
     }
 

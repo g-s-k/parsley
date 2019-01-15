@@ -1,4 +1,6 @@
-use super::super::Primitive::{Character, Env, Number, Procedure, String as LispString, Void};
+use super::super::Primitive::{
+    Character, Env, Number, Procedure, String as LispString, Symbol, Void,
+};
 use super::super::SExp::{self, Atom, Null, Pair, Vector};
 use super::super::{Env as Environment, Error};
 
@@ -115,6 +117,40 @@ impl Context {
         });
         define_with!(ret, "car", SExp::car, make_unary_expr);
         define_with!(ret, "cdr", SExp::cdr, make_unary_expr);
+        define_ctx!(ret, "set-car!", |e, c| match e {
+            Pair {
+                head: box Atom(Symbol(s)),
+                tail:
+                    box Pair {
+                        head: box new,
+                        tail: box Null,
+                    },
+            } => if let Some(mut val) = c.get(&s) {
+                let new_val = new.eval(c)?;
+                val.set_car(new_val)?;
+                c.set(&s, val)
+            } else {
+                Err(Error::UndefinedSymbol { sym: s })
+            },
+            _ => Err(Error::Type),
+        });
+        define_ctx!(ret, "set-cdr!", |e, c| match e {
+            Pair {
+                head: box Atom(Symbol(s)),
+                tail:
+                box Pair {
+                    head: box new,
+                    tail: box Null,
+                },
+            } => if let Some(mut val) = c.get(&s) {
+                let new_val = new.eval(c)?;
+                val.set_cdr(new_val)?;
+                c.set(&s, val)
+            } else {
+                Err(Error::UndefinedSymbol { sym: s })
+            },
+            _ => Err(Error::Type),
+        });
         define_with!(
             ret,
             "type-of",

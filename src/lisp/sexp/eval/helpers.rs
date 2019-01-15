@@ -233,7 +233,10 @@ impl SExp {
 
     fn make_proc(name: Option<String>, params: Self, fn_body: Self, ctx: &mut Context) -> Self {
         let expected = params.iter().count();
-        let params_as_set = params.iter().filter_map(Self::sym_to_str).collect();
+        let mut params_as_set = params.iter().filter_map(Self::sym_to_str).collect::<HashSet<_>>();
+        if let Some(ref n) = name {
+            params_as_set.insert(n);
+        }
         let syms_to_close = fn_body
             .iter()
             .flat_map(|e| {
