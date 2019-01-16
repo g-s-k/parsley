@@ -30,27 +30,21 @@ impl SExp {
         let code = s.trim();
 
         if code.starts_with('\'') {
-            match code.len() {
-                1 => Err(Error::Syntax {
+            if code.len() == 1 {
+                Err(Error::Syntax {
                     exp: code.to_string(),
-                }),
-                n => {
-                    debug!("Matched quoted expression with length {} chars.", n - 1);
-                    Ok(Null
-                        .cons(Self::parse_str(&code[1..])?)
-                        .cons(Self::sym("quote")))
-                }
+                })
+            } else {
+                Ok(Null
+                    .cons(Self::parse_str(&code[1..])?)
+                    .cons(Self::sym("quote")))
             }
         } else if code.chars().all(utils::is_atom_char) {
-            debug!("Matched atom: {}", code);
             Ok(Atom(code.parse::<Primitive>()?))
         } else if code.starts_with('(') && code.ends_with(')') {
             match utils::find_closing_delim(code.chars(), '(', ')') {
                 Some(idx) if idx == 1 => Ok(Null),
-                Some(idx) => {
-                    debug!("Matched list with length {} chars", idx + 1);
-                    Self::parse_list_from_str(&code[1..idx])
-                }
+                Some(idx) => Self::parse_list_from_str(&code[1..idx]),
                 None => Err(Error::Syntax {
                     exp: code.to_string(),
                 }),
@@ -78,11 +72,6 @@ impl SExp {
         let mut list_out = Null;
 
         while !list_str.is_empty() {
-            debug!(
-                "Processing list string with length {} chars",
-                list_str.len()
-            );
-
             if list_str.ends_with(')') {
                 match utils::find_closing_delim(list_str.chars().rev(), ')', '(') {
                     None => {
@@ -91,7 +80,6 @@ impl SExp {
                         });
                     }
                     Some(idx2) => {
-                        debug!("Matched sub-list with length {} chars", idx2 + 1);
                         let mut new_idx = list_str.len() - 1 - idx2;
                         if new_idx > 0 {
                             // vector
@@ -115,7 +103,6 @@ impl SExp {
             } else {
                 if list_str.ends_with('"') {
                     if let Some(idx2) = list_str.chars().rev().skip(1).position(|e| e == '"') {
-                        debug!("Matched string with length {} chars", idx2);
                         let (rest, last) = list_str.split_at(list_str.len() - 2 - idx2);
                         list_out = list_out.cons(Atom(last.parse::<Primitive>()?));
                         list_str = rest.trim();
@@ -127,7 +114,6 @@ impl SExp {
                 }
 
                 if let Some(idx3) = list_str.chars().rev().position(|c| !utils::is_atom_char(c)) {
-                    debug!("Matched atom in first position with length {} chars", idx3);
                     let (rest, last) = list_str.split_at(list_str.len() - idx3);
                     list_out = Pair {
                         head: Box::new(Self::parse_str(last)?),
@@ -135,7 +121,6 @@ impl SExp {
                     };
                     list_str = rest.trim();
                 } else {
-                    debug!("Entire string is an atom.");
                     list_out = Pair {
                         head: Box::new(Self::parse_str(list_str)?),
                         tail: Box::new(list_out),

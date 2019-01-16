@@ -136,7 +136,6 @@ impl SExp {
                     head: box Atom(Primitive::Symbol(sym)),
                     tail: fn_params,
                 } => {
-                    debug!("Defining a function with \"define\" syntax.");
                     let new_fn = defn
                         .cons(fn_params.cons(Atom(Primitive::Symbol(sym.clone()))))
                         .eval_lambda(ctx, true)?;
@@ -163,14 +162,11 @@ impl SExp {
                                 tail: box Null,
                             },
                     },
-            } => {
-                debug!("Evaluating 'if' expression.");
-                (match condition.eval(ctx)? {
-                    Atom(Primitive::Boolean(false)) => if_false,
-                    _ => if_true,
-                })
-                .eval(ctx)
-            }
+            } => (match condition.eval(ctx)? {
+                Atom(Primitive::Boolean(false)) => if_false,
+                _ => if_true,
+            })
+            .eval(ctx),
             exp => Err(Error::Syntax {
                 exp: exp.to_string(),
             }),

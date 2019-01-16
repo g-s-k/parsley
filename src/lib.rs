@@ -31,9 +31,6 @@
 #[macro_use]
 extern crate failure_derive;
 
-#[macro_use]
-extern crate log;
-
 mod lisp;
 pub use self::lisp::context::utils as proc_utils;
 pub use self::lisp::{Context, Error, Result, SExp};

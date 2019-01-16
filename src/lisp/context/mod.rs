@@ -38,7 +38,6 @@ impl Context {
     ///
     /// See [Context::pop](#method.pop) for a usage example.
     pub fn push(&mut self) {
-        trace!("Creating a new scope.");
         self.user.push(Env::new());
     }
 
@@ -60,7 +59,6 @@ impl Context {
     /// assert_eq!(ctx.get("x"), None);
     /// ```
     pub fn pop(&mut self) {
-        trace!("Leaving nested scope.");
         self.user.pop();
 
         if self.user.is_empty() {
@@ -70,7 +68,6 @@ impl Context {
 
     /// Create a new definition in the current scope.
     pub fn define(&mut self, key: &str, value: SExp) {
-        trace!("Binding the symbol {} to the value {}.", key, value);
         let num_frames = self.user.len();
         self.user[num_frames - 1].insert(key.to_string(), value);
     }
@@ -144,7 +141,6 @@ impl Context {
     /// assert_eq!(ctx.get("x"), Some(SExp::from("potato"))); // check that its value is now "potato"
     /// ```
     pub fn set(&mut self, key: &str, value: SExp) -> Result {
-        trace!("Re-binding the symbol {} to the value {}", key, value);
         for frame in self.user.iter_mut().rev() {
             if frame.contains_key(key) {
                 frame.insert(key.to_string(), value);

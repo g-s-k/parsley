@@ -37,7 +37,6 @@ pub enum SExp {
 
 impl SExp {
     pub(super) fn car(self) -> Result {
-        trace!("Getting the car of {}", self);
         match self {
             Null => Err(Error::NullList),
             Atom(_) | Vector(_) => Err(Error::NotAList {
@@ -48,7 +47,6 @@ impl SExp {
     }
 
     pub(super) fn cdr(self) -> Result {
-        trace!("Getting the cdr of {}", self);
         match self {
             Null => Err(Error::NullList),
             Atom(_) | Vector(_) => Err(Error::NotAList {
