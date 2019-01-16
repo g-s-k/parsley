@@ -49,23 +49,7 @@ fn sicp_1_2() {
 // Exercise 1.3
 #[test]
 fn sicp_1_3() {
-    let func = r#"
-(define (sqr x) (* x x))
-(define (sumsqr x y) (+ (sqr x) (sqr y)))
-
-(define (biggest-2-of-3 x y z)
- (if
-  (> y x)
-  (if (> z x) (list z y) (list x y))
-  (if (> z y) (list z x) (list x y))
-  )
- )
-
-(define (big-2-sum-sqrs x y z)
- (define big-2 (biggest-2-of-3 x y z))
- (sumsqr (car big-2) (car (cdr big-2)))
- )
-"#;
+    let func = include_str!("./sicp/ch1/ex_3.ss");
 
     let mut ctx = Context::base();
     func.parse::<SExp>().unwrap().eval(&mut ctx).unwrap();
@@ -105,16 +89,7 @@ fn sicp_1_4() {
 // Exercise 1.10
 #[test]
 fn sicp_1_10() {
-    let ack = r#"
-(define (A x y)
- (cond
-  ((= y 0) 0)
-  ((= x 0) (* 2 y))
-  ((= y 1) 2)
-  (else (A (- x 1) (A x (- y 1))))
-  )
-)
-"#;
+    let ack = include_str!("./sicp/ch1/ex_5.ss");
 
     let mut ctx = Context::base();
     ack.parse::<SExp>().unwrap().eval(&mut ctx).unwrap();
@@ -139,31 +114,8 @@ fn sicp_1_10() {
 // Exercise 1.11
 #[test]
 fn sicp_1_11() {
-    let func_rec = r#"
-(define (f-r n)
- (if
-  (< n 3)
-  n
-  (+ (f-r (- n 1)) (* 2 (f-r (- n 2))) (* 3 (f-r (- n 3))))
-  )
- )
-"#;
-
-    let func_itr = r#"
-(define (f-i-calc a b c) (+ a (* 2 b) (* 3 c)))
-
-(define (f-i-helper f-3 f-2 f-1 m)
-  (if
-   (= m n)
-   (f-i-calc f-1 f-2 f-3)
-   (f-i-helper f-2 f-1 (f-i-calc f-1 f-2 f-3) (+ m 1))
-   )
- )
-
-(define (f-i n)
- (f-i-helper 0 1 2 3)
- )
-"#;
+    let func_rec = include_str!("./sicp/ch1/ex_11_rec.ss");
+    let func_itr = include_str!("./sicp/ch1/ex_11_iter.ss");
 
     let mut ctx = Context::base();
     func_rec.parse::<SExp>().unwrap().eval(&mut ctx).unwrap();
