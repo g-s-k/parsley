@@ -32,7 +32,14 @@ where
                 head: box SExp::Atom(Primitive::Number(n)),
                 ..
             } => Ok((f(n)).into()),
-            _ => Err(Error::Type),
+            SExp::Pair {
+                head: box expr,
+                tail: box SExp::Null,
+            }
+            | expr => Err(Error::Type {
+                expected: "number",
+                given: expr.type_of().to_string(),
+            }),
         },
         name,
     )
@@ -70,7 +77,10 @@ where
                         ..
                     },
             } => Ok((f(n1, n2)).into()),
-            _ => Err(Error::Type),
+            _ => Err(Error::Type {
+                expected: "list",
+                given: e.type_of().to_string(),
+            }),
         },
         name,
     )
@@ -107,7 +117,10 @@ where
                 if let SExp::Atom(Primitive::Number(n)) = e {
                     Ok(f(val, n))
                 } else {
-                    Err(Error::Type)
+                    Err(Error::Type {
+                        expected: "number",
+                        given: e.type_of().to_string(),
+                    })
                 }
             } else {
                 a
@@ -148,23 +161,34 @@ where
     SExp::proc(
         move |exp: SExp| {
             let mut i = exp.into_iter();
-            if let Some(SExp::Atom(Primitive::Number(first))) = i.next() {
-                match i.fold(Ok(first), |a, e| {
-                    if let Ok(val) = a {
-                        if let SExp::Atom(Primitive::Number(n)) = e {
-                            Ok(f(val, n))
+            match i.next() {
+                Some(SExp::Atom(Primitive::Number(first))) => {
+                    match i.fold(Ok(first), |a, e| {
+                        if let Ok(val) = a {
+                            if let SExp::Atom(Primitive::Number(n)) = e {
+                                Ok(f(val, n))
+                            } else {
+                                Err(Error::Type {
+                                    expected: "number",
+                                    given: e.type_of().to_string(),
+                                })
+                            }
                         } else {
-                            Err(Error::Type)
+                            a
                         }
-                    } else {
-                        a
+                    }) {
+                        Ok(v) => Ok(v.into()),
+                        Err(err) => Err(err),
                     }
-                }) {
-                    Ok(v) => Ok(v.into()),
-                    Err(err) => Err(err),
                 }
-            } else {
-                Err(Error::Type)
+                Some(other) => Err(Error::Type {
+                    expected: "number",
+                    given: other.type_of().to_string(),
+                }),
+                None => Err(Error::ArityMin {
+                    expected: 1,
+                    given: 0,
+                }),
             }
         },
         name,

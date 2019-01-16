@@ -32,7 +32,10 @@ impl Context {
             "make-vector",
             |e| match e {
                 Atom(Number(n)) => Ok(Vector(vec![Null; n.floor() as usize])),
-                _ => Err(Error::Type),
+                _ => Err(Error::Type {
+                    expected: "number",
+                    given: e.type_of().to_string(),
+                }),
             },
             make_unary_expr
         );
@@ -42,7 +45,10 @@ impl Context {
             "vector-copy",
             |v| match v {
                 Vector(vec) => Ok(Vector(vec.clone())),
-                _ => Err(Error::Type),
+                _ => Err(Error::Type {
+                    expected: "vector",
+                    given: v.type_of().to_string(),
+                }),
             },
             make_unary_expr
         );
@@ -62,7 +68,10 @@ impl Context {
             "vector-length",
             |v| match v {
                 Vector(vec) => Ok((vec.len() as f64).into()),
-                _ => Err(Error::Type),
+                _ => Err(Error::Type {
+                    expected: "vector",
+                    given: v.type_of().to_string(),
+                }),
             },
             make_unary_expr
         );
@@ -75,7 +84,14 @@ impl Context {
                     .get(n as usize)
                     .map(ToOwned::to_owned)
                     .ok_or(Error::Index { i: n as usize }),
-                _ => Err(Error::Type),
+                (Vector(_), i) => Err(Error::Type {
+                    expected: "number",
+                    given: i.type_of().to_string(),
+                }),
+                (v, _) => Err(Error::Type {
+                    expected: "vector",
+                    given: v.type_of().to_string(),
+                }),
             },
             make_binary_expr
         );
@@ -99,11 +115,17 @@ impl Context {
                     ctx.set(&sym, Vector(vec)).unwrap();
                     Ok(Atom(Undefined))
                 }
-                Some(_) => Err(Error::Type),
+                Some(val) => Err(Error::Type {
+                    expected: "vector",
+                    given: val.type_of().to_string(),
+                }),
                 None => Err(Error::UndefinedSymbol { sym }),
             }
         } else {
-            Err(Error::Type)
+            Err(Error::Type {
+                expected: "vector",
+                given: expr.type_of().to_string(),
+            })
         });
 
         define_ctx!(self, "vector-map", |expr, ctx| if let Pair {
@@ -121,7 +143,10 @@ impl Context {
             }
             Ok(Vector(new_vec))
         } else {
-            Err(Error::Type)
+            Err(Error::Type {
+                expected: "procedure",
+                given: expr.type_of().to_string(),
+            })
         });
 
         define_with!(
@@ -139,7 +164,18 @@ impl Context {
 
                     Ok(Vector(vec[i0..i1].to_vec()))
                 }
-                _ => Err(Error::Type),
+                (Vector(_), Atom(Number(_)), end) => Err(Error::Type {
+                    expected: "number",
+                    given: end.type_of().to_string(),
+                }),
+                (Vector(_), start, _) => Err(Error::Type {
+                    expected: "number",
+                    given: start.type_of().to_string(),
+                }),
+                (v, _, _) => Err(Error::Type {
+                    expected: "vector",
+                    given: v.type_of().to_string(),
+                }),
             },
             make_ternary_expr
         );
@@ -156,7 +192,14 @@ impl Context {
 
                     Ok(Vector(vec[..i1].to_vec()))
                 }
-                _ => Err(Error::Type),
+                (Vector(_), end) => Err(Error::Type {
+                    expected: "number",
+                    given: end.type_of().to_string(),
+                }),
+                (v, _) => Err(Error::Type {
+                    expected: "vector",
+                    given: v.type_of().to_string(),
+                }),
             },
             make_binary_expr
         );
@@ -173,7 +216,14 @@ impl Context {
 
                     Ok(Vector(vec[i0..].to_vec()))
                 }
-                _ => Err(Error::Type),
+                (Vector(_), start) => Err(Error::Type {
+                    expected: "number",
+                    given: start.type_of().to_string(),
+                }),
+                (v, _) => Err(Error::Type {
+                    expected: "vector",
+                    given: v.type_of().to_string(),
+                }),
             },
             make_binary_expr
         );

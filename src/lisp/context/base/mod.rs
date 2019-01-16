@@ -110,7 +110,14 @@ impl Context {
                 head: box Atom(LispString(s)),
                 tail: box Null,
             } => Ok(s.chars().map(SExp::from).collect()),
-            _ => Err(Error::Type),
+            Pair {
+                head: box exp,
+                tail: box Null,
+            }
+            | exp => Err(Error::Type {
+                expected: "string",
+                given: exp.type_of().to_string()
+            }),
         });
         define!(ret, "list->string", |e| match e {
             Pair { .. } => {
@@ -124,13 +131,19 @@ impl Context {
                             s
                         }
                     }
-                    _ => Err(Error::Type),
+                    _ => Err(Error::Type {
+                        expected: "char",
+                        given: e.type_of().to_string(),
+                    }),
                 }) {
                     Ok(s) => Ok(Atom(LispString(s))),
                     Err(err) => Err(err),
                 }
             }
-            _ => Err(Error::Type),
+            _ => Err(Error::Type {
+                expected: "list",
+                given: e.type_of().to_string()
+            }),
         });
 
         ret
@@ -191,7 +204,10 @@ impl Context {
                     Err(Error::UndefinedSymbol { sym: s })
                 }
             }
-            _ => Err(Error::Type),
+            _ => Err(Error::Type {
+                expected: "list",
+                given: e.type_of().to_string()
+            }),
         });
 
         define_ctx!(self, "set-cdr!", |e, c| match e {
@@ -211,13 +227,16 @@ impl Context {
                     Err(Error::UndefinedSymbol { sym: s })
                 }
             }
-            _ => Err(Error::Type),
+            _ => Err(Error::Type {
+                expected: "list",
+                given: e.type_of().to_string()
+            }),
         });
 
         define_with!(
             self,
             "type-of",
-            |e| Ok(SExp::from(e.type_of())),
+            |e| Ok(SExp::from(e.type_of().to_string())),
             make_unary_expr
         );
 

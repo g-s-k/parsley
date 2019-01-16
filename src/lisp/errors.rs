@@ -3,9 +3,12 @@
 pub enum Error {
     #[fail(display = "could not parse expression: {}", exp)]
     Syntax { exp: String },
-    #[fail(display = "type error")]
-    Type,
-    #[fail(display = "symbol is not defined: {}", sym)]
+    #[fail(display = "Type error: expected {}, got {}.", expected, given)]
+    Type {
+        expected: &'static str,
+        given: String,
+    },
+    #[fail(display = "Symbol is not defined: {}", sym)]
     UndefinedSymbol { sym: String },
     #[fail(
         display = "arity mismatch: expected {} params, given {}.",
@@ -32,4 +35,6 @@ pub enum Error {
     NotAProcedure { exp: String },
     #[fail(display = "Tried to access invalid index: {}", i)]
     Index { i: usize },
+    #[fail(display = "I/O error: {}", 0)]
+    IO(::std::fmt::Error),
 }

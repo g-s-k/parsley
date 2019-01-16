@@ -209,7 +209,10 @@ impl SExp {
                     if let Atom(Primitive::Symbol(s)) = *p_h {
                         (Some(s), *p_t)
                     } else {
-                        return Err(Error::Type);
+                        return Err(Error::Type {
+                            expected: "symbol",
+                            given: p_h.type_of().to_string(),
+                        });
                     }
                 } else {
                     (None, p_t.cons(*p_h))
@@ -355,7 +358,10 @@ impl SExp {
                 head,
                 tail: box Null,
             } => Ok(*head),
-            _ => Err(Error::Type),
+            _ => Err(Error::Type {
+                expected: "list",
+                given: self.type_of().to_string(),
+            }),
         }
     }
 
@@ -478,7 +484,7 @@ impl SExp {
             });
             match write!(ctx, "{}", unescaped) {
                 Ok(()) => Ok(Atom(Primitive::Undefined)),
-                Err(_) => Err(Error::Type),
+                Err(e) => Err(Error::IO(e)),
             }
         } else {
             Err(Error::Syntax {
