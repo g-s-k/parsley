@@ -1,13 +1,12 @@
-use super::super::Primitive::{
-    Character, Env, Number, Procedure, String as LispString, Symbol, Undefined, Void,
-};
-use super::super::SExp::{self, Atom, Null, Pair, Vector};
+use super::super::Primitive::{Character, Env, Procedure, String as LispString, Symbol, Void};
+use super::super::SExp::{self, Atom, Null, Pair};
 use super::super::{Env as Environment, Error};
 
 use super::utils::*;
 use super::Context;
 
 mod tests;
+mod vec;
 
 macro_rules! define_with {
     ( $ctx:ident, $name:expr, $proc:expr, $tform:expr ) => {
@@ -79,6 +78,7 @@ impl Context {
     /// ```
     pub fn base() -> Self {
         let mut ret = Self::default();
+        ret.vector();
 
         // The basics
         define!(ret, "eq?", |e| match e {
@@ -197,98 +197,6 @@ impl Context {
         define_with!(ret, "pow", f64::powf, make_binary_numeric);
         ret.lang
             .insert("pi".to_string(), std::f64::consts::PI.into());
-
-        // Vectors
-        define_with!(
-            ret,
-            "make-vector",
-            |e| match e {
-                Atom(Number(n)) => Ok(Vector(vec![Null; n.floor() as usize])),
-                _ => Err(Error::Type),
-            },
-            make_unary_expr
-        );
-        define_with!(
-            ret,
-            "vector-copy",
-            |v| match v {
-                Vector(vec) => Ok(Vector(vec.clone())),
-                _ => Err(Error::Type),
-            },
-            make_unary_expr
-        );
-        define_with!(
-            ret,
-            "vector?",
-            |e| match e {
-                Vector(_) => Ok(true.into()),
-                _ => Ok(false.into()),
-            },
-            make_unary_expr
-        );
-        define_with!(
-            ret,
-            "vector-length",
-            |v| match v {
-                Vector(vec) => Ok((vec.len() as f64).into()),
-                _ => Err(Error::Type),
-            },
-            make_unary_expr
-        );
-        define_with!(
-            ret,
-            "vector-ref",
-            |v, i| match (v, i) {
-                (Vector(vec), Atom(Number(n))) => vec
-                    .get(n as usize)
-                    .map(ToOwned::to_owned)
-                    .ok_or(Error::Index { i: n as usize }),
-                _ => Err(Error::Type),
-            },
-            make_binary_expr
-        );
-        define_ctx!(ret, "vector-set!", |expr, ctx| if let Pair {
-            head: box Atom(Symbol(sym)),
-            tail:
-                box Pair {
-                    head: box Atom(Number(n)),
-                    tail:
-                        box Pair {
-                            head,
-                            tail: box Null,
-                        },
-                },
-        } = expr
-        {
-            match ctx.get(&sym) {
-                Some(Vector(mut vec)) => {
-                    vec[n as usize] = *head;
-                    ctx.set(&sym, Vector(vec)).unwrap();
-                    Ok(Atom(Undefined))
-                }
-                Some(_) => Err(Error::Type),
-                None => Err(Error::UndefinedSymbol { sym }),
-            }
-        } else {
-            Err(Error::Type)
-        });
-        define_ctx!(ret, "vector-map", |expr, ctx| if let Pair {
-            head: box proc,
-            tail:
-                box Pair {
-                    head: box Vector(vec),
-                    tail: box Null,
-                },
-        } = expr
-        {
-            let mut new_vec = Vec::new();
-            for expression in vec {
-                new_vec.push(Null.cons(expression).cons(proc.clone()).eval(ctx)?);
-            }
-            Ok(Vector(new_vec))
-        } else {
-            Err(Error::Type)
-        });
 
         // Procedures
         define_with!(
