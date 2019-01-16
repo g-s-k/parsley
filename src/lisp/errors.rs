@@ -30,4 +30,6 @@ pub enum Error {
     NullList,
     #[fail(display = "{} is not a procedure.", exp)]
     NotAProcedure { exp: String },
+    #[fail(display = "Tried to access invalid index: {}", i)]
+    Index { i: usize },
 }

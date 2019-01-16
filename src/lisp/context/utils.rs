@@ -195,3 +195,66 @@ where
         name,
     )
 }
+
+pub fn make_binary_expr<F>(f: F, name: Option<&str>) -> SExp
+where
+    F: Fn(SExp, SExp) -> crate::Result + 'static,
+{
+    SExp::proc(
+        move |exp| match exp {
+            SExp::Pair {
+                head: box arg0,
+                tail:
+                    box SExp::Pair {
+                        head: box arg1,
+                        tail: box SExp::Null,
+                    },
+            } => f(arg0, arg1),
+            SExp::Pair {
+                tail: box SExp::Null,
+                ..
+            }
+            | SExp::Atom(_)
+            | SExp::Vector(_) => Err(Error::Arity {
+                expected: 2,
+                given: 1,
+            }),
+            p @ SExp::Pair { .. } => Err(Error::Arity {
+                expected: 2,
+                given: p.iter().count(),
+            }),
+            SExp::Null => Err(Error::Arity {
+                expected: 2,
+                given: 0,
+            }),
+        },
+        name,
+    )
+}
+
+pub fn make_ternary_expr<F>(f: F, name: Option<&str>) -> SExp
+where
+    F: Fn(SExp, SExp, SExp) -> crate::Result + 'static,
+{
+    SExp::proc(
+        move |exp| match exp {
+            SExp::Pair {
+                head: box arg0,
+                tail:
+                    box SExp::Pair {
+                        head: box arg1,
+                        tail:
+                            box SExp::Pair {
+                                head: box arg2,
+                                tail: box SExp::Null,
+                            },
+                    },
+            } => f(arg0, arg1, arg2),
+            other_variant => Err(Error::Arity {
+                expected: 3,
+                given: other_variant.iter().count(),
+            }),
+        },
+        name,
+    )
+}

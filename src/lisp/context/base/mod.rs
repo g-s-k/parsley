@@ -1,5 +1,5 @@
 use super::super::Primitive::{
-    Character, Env, Number, Procedure, String as LispString, Symbol, Void,
+    Character, Env, Number, Procedure, String as LispString, Symbol, Undefined, Void,
 };
 use super::super::SExp::{self, Atom, Null, Pair, Vector};
 use super::super::{Env as Environment, Error};
@@ -235,6 +235,60 @@ impl Context {
             },
             make_unary_expr
         );
+        define_with!(
+            ret,
+            "vector-ref",
+            |v, i| match (v, i) {
+                (Vector(vec), Atom(Number(n))) => vec
+                    .get(n as usize)
+                    .map(ToOwned::to_owned)
+                    .ok_or(Error::Index { i: n as usize }),
+                _ => Err(Error::Type),
+            },
+            make_binary_expr
+        );
+        define_ctx!(ret, "vector-set!", |expr, ctx| if let Pair {
+            head: box Atom(Symbol(sym)),
+            tail:
+                box Pair {
+                    head: box Atom(Number(n)),
+                    tail:
+                        box Pair {
+                            head,
+                            tail: box Null,
+                        },
+                },
+        } = expr
+        {
+            match ctx.get(&sym) {
+                Some(Vector(mut vec)) => {
+                    vec[n as usize] = *head;
+                    ctx.set(&sym, Vector(vec)).unwrap();
+                    Ok(Atom(Undefined))
+                }
+                Some(_) => Err(Error::Type),
+                None => Err(Error::UndefinedSymbol { sym }),
+            }
+        } else {
+            Err(Error::Type)
+        });
+        define_ctx!(ret, "vector-map", |expr, ctx| if let Pair {
+            head: box proc,
+            tail:
+                box Pair {
+                    head: box Vector(vec),
+                    tail: box Null,
+                },
+        } = expr
+        {
+            let mut new_vec = Vec::new();
+            for expression in vec {
+                new_vec.push(Null.cons(expression).cons(proc.clone()).eval(ctx)?);
+            }
+            Ok(Vector(new_vec))
+        } else {
+            Err(Error::Type)
+        });
 
         // Procedures
         define_with!(
