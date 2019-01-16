@@ -16,7 +16,6 @@ The following special commands are available:
 const REPL_EXIT_MSG: &str = "\nLeaving PARSLEY.\n";
 
 pub fn repl(ctx: &mut Context) -> Result<String, ReadlineError> {
-    info!("Initializing REPL.");
     ctx.push();
 
     print!(

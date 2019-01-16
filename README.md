@@ -13,7 +13,6 @@ what if scheme...but rust. still working on a backronym.
 - (eventually) build on stable. blockers are:
   - `www` builds against unstable `wasm32-unknown-unkown` target
   - `box_patterns` feature
-  - `quicli` dependency
 - (very eventually) ANSI compliance
 
 ## License

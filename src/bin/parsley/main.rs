@@ -1,10 +1,7 @@
-#[macro_use]
-extern crate log;
-
-use std::io::{self, Read};
+use std::fs;
+use std::io::{self, Read, Result};
 use std::path::PathBuf;
 
-use quicli::prelude::*;
 use structopt::StructOpt;
 
 use parsley::prelude::*;
@@ -18,20 +15,15 @@ struct Cli {
     read_stdin: bool,
     #[structopt(parse(from_os_str))]
     file: Option<PathBuf>,
-    #[structopt(flatten)]
-    verbosity: Verbosity,
 }
 
-fn main() -> CliResult {
+fn main() -> Result<()> {
     let args = Cli::from_args();
-    args.verbosity.setup_env_logger("parsley")?;
 
-    info!("Creating base namespace.");
     let mut base_context = Context::base();
 
     let code = if let Some(f_name) = args.file {
-        info!("Reading source from {:?}", f_name);
-        read_file(&f_name)?
+        fs::read_to_string(&f_name)?
     } else if args.read_stdin {
         let mut code_buffer = String::new();
         io::stdin().read_to_string(&mut code_buffer)?;
@@ -41,19 +33,18 @@ fn main() -> CliResult {
     };
 
     if !code.is_empty() {
-        info!("Parsing and evaluating source code.");
         match run_in(&code, &mut base_context) {
             Ok(tree) => {
                 println!("{}", tree);
             }
-            Err(error) => error!("{}", error),
+            Err(error) => eprintln!("{}", error),
         };
     }
 
     if code.is_empty() || args.force_interactive {
         match repl::repl(&mut base_context) {
             Ok(res) => println!("{}", res),
-            Err(err) => error!("{}", err),
+            Err(err) => eprintln!("{}", err),
         }
     }
 
