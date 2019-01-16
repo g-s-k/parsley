@@ -1,3 +1,11 @@
+// there are a number of f64 <-> usize casts in this module, and clippy
+// (understandably) isn't a big fan.
+#![allow(
+    clippy::cast_sign_loss,
+    clippy::cast_precision_loss,
+    clippy::cast_possible_truncation
+)]
+
 use super::super::super::Error;
 use super::super::super::Primitive::{Number, Symbol, Undefined};
 use super::super::super::SExp::{Atom, Null, Pair, Vector};
@@ -123,10 +131,10 @@ impl Context {
                 (Vector(vec), Atom(Number(n0)), Atom(Number(n1))) => {
                     let (i0, i1) = (n0 as usize, n1 as usize);
                     if i0 >= vec.len() {
-                        return Err(Error::Index { i: i0 })
+                        return Err(Error::Index { i: i0 });
                     }
                     if i1 >= vec.len() {
-                        return Err(Error::Index { i: i1 })
+                        return Err(Error::Index { i: i1 });
                     }
 
                     Ok(Vector(vec[i0..i1].to_vec()))
@@ -143,7 +151,7 @@ impl Context {
                 (Vector(vec), Atom(Number(n1))) => {
                     let i1 = n1 as usize;
                     if i1 >= vec.len() {
-                        return Err(Error::Index { i: i1 })
+                        return Err(Error::Index { i: i1 });
                     }
 
                     Ok(Vector(vec[..i1].to_vec()))
@@ -160,7 +168,7 @@ impl Context {
                 (Vector(vec), Atom(Number(n0))) => {
                     let i0 = n0 as usize;
                     if i0 >= vec.len() {
-                        return Err(Error::Index { i: i0 })
+                        return Err(Error::Index { i: i0 });
                     }
 
                     Ok(Vector(vec[i0..].to_vec()))
