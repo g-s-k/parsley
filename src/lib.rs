@@ -28,9 +28,24 @@
 #![feature(box_patterns)]
 #![deny(clippy::pedantic)]
 
-mod lisp;
-pub use self::lisp::context::utils as proc_utils;
-pub use self::lisp::{Context, Error, Result, SExp};
+use std::collections::HashMap;
+
+mod context;
+mod errors;
+mod primitives;
+mod sexp;
+mod utils;
+
+pub use self::context::{utils as proc_utils, Context};
+pub use self::errors::Error;
+use self::primitives::Primitive;
+pub use self::sexp::SExp;
+
+/// A shorthand Result type.
+pub type Result = ::std::result::Result<SExp, Error>;
+
+/// A type to represent an execution environment.
+type Env = HashMap<String, SExp>;
 
 /// Run a code snippet in an existing [Context](./struct.Context.html).
 ///
