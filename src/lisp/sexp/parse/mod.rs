@@ -94,6 +94,11 @@ impl SExp {
                         debug!("Matched sub-list with length {} chars", idx2 + 1);
                         let mut new_idx = list_str.len() - 1 - idx2;
                         if new_idx > 0 {
+                            // vector
+                            if let Some('#') = list_str.chars().nth(new_idx - 1) {
+                                new_idx -= 1;
+                            }
+                            // quotes
                             while let Some('\'') = list_str.chars().nth(new_idx - 1) {
                                 new_idx -= 1;
                             }
