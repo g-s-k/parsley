@@ -115,5 +115,59 @@ impl Context {
         } else {
             Err(Error::Type)
         });
+
+        define_with!(
+            self,
+            "subvector",
+            |v, start, end| match (v, start, end) {
+                (Vector(vec), Atom(Number(n0)), Atom(Number(n1))) => {
+                    let (i0, i1) = (n0 as usize, n1 as usize);
+                    if i0 >= vec.len() {
+                        return Err(Error::Index { i: i0 })
+                    }
+                    if i1 >= vec.len() {
+                        return Err(Error::Index { i: i1 })
+                    }
+
+                    Ok(Vector(vec[i0..i1].to_vec()))
+                }
+                _ => Err(Error::Type),
+            },
+            make_ternary_expr
+        );
+
+        define_with!(
+            self,
+            "vector-head",
+            |v, end| match (v, end) {
+                (Vector(vec), Atom(Number(n1))) => {
+                    let i1 = n1 as usize;
+                    if i1 >= vec.len() {
+                        return Err(Error::Index { i: i1 })
+                    }
+
+                    Ok(Vector(vec[..i1].to_vec()))
+                }
+                _ => Err(Error::Type),
+            },
+            make_binary_expr
+        );
+
+        define_with!(
+            self,
+            "vector-tail",
+            |v, start| match (v, start) {
+                (Vector(vec), Atom(Number(n0))) => {
+                    let i0 = n0 as usize;
+                    if i0 >= vec.len() {
+                        return Err(Error::Index { i: i0 })
+                    }
+
+                    Ok(Vector(vec[i0..].to_vec()))
+                }
+                _ => Err(Error::Type),
+            },
+            make_binary_expr
+        );
     }
 }
