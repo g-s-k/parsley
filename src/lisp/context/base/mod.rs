@@ -78,125 +78,9 @@ impl Context {
     /// ```
     pub fn base() -> Self {
         let mut ret = Self::default();
+        ret.std();
+        ret.num_base();
         ret.vector();
-
-        // The basics
-        define!(ret, "eq?", |e| match e {
-            Pair {
-                head: elem1,
-                tail:
-                    box Pair {
-                        head: elem2,
-                        tail: box Null,
-                    },
-            } => Ok((elem1 == elem2).into()),
-            exp => Err(Error::Syntax {
-                exp: exp.to_string(),
-            }),
-        });
-        define!(ret, "null?", |e| Ok((e == ((),).into()).into()));
-        ret.lang.insert("null".to_string(), Null);
-        define!(ret, "void", |_| Ok(Atom(Void)));
-        define!(ret, "list", Ok);
-        define!(ret, "not", |e| Ok((e == (false,).into()).into()));
-        define!(ret, "cons", |e| match e {
-            Pair {
-                head: elem1,
-                tail:
-                    box Pair {
-                        head: elem2,
-                        tail: box Null,
-                    },
-            } => Ok(elem2.cons(*elem1)),
-            exp => Err(Error::Syntax {
-                exp: exp.to_string(),
-            }),
-        });
-        define_with!(ret, "car", SExp::car, make_unary_expr);
-        define_with!(ret, "cdr", SExp::cdr, make_unary_expr);
-        define_ctx!(ret, "set-car!", |e, c| match e {
-            Pair {
-                head: box Atom(Symbol(s)),
-                tail:
-                    box Pair {
-                        head: box new,
-                        tail: box Null,
-                    },
-            } => {
-                if let Some(mut val) = c.get(&s) {
-                    let new_val = new.eval(c)?;
-                    val.set_car(new_val)?;
-                    c.set(&s, val)
-                } else {
-                    Err(Error::UndefinedSymbol { sym: s })
-                }
-            }
-            _ => Err(Error::Type),
-        });
-        define_ctx!(ret, "set-cdr!", |e, c| match e {
-            Pair {
-                head: box Atom(Symbol(s)),
-                tail:
-                    box Pair {
-                        head: box new,
-                        tail: box Null,
-                    },
-            } => {
-                if let Some(mut val) = c.get(&s) {
-                    let new_val = new.eval(c)?;
-                    val.set_cdr(new_val)?;
-                    c.set(&s, val)
-                } else {
-                    Err(Error::UndefinedSymbol { sym: s })
-                }
-            }
-            _ => Err(Error::Type),
-        });
-        define_with!(
-            ret,
-            "type-of",
-            |e| Ok(SExp::from(e.type_of())),
-            make_unary_expr
-        );
-
-        // i/o
-        define_ctx!(ret, "display", |e, c| SExp::do_print(e, c, false, false));
-        define_ctx!(ret, "displayln", |e, c| SExp::do_print(e, c, true, false));
-        define_ctx!(ret, "write", |e, c| SExp::do_print(e, c, false, true));
-        define_ctx!(ret, "writeln", |e, c| SExp::do_print(e, c, true, true));
-
-        // functional goodness
-        define_ctx!(ret, "map", SExp::eval_map);
-        define_ctx!(ret, "foldl", SExp::eval_fold);
-        define_ctx!(ret, "filter", SExp::eval_filter);
-
-        // Numerics
-        define!(ret, "zero?", |e: SExp| Ok((e.car()? == 0.into()).into()));
-        define_with!(ret, "add1", |e| e + 1., make_unary_numeric);
-        define_with!(ret, "sub1", |e| e - 1., make_unary_numeric);
-        define_with!(
-            ret,
-            "=",
-            |l, r| (l - r).abs() < std::f64::EPSILON,
-            make_binary_numeric
-        );
-        define_with!(ret, "<", |l, r| l < r, make_binary_numeric);
-        define_with!(ret, ">", |l, r| l > r, make_binary_numeric);
-        define_with!(ret, "abs", f64::abs, make_unary_numeric);
-        ret.lang.insert(
-            "+".to_string(),
-            make_fold_numeric(0., std::ops::Add::add, Some("+")),
-        );
-        define_with!(ret, "-", std::ops::Sub::sub, make_fold_from0_numeric);
-        ret.lang.insert(
-            "*".to_string(),
-            make_fold_numeric(1., std::ops::Mul::mul, Some("*")),
-        );
-        define_with!(ret, "/", std::ops::Div::div, make_fold_from0_numeric);
-        define_with!(ret, "remainder", std::ops::Rem::rem, make_binary_numeric);
-        define_with!(ret, "pow", f64::powf, make_binary_numeric);
-        ret.lang
-            .insert("pi".to_string(), std::f64::consts::PI.into());
 
         // Procedures
         define_with!(
@@ -250,5 +134,138 @@ impl Context {
         });
 
         ret
+    }
+
+    fn std(&mut self) {
+        define!(self, "eq?", |e| match e {
+            Pair {
+                head: elem1,
+                tail:
+                    box Pair {
+                        head: elem2,
+                        tail: box Null,
+                    },
+            } => Ok((elem1 == elem2).into()),
+            exp => Err(Error::Syntax {
+                exp: exp.to_string(),
+            }),
+        });
+
+        define!(self, "null?", |e| Ok((e == ((),).into()).into()));
+        self.lang.insert("null".to_string(), Null);
+        define!(self, "void", |_| Ok(Atom(Void)));
+        define!(self, "list", Ok);
+        define!(self, "not", |e| Ok((e == (false,).into()).into()));
+
+        define!(self, "cons", |e| match e {
+            Pair {
+                head: elem1,
+                tail:
+                    box Pair {
+                        head: elem2,
+                        tail: box Null,
+                    },
+            } => Ok(elem2.cons(*elem1)),
+            exp => Err(Error::Syntax {
+                exp: exp.to_string(),
+            }),
+        });
+
+        define_with!(self, "car", SExp::car, make_unary_expr);
+        define_with!(self, "cdr", SExp::cdr, make_unary_expr);
+
+        define_ctx!(self, "set-car!", |e, c| match e {
+            Pair {
+                head: box Atom(Symbol(s)),
+                tail:
+                    box Pair {
+                        head: box new,
+                        tail: box Null,
+                    },
+            } => {
+                if let Some(mut val) = c.get(&s) {
+                    let new_val = new.eval(c)?;
+                    val.set_car(new_val)?;
+                    c.set(&s, val)
+                } else {
+                    Err(Error::UndefinedSymbol { sym: s })
+                }
+            }
+            _ => Err(Error::Type),
+        });
+
+        define_ctx!(self, "set-cdr!", |e, c| match e {
+            Pair {
+                head: box Atom(Symbol(s)),
+                tail:
+                    box Pair {
+                        head: box new,
+                        tail: box Null,
+                    },
+            } => {
+                if let Some(mut val) = c.get(&s) {
+                    let new_val = new.eval(c)?;
+                    val.set_cdr(new_val)?;
+                    c.set(&s, val)
+                } else {
+                    Err(Error::UndefinedSymbol { sym: s })
+                }
+            }
+            _ => Err(Error::Type),
+        });
+
+        define_with!(
+            self,
+            "type-of",
+            |e| Ok(SExp::from(e.type_of())),
+            make_unary_expr
+        );
+
+        // i/o
+        define_ctx!(self, "display", |e, c| SExp::do_print(e, c, false, false));
+        define_ctx!(self, "displayln", |e, c| SExp::do_print(e, c, true, false));
+        define_ctx!(self, "write", |e, c| SExp::do_print(e, c, false, true));
+        define_ctx!(self, "writeln", |e, c| SExp::do_print(e, c, true, true));
+
+        // functional goodness
+        define_ctx!(self, "map", SExp::eval_map);
+        define_ctx!(self, "foldl", SExp::eval_fold);
+        define_ctx!(self, "filter", SExp::eval_filter);
+    }
+
+    fn num_base(&mut self) {
+        define!(self, "zero?", |e: SExp| Ok((e.car()? == 0.into()).into()));
+        define_with!(self, "add1", |e| e + 1., make_unary_numeric);
+        define_with!(self, "sub1", |e| e - 1., make_unary_numeric);
+
+        define_with!(
+            self,
+            "=",
+            |l, r| (l - r).abs() < std::f64::EPSILON,
+            make_binary_numeric
+        );
+
+        define_with!(self, "<", |l, r| l < r, make_binary_numeric);
+        define_with!(self, ">", |l, r| l > r, make_binary_numeric);
+        define_with!(self, "abs", f64::abs, make_unary_numeric);
+
+        self.lang.insert(
+            "+".to_string(),
+            make_fold_numeric(0., std::ops::Add::add, Some("+")),
+        );
+
+        define_with!(self, "-", std::ops::Sub::sub, make_fold_from0_numeric);
+
+        self.lang.insert(
+            "*".to_string(),
+            make_fold_numeric(1., std::ops::Mul::mul, Some("*")),
+        );
+
+        define_with!(self, "/", std::ops::Div::div, make_fold_from0_numeric);
+        define_with!(self, "remainder", std::ops::Rem::rem, make_binary_numeric);
+        define_with!(self, "pow", f64::powf, make_binary_numeric);
+
+        self.lang
+            .insert("pi".to_string(), std::f64::consts::PI.into());
     }
 }
