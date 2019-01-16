@@ -9,12 +9,22 @@ mod write;
 
 /// Evaluation context for LISP expressions.
 ///
-/// # Note
-/// `Context::default()` does not provide any definitions. To obtain an
+/// ## Note
+/// `Context::default()` only provides *very* basic utilities. To obtain an
 /// evaluation context with useful functions available, use
 /// [`Context::base()`](#method.base).
+///
+/// ## Some implementation details
+/// `Context` maintains separate environments for "core" (special forms, etc.),
+/// "lang" (basic functions, vectors, and more), and "user" definitions. Most of
+/// the provided methods operate on the "user" environment, as the intended use
+/// case keeps the other environments immutable once they have been initialized.
 pub struct Context {
-    pub(crate) core: Env,
+    core: Env,
+    /// You can `insert` additional definitions here to make them available
+    /// throughout the runtime. These definitions will not go out of scope
+    /// automatically, but can be overridden (see [`get`](#method.get) for
+    /// semantic details).
     pub lang: Env,
     user: Vec<Env>,
     overlay: Option<Env>,
@@ -80,14 +90,27 @@ impl Context {
             .map(Clone::clone)
     }
 
-    /// Get the most recent definition for a symbol.
+    /// Get the definition for a symbol in the execution environment.
     ///
-    /// This starts at the current scope and walks upward toward the global
-    /// scope until it finds a match. If no match is found, it returns `None`.
+    /// Returns `None` if no definition is found.
+    ///
+    /// # Override semantics
+    /// This method searches for a definition in the following order:
+    ///
+    ///   1. The core language
+    ///   2. The current closure overlay (if there is one)
+    ///   3. User definitions, starting from the most recent scope and working
+    ///      backward to the top-level
+    ///   4. [Language-level definitions](#structfield.lang)
+    ///
+    /// What this means is that definitions populated in the `lang` field can be
+    /// overridden inside the runtime (e.g. in a REPL), but special form keywords
+    /// cannot. For example, we can `(define null "foo")`, but we cannot
+    /// `(set! and or)`.
     ///
     /// # Examples
     /// ```
-    /// let ctx = parsley::Context::default(); // no definitions included
+    /// let ctx = parsley::Context::default(); // only core definitions included
     /// assert!(ctx.get("potato").is_none());
     /// ```
     /// ```
