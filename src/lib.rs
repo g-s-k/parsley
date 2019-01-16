@@ -28,9 +28,6 @@
 #![feature(box_patterns)]
 #![deny(clippy::pedantic)]
 
-#[macro_use]
-extern crate failure_derive;
-
 mod lisp;
 pub use self::lisp::context::utils as proc_utils;
 pub use self::lisp::{Context, Error, Result, SExp};

@@ -102,8 +102,9 @@ impl SExp {
 
     pub(crate) fn eval_define(self, ctx: &mut Context) -> Result {
         match self {
-            Null => Err(Error::NoArgumentsProvided {
-                symbol: "define".to_string(),
+            Null => Err(Error::ArityMin {
+                expected: 2,
+                given: 0,
             }),
             Atom(a) => Err(Error::NotAList {
                 atom: a.to_string(),
@@ -183,8 +184,9 @@ impl SExp {
 
     pub(crate) fn eval_lambda(self, ctx: &mut Context, is_named: bool) -> Result {
         match self {
-            Null => Err(Error::NoArgumentsProvided {
-                symbol: "lambda".to_string(),
+            Null => Err(Error::ArityMin {
+                expected: 2,
+                given: 0,
             }),
             Atom(a) => Err(Error::NotAList {
                 atom: a.to_string(),
@@ -282,8 +284,9 @@ impl SExp {
 
     pub(crate) fn eval_let(self, ctx: &mut Context) -> Result {
         match self {
-            Null => Err(Error::NoArgumentsProvided {
-                symbol: "let".to_string(),
+            Null => Err(Error::ArityMin {
+                expected: 2,
+                given: 0,
             }),
             Pair {
                 head: defn_list,
@@ -363,8 +366,9 @@ impl SExp {
 
     pub(crate) fn eval_set(self, ctx: &mut Context) -> Result {
         match self {
-            Null => Err(Error::NoArgumentsProvided {
-                symbol: "set!".to_string(),
+            Null => Err(Error::Arity {
+                expected: 2,
+                given: 0,
             }),
             Pair {
                 head: box Atom(Primitive::Symbol(sym)),
