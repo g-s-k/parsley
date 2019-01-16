@@ -4,9 +4,6 @@ extern crate yew;
 use yew::prelude::*;
 
 mod app;
-mod body;
-mod footer;
-mod header;
 
 fn main() {
     yew::initialize();

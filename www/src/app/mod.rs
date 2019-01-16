@@ -1,8 +1,12 @@
 use yew::prelude::*;
 
-use super::header::Header;
-use super::footer::Footer;
-use super::body::Body;
+use header::Header;
+use footer::Footer;
+use body::Body;
+
+mod body;
+mod footer;
+mod header;
 
 pub struct App;
 
