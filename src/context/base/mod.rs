@@ -146,18 +146,9 @@ impl Context {
     }
 
     fn std(&mut self) {
-        define!(self, "eq?", |e| match e {
-            Pair {
-                head: elem1,
-                tail:
-                    box Pair {
-                        head: elem2,
-                        tail: box Null,
-                    },
-            } => Ok((elem1 == elem2).into()),
-            exp => Err(Error::Syntax {
-                exp: exp.to_string(),
-            }),
+        define!(self, "eq?", |e| match e.len() {
+            2 => Ok((e[0] == e[1]).into()),
+            given => Err(Error::Arity { expected: 2, given }),
         });
 
         define!(self, "null?", |e| Ok((e == ((),).into()).into()));
@@ -178,50 +169,52 @@ impl Context {
         define_with!(self, "car", SExp::car, make_unary_expr);
         define_with!(self, "cdr", SExp::cdr, make_unary_expr);
 
-        define_ctx!(self, "set-car!", |e, c| match e {
-            Pair {
-                head: box Atom(Symbol(s)),
-                tail:
-                    box Pair {
-                        head: box new,
-                        tail: box Null,
-                    },
-            } => {
-                if let Some(mut val) = c.get(&s) {
-                    let new_val = new.eval(c)?;
-                    val.set_car(new_val)?;
-                    c.set(&s, val)
-                } else {
-                    Err(Error::UndefinedSymbol { sym: s })
+        define_ctx!(self, "set-car!", |e, c| match e.len() {
+            2 => {
+                let (car, cdr) = e.split_car()?;
+                let new = cdr.car()?;
+
+                match car {
+                    Atom(Symbol(key)) => {
+                        if let Some(mut val) = c.get(&key) {
+                            let new_val = new.eval(c)?;
+                            val.set_car(new_val)?;
+                            c.set(&key, val)
+                        } else {
+                            Err(Error::UndefinedSymbol { sym: key })
+                        }
+                    }
+                    other => Err(Error::Type {
+                        expected: "symbol",
+                        given: other.type_of().to_string(),
+                    }),
                 }
             }
-            _ => Err(Error::Type {
-                expected: "list",
-                given: e.type_of().to_string()
-            }),
+            given => Err(Error::Arity { expected: 2, given }),
         });
 
-        define_ctx!(self, "set-cdr!", |e, c| match e {
-            Pair {
-                head: box Atom(Symbol(s)),
-                tail:
-                    box Pair {
-                        head: box new,
-                        tail: box Null,
-                    },
-            } => {
-                if let Some(mut val) = c.get(&s) {
-                    let new_val = new.eval(c)?;
-                    val.set_cdr(new_val)?;
-                    c.set(&s, val)
-                } else {
-                    Err(Error::UndefinedSymbol { sym: s })
+        define_ctx!(self, "set-cdr!", |e, c| match e.len() {
+            2 => {
+                let (car, cdr) = e.split_car()?;
+                let new = cdr.car()?;
+
+                match car {
+                    Atom(Symbol(key)) => {
+                        if let Some(mut val) = c.get(&key) {
+                            let new_val = new.eval(c)?;
+                            val.set_cdr(new_val)?;
+                            c.set(&key, val)
+                        } else {
+                            Err(Error::UndefinedSymbol { sym: key })
+                        }
+                    }
+                    other => Err(Error::Type {
+                        expected: "symbol",
+                        given: other.type_of().to_string(),
+                    }),
                 }
             }
-            _ => Err(Error::Type {
-                expected: "list",
-                given: e.type_of().to_string()
-            }),
+            given => Err(Error::Arity { expected: 2, given }),
         });
 
         define_with!(
