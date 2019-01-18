@@ -1,6 +1,7 @@
 use std::iter::FromIterator;
+use std::ops::Index;
 
-use super::SExp::{self, Atom, Null, Pair};
+use super::SExp::{self, Atom, Null, Pair, Vector};
 
 /// An iterator over an S-Expression. Returns list elements until the end of a chain of pairs.
 pub struct SExpIterator {
@@ -35,23 +36,35 @@ impl IntoIterator for SExp {
 }
 
 pub struct SExpRefIterator<'a> {
-    exp: &'a SExp,
+    exp: SExpRef<'a>,
+}
+
+enum SExpRef<'a> {
+    List(&'a SExp),
+    Vect(&'a [SExp]),
 }
 
 impl<'a> Iterator for SExpRefIterator<'a> {
     type Item = &'a SExp;
 
     fn next(&mut self) -> Option<Self::Item> {
+        use SExpRef::*;
         match self.exp {
-            Pair { head, tail } => {
-                self.exp = &*tail;
-                Some(&*head)
+            List(exp) => match exp {
+                Pair { head, tail } => {
+                    self.exp = List(&*tail);
+                    Some(&*head)
+                }
+                a @ Atom(_) => {
+                    self.exp = List(&Null);
+                    Some(&a)
+                }
+                _ => None,
+            },
+            Vect(v) => {
+                self.exp = Vect(&v[1..]);
+                Some(&v[0])
             }
-            a @ Atom(_) => {
-                self.exp = &Null;
-                Some(&a)
-            }
-            _ => None,
         }
     }
 }
@@ -68,7 +81,37 @@ impl SExp {
     /// );
     /// ```
     pub fn iter(&self) -> SExpRefIterator {
-        SExpRefIterator { exp: self }
+        if let Vector(v) = self {
+            SExpRefIterator {
+                exp: SExpRef::Vect(&v),
+            }
+        } else {
+            SExpRefIterator {
+                exp: SExpRef::List(self),
+            }
+        }
+    }
+
+    /// Get the length of an S-Expression (vector or list)
+    ///
+    /// # Example
+    /// ```
+    /// use parsley::prelude::*;
+    /// assert_eq!(
+    ///     sexp!['a', "bee", SExp::sym("sea")].len(),
+    ///     3
+    /// );
+    /// ```
+    pub fn len(&self) -> usize {
+        self.iter().count()
+    }
+}
+
+impl Index<usize> for SExp {
+    type Output = Self;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        self.iter().nth(index).unwrap()
     }
 }
 
