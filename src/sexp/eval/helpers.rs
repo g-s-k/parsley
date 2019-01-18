@@ -151,26 +151,20 @@ impl SExp {
     }
 
     pub(crate) fn eval_if(self, ctx: &mut Context) -> Result {
-        match self {
-            Pair {
-                head: condition,
-                tail:
-                    box Pair {
-                        head: if_true,
-                        tail:
-                            box Pair {
-                                head: if_false,
-                                tail: box Null,
-                            },
-                    },
-            } => (match condition.eval(ctx)? {
-                Atom(Primitive::Boolean(false)) => if_false,
-                _ => if_true,
-            })
-            .eval(ctx),
-            exp => Err(Error::Syntax {
-                exp: exp.to_string(),
-            }),
+        match self.len() {
+            3 => {
+                let (condition, cdr) = self.split_car()?;
+                let (if_true, cdr) = cdr.split_car()?;
+                let (if_false, _) = cdr.split_car()?;
+
+                if let Atom(Primitive::Boolean(false)) = condition.eval(ctx)? {
+                    if_false
+                } else {
+                    if_true
+                }
+                .eval(ctx)
+            }
+            given => Err(Error::Arity { expected: 3, given }),
         }
     }
 
