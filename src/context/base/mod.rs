@@ -105,19 +105,15 @@ impl Context {
         );
 
         // Strings
-        define!(ret, "string->list", |e| match e {
-            Pair {
-                head: box Atom(LispString(s)),
-                tail: box Null,
-            } => Ok(s.chars().map(SExp::from).collect()),
-            Pair {
-                head: box exp,
-                tail: box Null,
-            }
-            | exp => Err(Error::Type {
-                expected: "string",
-                given: exp.type_of().to_string()
-            }),
+        define!(ret, "string->list", |e| match e.len() {
+            1 => match &e[0] {
+                Atom(LispString(s)) => Ok(s.chars().map(SExp::from).collect()),
+                exp => Err(Error::Type {
+                    expected: "string",
+                    given: exp.type_of().to_string()
+                }),
+            },
+            given => Err(Error::Arity { expected: 1, given }),
         });
         define!(ret, "list->string", |e| match e {
             Pair { .. } => {
