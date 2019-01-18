@@ -170,18 +170,13 @@ impl Context {
         define!(self, "list", Ok);
         define!(self, "not", |e| Ok((e == (false,).into()).into()));
 
-        define!(self, "cons", |e| match e {
-            Pair {
-                head: elem1,
-                tail:
-                    box Pair {
-                        head: elem2,
-                        tail: box Null,
-                    },
-            } => Ok(elem2.cons(*elem1)),
-            exp => Err(Error::Syntax {
-                exp: exp.to_string(),
-            }),
+        define!(self, "cons", |e| match e.len() {
+            2 => {
+                let (car, cdr) = e.split_car()?;
+                let (car2, _) = cdr.split_car()?;
+                Ok(car2.cons(car))
+            }
+            given => Err(Error::Arity { expected: 2, given }),
         });
 
         define_with!(self, "car", SExp::car, make_unary_expr);

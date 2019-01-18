@@ -36,24 +36,22 @@ pub enum SExp {
 }
 
 impl SExp {
-    pub(super) fn car(self) -> Result {
+    pub(super) fn split_car(self) -> ::std::result::Result<(Self, Self), Error> {
         match self {
             Null => Err(Error::NullList),
             Atom(_) | Vector(_) => Err(Error::NotAList {
                 atom: self.to_string(),
             }),
-            Pair { head, .. } => Ok(*head),
+            Pair { head, tail } => Ok((*head, *tail)),
         }
     }
 
+    pub(super) fn car(self) -> Result {
+        Ok(self.split_car()?.0)
+    }
+
     pub(super) fn cdr(self) -> Result {
-        match self {
-            Null => Err(Error::NullList),
-            Atom(_) | Vector(_) => Err(Error::NotAList {
-                atom: self.to_string(),
-            }),
-            Pair { tail, .. } => Ok(*tail),
-        }
+        Ok(self.split_car()?.1)
     }
 
     pub(super) fn set_car(&mut self, new: Self) -> Result {
