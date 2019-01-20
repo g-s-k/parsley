@@ -47,21 +47,6 @@ pub type Result = ::std::result::Result<SExp, Error>;
 /// A type to represent an execution environment.
 type Env = HashMap<String, SExp>;
 
-/// Run a code snippet in an existing [Context](./struct.Context.html).
-///
-/// # Example
-/// ```
-/// use parsley::prelude::*;
-/// let mut ctx = Context::base();
-///
-/// assert!(run_in("x", &mut ctx).is_err());
-/// assert!(run_in("(define x 6)", &mut ctx).is_ok());
-/// assert_eq!(run_in("x", &mut ctx).unwrap(), SExp::from(6));
-/// ```
-pub fn run_in(code: &str, ctx: &mut Context) -> Result {
-    code.parse::<SExp>()?.eval(ctx)
-}
-
 /// Run a code snippet in the [base context](./struct.Context.html#method.base).
 ///
 /// # Example
@@ -73,10 +58,10 @@ pub fn run_in(code: &str, ctx: &mut Context) -> Result {
 /// assert_eq!(run("null").unwrap(), SExp::Null);
 /// ```
 pub fn run(code: &str) -> Result {
-    run_in(code, &mut Context::base())
+    Context::base().run(code)
 }
 
 /// Quick access to the important stuff.
 pub mod prelude {
-    pub use super::{eval, run, run_in, sexp, Context, SExp};
+    pub use super::{eval, run, sexp, Context, SExp};
 }

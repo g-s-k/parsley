@@ -45,7 +45,7 @@ pub fn repl(ctx: &mut Context) -> Result<String, ReadlineError> {
                     ".help" => {
                         println!("{}", REPL_HELP);
                     }
-                    other => match run_in(other, ctx) {
+                    other => match ctx.run(other) {
                         Ok(result) => {
                             let res = format!("{}", result);
                             if !res.is_empty() {

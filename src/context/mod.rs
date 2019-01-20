@@ -192,4 +192,19 @@ impl Context {
     pub fn overlay_env(&mut self, env: Option<Env>) {
         self.overlay = env;
     }
+
+    /// Run a code snippet in an existing `Context`.
+    ///
+    /// # Example
+    /// ```
+    /// use parsley::prelude::*;
+    /// let mut ctx = Context::base();
+    ///
+    /// assert!(ctx.run("x").is_err());
+    /// assert!(ctx.run("(define x 6)").is_ok());
+    /// assert_eq!(ctx.run("x").unwrap(), SExp::from(6));
+    /// ```
+    pub fn run(&mut self, expr: &str) -> Result {
+        expr.parse::<SExp>()?.eval(self)
+    }
 }

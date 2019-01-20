@@ -33,7 +33,7 @@ fn main() -> Result<()> {
     };
 
     if !code.is_empty() {
-        match run_in(&code, &mut base_context) {
+        match base_context.run(&code) {
             Ok(tree) => {
                 println!("{}", tree);
             }

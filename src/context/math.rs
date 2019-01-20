@@ -15,7 +15,7 @@ impl Context {
     /// use parsley::prelude::*;
     /// let mut ctx = &mut Context::base().math();
     /// let mut asrt = |lhs, rhs| {
-    ///     assert_eq!(run_in(lhs, ctx).unwrap(), run_in(rhs, ctx).unwrap())
+    ///     assert_eq!(ctx.run(lhs).unwrap(), ctx.run(rhs).unwrap())
     /// };
     ///
     /// asrt("(is-nan NaN)", "#t");
