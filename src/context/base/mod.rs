@@ -1,6 +1,10 @@
-use super::super::Primitive::{Character, Env, Procedure, String as LispString, Symbol, Void};
+use std::fmt::Write;
+
+use super::super::Primitive::{
+    Boolean, Character, Env, Procedure, String as LispString, Symbol, Undefined, Void,
+};
 use super::super::SExp::{self, Atom, Null, Pair};
-use super::super::{Env as Environment, Error};
+use super::super::{Error, Result};
 
 use super::utils::*;
 use super::Context;
@@ -28,38 +32,16 @@ macro_rules! define {
     };
 }
 
-macro_rules! tup_ctx_env {
-    ( $name:expr, $proc:expr ) => {
-        (
-            $name.to_string(),
-            $crate::SExp::ctx_proc($proc, Some($name)),
-        )
-    };
+fn unescape(s: &str) -> String {
+    s.replace("\\n", "\n")
+        .replace("\\t", "\t")
+        .replace("\\\\", "\\")
+        .replace("\\r", "\r")
+        .replace("\\0", "\0")
+        .replace("\\\"", "\"")
 }
 
 impl Context {
-    pub(super) fn core() -> Environment {
-        [
-            tup_ctx_env!("eval", |e, c| e.car()?.eval(c)?.eval(c)),
-            tup_ctx_env!("apply", SExp::do_apply),
-            tup_ctx_env!("and", SExp::eval_and),
-            tup_ctx_env!("begin", SExp::eval_begin),
-            tup_ctx_env!("case", SExp::eval_case),
-            tup_ctx_env!("cond", SExp::eval_cond),
-            tup_ctx_env!("define", SExp::eval_define),
-            tup_ctx_env!("if", SExp::eval_if),
-            tup_ctx_env!("lambda", |e, c| SExp::eval_lambda(e, c, false)),
-            tup_ctx_env!("let", SExp::eval_let),
-            tup_ctx_env!("named-lambda", |e, c| SExp::eval_lambda(e, c, true)),
-            tup_ctx_env!("or", SExp::eval_or),
-            tup_ctx_env!("quote", SExp::eval_quote),
-            tup_ctx_env!("set!", SExp::eval_set),
-        ]
-        .iter()
-        .cloned()
-        .collect()
-    }
-
     /// Base context - defines a number of useful functions and constants for
     /// use in the runtime.
     ///
@@ -169,7 +151,7 @@ impl Context {
         define_with!(self, "car", SExp::car, make_unary_expr);
         define_with!(self, "cdr", SExp::cdr, make_unary_expr);
 
-        define_ctx!(self, "set-car!", |e, c| match e.len() {
+        define_ctx!(self, "set-car!", |c, e| match e.len() {
             2 => {
                 let (car, cdr) = e.split_car()?;
                 let new = cdr.car()?;
@@ -177,8 +159,7 @@ impl Context {
                 match car {
                     Atom(Symbol(key)) => {
                         if let Some(mut val) = c.get(&key) {
-                            let new_val = new.eval(c)?;
-                            val.set_car(new_val)?;
+                            val.set_car(c.eval(new)?)?;
                             c.set(&key, val)
                         } else {
                             Err(Error::UndefinedSymbol { sym: key })
@@ -193,7 +174,7 @@ impl Context {
             given => Err(Error::Arity { expected: 2, given }),
         });
 
-        define_ctx!(self, "set-cdr!", |e, c| match e.len() {
+        define_ctx!(self, "set-cdr!", |c, e| match e.len() {
             2 => {
                 let (car, cdr) = e.split_car()?;
                 let new = cdr.car()?;
@@ -201,8 +182,7 @@ impl Context {
                 match car {
                     Atom(Symbol(key)) => {
                         if let Some(mut val) = c.get(&key) {
-                            let new_val = new.eval(c)?;
-                            val.set_cdr(new_val)?;
+                            val.set_cdr(c.eval(new)?)?;
                             c.set(&key, val)
                         } else {
                             Err(Error::UndefinedSymbol { sym: key })
@@ -225,15 +205,108 @@ impl Context {
         );
 
         // i/o
-        define_ctx!(self, "display", |e, c| SExp::do_print(e, c, false, false));
-        define_ctx!(self, "displayln", |e, c| SExp::do_print(e, c, true, false));
-        define_ctx!(self, "write", |e, c| SExp::do_print(e, c, false, true));
-        define_ctx!(self, "writeln", |e, c| SExp::do_print(e, c, true, true));
+        define_ctx!(self, "display", |e, c| Self::do_print(e, c, false, false));
+        define_ctx!(self, "displayln", |e, c| Self::do_print(e, c, true, false));
+        define_ctx!(self, "write", |e, c| Self::do_print(e, c, false, true));
+        define_ctx!(self, "writeln", |e, c| Self::do_print(e, c, true, true));
 
         // functional goodness
-        define_ctx!(self, "map", SExp::eval_map);
-        define_ctx!(self, "foldl", SExp::eval_fold);
-        define_ctx!(self, "filter", SExp::eval_filter);
+        define_ctx!(self, "map", Self::eval_map);
+        define_ctx!(self, "foldl", Self::eval_fold);
+        define_ctx!(self, "filter", Self::eval_filter);
+    }
+
+    fn do_print(&mut self, expr: SExp, newline: bool, debug: bool) -> Result {
+        if let Pair {
+            head,
+            tail: box Null,
+        } = expr
+        {
+            let ending = if newline { "\n" } else { "" };
+            let hevl = self.eval(*head)?;
+            let unescaped = unescape(&if debug {
+                format!("{:?}{}", hevl, ending)
+            } else {
+                format!("{}{}", hevl, ending)
+            });
+            match write!(self, "{}", unescaped) {
+                Ok(()) => Ok(Atom(Undefined)),
+                Err(e) => Err(Error::IO(e)),
+            }
+        } else {
+            Err(Error::Syntax {
+                exp: expr.to_string(),
+            })
+        }
+    }
+
+    fn eval_map(&mut self, expr: SExp) -> Result {
+        match expr {
+            Pair {
+                head,
+                tail:
+                    box Pair {
+                        head: exp,
+                        tail: box Null,
+                    },
+            } => self
+                .eval(*exp)?
+                .into_iter()
+                .map(|e| self.eval(Null.cons(e).cons((*head).to_owned())))
+                .collect(),
+            exp => Err(Error::Syntax {
+                exp: exp.to_string(),
+            }),
+        }
+    }
+
+    fn eval_fold(&mut self, expr: SExp) -> Result {
+        match expr {
+            Pair {
+                head,
+                tail:
+                    box Pair {
+                        head: init,
+                        tail:
+                            box Pair {
+                                head: exp,
+                                tail: box Null,
+                            },
+                    },
+            } => self.eval(*exp)?.into_iter().fold(Ok(*init), |a, e| match a {
+                Ok(acc) => self.eval(Null.cons(e).cons(acc).cons((*head).to_owned())),
+                err => err,
+            }),
+            exp => Err(Error::Syntax {
+                exp: exp.to_string(),
+            }),
+        }
+    }
+
+    fn eval_filter(&mut self, expr: SExp) -> Result {
+        match expr {
+            Pair {
+                head: predicate,
+                tail:
+                    box Pair {
+                        head: list,
+                        tail: box Null,
+                    },
+            } => self
+                .eval(*list)?
+                .into_iter()
+                .filter_map(
+                    |e| match self.eval(Null.cons(e.clone()).cons((*predicate).clone())) {
+                        Ok(Atom(Boolean(false))) => None,
+                        Ok(_) => Some(Ok(e)),
+                        err => Some(err),
+                    },
+                )
+                .collect(),
+            exp => Err(Error::Syntax {
+                exp: exp.to_string(),
+            }),
+        }
     }
 
     fn num_base(&mut self) {

@@ -96,7 +96,7 @@ impl Context {
             make_binary_expr
         );
 
-        define_ctx!(self, "vector-set!", |expr, ctx| if let Pair {
+        define_ctx!(self, "vector-set!", |ctx, expr| if let Pair {
             head: box Atom(Symbol(sym)),
             tail:
                 box Pair {
@@ -128,7 +128,7 @@ impl Context {
             })
         });
 
-        define_ctx!(self, "vector-map", |expr, ctx| if let Pair {
+        define_ctx!(self, "vector-map", |ctx, expr| if let Pair {
             head: box proc,
             tail:
                 box Pair {
@@ -139,7 +139,7 @@ impl Context {
         {
             let mut new_vec = Vec::new();
             for expression in vec {
-                new_vec.push(Null.cons(expression).cons(proc.clone()).eval(ctx)?);
+                new_vec.push(ctx.eval(Null.cons(expression).cons(proc.clone()))?);
             }
             Ok(Vector(new_vec))
         } else {

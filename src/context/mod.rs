@@ -1,8 +1,9 @@
-use super::Primitive::Undefined;
+use super::Primitive::{self, Undefined};
 use super::SExp::{self, Atom};
 use super::{Env, Error, Result};
 
 mod base;
+mod core;
 mod math;
 pub mod utils;
 mod write;
@@ -205,6 +206,82 @@ impl Context {
     /// assert_eq!(ctx.run("x").unwrap(), SExp::from(6));
     /// ```
     pub fn run(&mut self, expr: &str) -> Result {
-        expr.parse::<SExp>()?.eval(self)
+        self.eval(expr.parse::<SExp>()?)
+    }
+
+    /// Evaluate an S-Expression in a context.
+    ///
+    /// The context will retain any definitions bound during evaluation
+    /// (e.g. `define`, `set!`).
+    ///
+    /// # Examples
+    /// ```
+    /// use parsley::prelude::*;
+    /// let result = sexp![SExp::sym("eq?"), 0, 1].eval(&mut Context::base());
+    /// assert_eq!(result.unwrap(), SExp::from(false));
+    /// ```
+    /// ```
+    /// use parsley::prelude::*;
+    /// let exp1 = sexp![SExp::sym("define"), SExp::sym("x"), 10];
+    /// let exp2 = SExp::sym("x");
+    ///
+    /// let mut ctx = Context::base();
+    ///
+    /// exp1.eval(&mut ctx);
+    /// assert_eq!(exp2.eval(&mut ctx).unwrap(), SExp::from(10));
+    /// ```
+    pub fn eval(&mut self, expr: SExp) -> Result {
+        use super::primitives::proc::Procedure::Ctx;
+        use SExp::{Atom, Null, Pair, Vector};
+
+        match expr {
+            Null => Err(Error::NullList),
+            Atom(Primitive::Symbol(sym)) => match self.get(&sym) {
+                None | Some(Atom(Primitive::Undefined)) => Err(Error::UndefinedSymbol { sym }),
+                Some(exp) => Ok(exp),
+            },
+            Atom(_) | Vector(_) => Ok(expr),
+            Pair { head, tail } => {
+                let proc = self.eval(*head)?;
+                let applic = if let Atom(Primitive::Procedure { f: Ctx(_), .. }) = proc {
+                    *tail
+                } else {
+                    tail.into_iter().map(|e| self.eval(e)).collect::<Result>()?
+                }
+                .cons(proc);
+                self.apply(applic)
+            }
+        }
+    }
+
+    fn apply(&mut self, expr: SExp) -> Result {
+        use super::primitives::proc::Procedure::{Basic, Ctx};
+        use SExp::{Atom, Null, Pair, Vector};
+
+        match expr {
+            Null | Atom(_) | Vector(_) => Ok(expr),
+            Pair { head, tail } => match *head {
+                Atom(Primitive::Procedure { f, env, .. }) => {
+                    self.overlay_env(env);
+                    let result = match f {
+                        Basic(p) => p(*tail),
+                        Ctx(p) => p(self, *tail),
+                    };
+                    self.overlay_env(None);
+                    result
+                }
+                Atom(Primitive::Symbol(sym)) => Err(Error::NotAProcedure {
+                    exp: sym.to_string(),
+                }),
+                Pair {
+                    head: proc,
+                    tail: tail2,
+                } => {
+                    let the_proc = self.eval(*proc)?;
+                    self.eval(tail2.cons(the_proc))
+                },
+                _ => Ok(tail.cons(*head)),
+            },
+        }
     }
 }
