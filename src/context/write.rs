@@ -5,15 +5,18 @@ use super::Context;
 const PREALLOC_BUFFER: usize = 199;
 
 impl Context {
+    /// Start capturing printed content in a buffer.
     pub fn capture(&mut self) {
         self.out = Some(String::with_capacity(PREALLOC_BUFFER));
     }
 
+    /// Capture `display` and `write` statement output in a buffer.
     pub fn capturing(mut self) -> Self {
         self.capture();
         self
     }
 
+    /// Get the captured side-effect output.
     pub fn get_output(&mut self) -> Option<String> {
         self.out.take()
     }

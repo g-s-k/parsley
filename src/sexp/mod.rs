@@ -137,6 +137,7 @@ impl SExp {
         }
     }
 
+    /// Make a basic (pure fuctional) procedure.
     pub fn proc<F>(f: F, name: Option<&str>) -> Self
     where
         F: Fn(Self) -> Result + 'static,
@@ -148,6 +149,7 @@ impl SExp {
         })
     }
 
+    /// Make a procedure that can mutate or query its execution context.
     pub fn ctx_proc<F>(f: F, name: Option<&str>) -> Self
     where
         F: Fn(Self, &mut Context) -> Result + 'static,

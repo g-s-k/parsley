@@ -175,6 +175,7 @@ impl Context {
         })
     }
 
+    /// Get a snapshot of environment state for a list of symbols.
     pub fn close(&self, vars: Vec<&str>) -> Env {
         let mut out = Env::new();
 
@@ -187,6 +188,7 @@ impl Context {
         out
     }
 
+    /// Use definitions from a closure (or purge the existing ones)
     pub fn overlay_env(&mut self, env: Option<Env>) {
         self.overlay = env;
     }
