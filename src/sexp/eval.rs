@@ -1,5 +1,3 @@
-mod tests;
-
 /// Evaluate one or more S-Expressions, in the base context or your own custom one.
 ///
 /// # Examples
