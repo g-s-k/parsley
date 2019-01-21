@@ -42,8 +42,8 @@ mod utils;
 pub use self::context::{utils as proc_utils, Context};
 pub use self::errors::Error;
 use self::primitives::Primitive;
-pub use proc::{Arity, Func, Proc};
 pub use self::sexp::SExp;
+pub use proc::{Arity, Func, Proc};
 
 /// A shorthand Result type.
 pub type Result = ::std::result::Result<SExp, Error>;

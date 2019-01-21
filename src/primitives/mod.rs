@@ -1,8 +1,8 @@
 use std::fmt;
 use std::string::String as CoreString;
 
-use super::Env as Environment;
 use super::proc::Proc;
+use super::Env as Environment;
 
 use self::Primitive::{
     Boolean, Character, Env, Number, Procedure, String, Symbol, Undefined, Void,

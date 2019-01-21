@@ -4,7 +4,7 @@
 
 use std::rc::Rc;
 
-use super::super::{Arity, Error, Func, Primitive, Proc, SExp};
+use super::super::{Error, Func, Primitive, Proc, SExp};
 
 /// Make a procedure that takes one numeric argument.
 ///
@@ -44,7 +44,7 @@ where
                 given: expr.type_of().to_string(),
             }),
         })),
-        Arity::Exact(1),
+        1,
         None,
         name,
     ))
@@ -88,7 +88,7 @@ where
                 given: e.type_of().to_string(),
             }),
         })),
-        Arity::Exact(2),
+        2,
         None,
         name,
     ))
@@ -140,7 +140,7 @@ where
                 Err(err) => Err(err),
             }
         })),
-        Arity::Min(0),
+        0,
         None,
         name,
     ))
@@ -205,7 +205,7 @@ where
                 }),
             }
         })),
-        Arity::Min(1),
+        1,
         None,
         name,
     ))
@@ -232,7 +232,7 @@ where
                 given: 0,
             }),
         })),
-        Arity::Exact(1),
+        1,
         None,
         name,
     ))
@@ -270,7 +270,7 @@ where
                 given: 0,
             }),
         })),
-        Arity::Exact(2),
+        2,
         None,
         name,
     ))
@@ -299,7 +299,7 @@ where
                 given: other_variant.iter().count(),
             }),
         })),
-        Arity::Exact(3),
+        3,
         None,
         name,
     ))

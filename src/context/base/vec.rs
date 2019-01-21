@@ -6,9 +6,9 @@
     clippy::cast_possible_truncation
 )]
 
+use super::super::super::Error;
 use super::super::super::Primitive::{Number, Symbol, Undefined};
 use super::super::super::SExp::{Atom, Null, Pair, Vector};
-use super::super::super::{Arity, Error};
 use super::super::utils::*;
 use super::super::Context;
 
@@ -138,7 +138,7 @@ impl Context {
                     given: expr.type_of().to_string(),
                 })
             },
-            Arity::Exact(2)
+            2
         );
 
         define_ctx!(
@@ -164,7 +164,7 @@ impl Context {
                     given: expr.type_of().to_string(),
                 })
             },
-            Arity::Exact(2)
+            2
         );
 
         define_with!(
