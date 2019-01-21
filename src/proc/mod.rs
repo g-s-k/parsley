@@ -3,21 +3,18 @@ use std::rc::Rc;
 
 use super::{Context, Env, Primitive, Result, SExp};
 
-pub type CtxFunc = Rc<Fn(&mut Context, SExp) -> Result>;
-pub type PureFunc = Rc<Fn(SExp) -> Result>;
-
 #[derive(Clone)]
 pub struct Proc {
     name: Option<String>,
     arity: Arity,
-    env: Option<Env>,
-    func: Func,
+    pub(crate) env: Option<Env>,
+    pub(crate) func: Func,
 }
 
 impl Proc {
-    fn new<T>(func: T, arity: Arity, env: Option<Env>, name: Option<&str>) -> Self
+    pub fn new<T>(func: T, arity: Arity, env: Option<Env>, name: Option<&str>) -> Self
     where
-        T: Into<Func>,
+        Func: From<T>,
     {
         Self {
             name: name.map(String::from),
@@ -28,25 +25,31 @@ impl Proc {
     }
 }
 
+impl fmt::Debug for Proc {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self)
+    }
+}
+
 impl fmt::Display for Proc {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self.name {
+        match &self.name {
             Some(n) => write!(f, "#<procedure:{}>", n),
             None => write!(f, "#<procedure>"),
         }
     }
 }
 
-impl Into<SExp> for Proc {
-    fn into(self) -> SExp {
-        SExp::Atom(Primitive::Procedure(self))
+impl From<Proc> for SExp {
+    fn from(p: Proc) -> Self {
+        SExp::Atom(Primitive::Procedure(p))
     }
 }
 
 #[derive(Copy, Clone, Debug)]
 pub enum Arity {
     Exact(usize),
-    Minimum(usize),
+    Min(usize),
     Range(usize, usize),
 }
 
@@ -56,7 +59,7 @@ impl Into<SExp> for Arity {
 
         match self {
             Exact(n) => (n as f64, n as f64).into(),
-            Minimum(n) => (n as f64, false).into(),
+            Min(n) => (n as f64, false).into(),
             Range(min, max) => (min as f64, max as f64).into(),
         }
     }
@@ -64,18 +67,18 @@ impl Into<SExp> for Arity {
 
 #[derive(Clone)]
 pub enum Func {
-    Ctx(Rc<CtxFunc>),
-    Pure(Rc<PureFunc>),
+    Ctx(Rc<Fn(&mut Context, SExp) -> Result>),
+    Pure(Rc<Fn(SExp) -> Result>),
 }
 
-impl From<CtxFunc> for Func {
-    fn from(f: CtxFunc) -> Self {
-        Func::Ctx(Rc::new(f))
+impl From<Rc<dyn Fn(&mut Context, SExp) -> Result>> for Func {
+    fn from(f: Rc<dyn Fn(&mut Context, SExp) -> Result>) -> Self {
+        Func::Ctx(f)
     }
 }
 
-impl From<PureFunc> for Func {
-    fn from(f: PureFunc) -> Self {
-        Func::Pure(Rc::new(f))
+impl From<Rc<dyn Fn(SExp) -> Result>> for Func {
+    fn from(f: Rc<dyn Fn(SExp) -> Result>) -> Self {
+        Func::Pure(f)
     }
 }

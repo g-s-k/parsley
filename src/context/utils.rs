@@ -2,7 +2,9 @@
 //!
 //! Reduce code duplication for type/arity checking and value packaging.
 
-use super::super::{Error, Primitive, SExp};
+use std::rc::Rc;
+
+use super::super::{Arity, Error, Func, Primitive, Proc, SExp};
 
 /// Make a procedure that takes one numeric argument.
 ///
@@ -27,8 +29,8 @@ pub fn make_unary_numeric<T>(f: impl Fn(f64) -> T + 'static, name: Option<&str>)
 where
     T: Into<SExp>,
 {
-    SExp::proc(
-        move |e| match e {
+    SExp::from(Proc::new(
+        Func::Pure(Rc::new(move |e| match e {
             SExp::Pair {
                 head: box SExp::Atom(Primitive::Number(n)),
                 ..
@@ -41,9 +43,11 @@ where
                 expected: "number",
                 given: expr.type_of().to_string(),
             }),
-        },
+        })),
+        Arity::Exact(1),
+        None,
         name,
-    )
+    ))
 }
 
 /// Make a procedure that takes two numeric arguments.
@@ -69,8 +73,8 @@ pub fn make_binary_numeric<T>(f: impl Fn(f64, f64) -> T + 'static, name: Option<
 where
     T: Into<SExp>,
 {
-    SExp::proc(
-        move |e| match e {
+    SExp::from(Proc::new(
+        Func::Pure(Rc::new(move |e| match e {
             SExp::Pair {
                 head: box SExp::Atom(Primitive::Number(n1)),
                 tail:
@@ -83,9 +87,11 @@ where
                 expected: "list",
                 given: e.type_of().to_string(),
             }),
-        },
+        })),
+        Arity::Exact(2),
+        None,
         name,
-    )
+    ))
 }
 
 /// Make a variadic procedure that takes a list of numeric arguments and folds
@@ -114,26 +120,30 @@ where
     F: Fn(T, f64) -> T + 'static,
     T: Into<SExp> + Clone + 'static,
 {
-    SExp::proc(
-        move |exp: SExp| match exp.into_iter().fold(Ok(init.to_owned()), |a, e| {
-            if let Ok(val) = a {
-                if let SExp::Atom(Primitive::Number(n)) = e {
-                    Ok(f(val, n))
+    SExp::from(Proc::new(
+        Func::Pure(Rc::new(move |exp: SExp| {
+            match exp.into_iter().fold(Ok(init.to_owned()), |a, e| {
+                if let Ok(val) = a {
+                    if let SExp::Atom(Primitive::Number(n)) = e {
+                        Ok(f(val, n))
+                    } else {
+                        Err(Error::Type {
+                            expected: "number",
+                            given: e.type_of().to_string(),
+                        })
+                    }
                 } else {
-                    Err(Error::Type {
-                        expected: "number",
-                        given: e.type_of().to_string(),
-                    })
+                    a
                 }
-            } else {
-                a
+            }) {
+                Ok(v) => Ok(v.into()),
+                Err(err) => Err(err),
             }
-        }) {
-            Ok(v) => Ok(v.into()),
-            Err(err) => Err(err),
-        },
+        })),
+        Arity::Min(0),
+        None,
         name,
-    )
+    ))
 }
 
 /// Make a variadic procedure that takes a list of numeric arguments, reserves
@@ -162,8 +172,8 @@ pub fn make_fold_from0_numeric<F>(f: F, name: Option<&str>) -> SExp
 where
     F: Fn(f64, f64) -> f64 + 'static,
 {
-    SExp::proc(
-        move |exp: SExp| {
+    SExp::from(Proc::new(
+        Func::Pure(Rc::new(move |exp: SExp| {
             let mut i = exp.into_iter();
             match i.next() {
                 Some(SExp::Atom(Primitive::Number(first))) => {
@@ -194,17 +204,19 @@ where
                     given: 0,
                 }),
             }
-        },
+        })),
+        Arity::Min(1),
+        None,
         name,
-    )
+    ))
 }
 
 pub fn make_unary_expr<F>(f: F, name: Option<&str>) -> SExp
 where
     F: Fn(SExp) -> crate::Result + 'static,
 {
-    SExp::proc(
-        move |exp| match exp {
+    SExp::from(Proc::new(
+        Func::Pure(Rc::new(move |exp| match exp {
             SExp::Pair {
                 head: box arg,
                 tail: box SExp::Null,
@@ -219,17 +231,19 @@ where
                 expected: 1,
                 given: 0,
             }),
-        },
+        })),
+        Arity::Exact(1),
+        None,
         name,
-    )
+    ))
 }
 
 pub fn make_binary_expr<F>(f: F, name: Option<&str>) -> SExp
 where
     F: Fn(SExp, SExp) -> crate::Result + 'static,
 {
-    SExp::proc(
-        move |exp| match exp {
+    SExp::from(Proc::new(
+        Func::Pure(Rc::new(move |exp| match exp {
             SExp::Pair {
                 head: box arg0,
                 tail:
@@ -255,17 +269,19 @@ where
                 expected: 2,
                 given: 0,
             }),
-        },
+        })),
+        Arity::Exact(2),
+        None,
         name,
-    )
+    ))
 }
 
 pub fn make_ternary_expr<F>(f: F, name: Option<&str>) -> SExp
 where
     F: Fn(SExp, SExp, SExp) -> crate::Result + 'static,
 {
-    SExp::proc(
-        move |exp| match exp {
+    SExp::from(Proc::new(
+        Func::Pure(Rc::new(move |exp| match exp {
             SExp::Pair {
                 head: box arg0,
                 tail:
@@ -282,7 +298,9 @@ where
                 expected: 3,
                 given: other_variant.iter().count(),
             }),
-        },
+        })),
+        Arity::Exact(3),
+        None,
         name,
-    )
+    ))
 }

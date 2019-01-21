@@ -4,7 +4,7 @@ use super::super::Primitive::{
     Boolean, Character, Env, Procedure, String as LispString, Symbol, Undefined, Void,
 };
 use super::super::SExp::{self, Atom, Null, Pair};
-use super::super::{Error, Result};
+use super::super::{Arity, Error, Result};
 
 use super::utils::*;
 use super::Context;
@@ -20,15 +20,30 @@ macro_rules! define_with {
 }
 
 macro_rules! define_ctx {
-    ( $ctx:ident, $name:expr, $proc:expr ) => {
-        define_with!($ctx, $name, $proc, $crate::SExp::ctx_proc)
+    ( $ctx:ident, $name:expr, $proc:expr, $arity:expr ) => {
+        $ctx.lang.insert(
+            $name.to_string(),
+            $crate::SExp::from($crate::Proc::new(
+                $crate::Func::Ctx(::std::rc::Rc::new($proc)),
+                $arity,
+                None,
+                ::std::option::Option::Some($name),
+            )),
+        )
     };
 }
 
 macro_rules! define {
-    ( $ctx:ident, $name:expr, $proc:expr ) => {
-        $ctx.lang
-            .insert($name.to_string(), $crate::SExp::proc($proc, Some($name)))
+    ( $ctx:ident, $name:expr, $proc:expr, $arity:expr ) => {
+        $ctx.lang.insert(
+            $name.to_string(),
+            $crate::SExp::from($crate::Proc::new(
+                $crate::Func::Pure(::std::rc::Rc::new($proc)),
+                $arity,
+                None,
+                Some($name),
+            )),
+        )
     };
 }
 
@@ -89,115 +104,155 @@ impl Context {
         );
 
         // Strings
-        define!(ret, "string->list", |e| match e.len() {
-            1 => match &e[0] {
-                Atom(LispString(s)) => Ok(s.chars().map(SExp::from).collect()),
-                exp => Err(Error::Type {
-                    expected: "string",
-                    given: exp.type_of().to_string()
+        define!(
+            ret,
+            "string->list",
+            |e| match e.len() {
+                1 => match &e[0] {
+                    Atom(LispString(s)) => Ok(s.chars().map(SExp::from).collect()),
+                    exp => Err(Error::Type {
+                        expected: "string",
+                        given: exp.type_of().to_string()
+                    }),
+                },
+                given => Err(Error::Arity { expected: 1, given }),
+            },
+            Arity::Exact(1)
+        );
+        define!(
+            ret,
+            "list->string",
+            |e| match e {
+                Pair { .. } => {
+                    match e.into_iter().fold(Ok(String::new()), |s, e| match e {
+                        Atom(Character(ref c)) => {
+                            if let Ok(st) = s {
+                                let mut stri = st;
+                                stri.push(*c);
+                                Ok(stri)
+                            } else {
+                                s
+                            }
+                        }
+                        _ => Err(Error::Type {
+                            expected: "char",
+                            given: e.type_of().to_string(),
+                        }),
+                    }) {
+                        Ok(s) => Ok(Atom(LispString(s))),
+                        Err(err) => Err(err),
+                    }
+                }
+                _ => Err(Error::Type {
+                    expected: "list",
+                    given: e.type_of().to_string()
                 }),
             },
-            given => Err(Error::Arity { expected: 1, given }),
-        });
-        define!(ret, "list->string", |e| match e {
-            Pair { .. } => {
-                match e.into_iter().fold(Ok(String::new()), |s, e| match e {
-                    Atom(Character(ref c)) => {
-                        if let Ok(st) = s {
-                            let mut stri = st;
-                            stri.push(*c);
-                            Ok(stri)
-                        } else {
-                            s
-                        }
-                    }
-                    _ => Err(Error::Type {
-                        expected: "char",
-                        given: e.type_of().to_string(),
-                    }),
-                }) {
-                    Ok(s) => Ok(Atom(LispString(s))),
-                    Err(err) => Err(err),
-                }
-            }
-            _ => Err(Error::Type {
-                expected: "list",
-                given: e.type_of().to_string()
-            }),
-        });
+            Arity::Exact(1)
+        );
 
         ret
     }
 
     fn std(&mut self) {
-        define!(self, "eq?", |e| match e.len() {
-            2 => Ok((e[0] == e[1]).into()),
-            given => Err(Error::Arity { expected: 2, given }),
-        });
+        define!(
+            self,
+            "eq?",
+            |e| match e.len() {
+                2 => Ok((e[0] == e[1]).into()),
+                given => Err(Error::Arity { expected: 2, given }),
+            },
+            Arity::Exact(2)
+        );
 
-        define!(self, "null?", |e| Ok((e == ((),).into()).into()));
+        define!(
+            self,
+            "null?",
+            |e| Ok((e == ((),).into()).into()),
+            Arity::Exact(1)
+        );
         self.lang.insert("null".to_string(), Null);
-        define!(self, "void", |_| Ok(Atom(Void)));
-        define!(self, "list", Ok);
-        define!(self, "not", |e| Ok((e == (false,).into()).into()));
+        define!(self, "void", |_| Ok(Atom(Void)), Arity::Exact(0));
+        define!(self, "list", Ok, Arity::Min(0));
+        define!(
+            self,
+            "not",
+            |e| Ok((e == (false,).into()).into()),
+            Arity::Exact(1)
+        );
 
-        define!(self, "cons", |e| match e.len() {
-            2 => {
-                let (car, cdr) = e.split_car()?;
-                let (car2, _) = cdr.split_car()?;
-                Ok(car2.cons(car))
-            }
-            given => Err(Error::Arity { expected: 2, given }),
-        });
+        define!(
+            self,
+            "cons",
+            |e| match e.len() {
+                2 => {
+                    let (car, cdr) = e.split_car()?;
+                    let (car2, _) = cdr.split_car()?;
+                    Ok(car2.cons(car))
+                }
+                given => Err(Error::Arity { expected: 2, given }),
+            },
+            Arity::Exact(2)
+        );
 
         define_with!(self, "car", SExp::car, make_unary_expr);
         define_with!(self, "cdr", SExp::cdr, make_unary_expr);
 
-        define_ctx!(self, "set-car!", |c, e| match e.len() {
-            2 => {
-                let (car, cdr) = e.split_car()?;
-                let new = cdr.car()?;
+        define_ctx!(
+            self,
+            "set-car!",
+            |c, e| match e.len() {
+                2 => {
+                    let (car, cdr) = e.split_car()?;
+                    let new = cdr.car()?;
 
-                match car {
-                    Atom(Symbol(key)) => {
-                        if let Some(mut val) = c.get(&key) {
-                            val.set_car(c.eval(new)?)?;
-                            c.set(&key, val)
-                        } else {
-                            Err(Error::UndefinedSymbol { sym: key })
+                    match car {
+                        Atom(Symbol(key)) => {
+                            if let Some(mut val) = c.get(&key) {
+                                val.set_car(c.eval(new)?)?;
+                                c.set(&key, val)
+                            } else {
+                                Err(Error::UndefinedSymbol { sym: key })
+                            }
                         }
+                        other => Err(Error::Type {
+                            expected: "symbol",
+                            given: other.type_of().to_string(),
+                        }),
                     }
-                    other => Err(Error::Type {
-                        expected: "symbol",
-                        given: other.type_of().to_string(),
-                    }),
                 }
-            }
-            given => Err(Error::Arity { expected: 2, given }),
-        });
+                given => Err(Error::Arity { expected: 2, given }),
+            },
+            Arity::Exact(2)
+        );
 
-        define_ctx!(self, "set-cdr!", |c, e| match e.len() {
-            2 => {
-                let (car, cdr) = e.split_car()?;
-                let new = cdr.car()?;
+        define_ctx!(
+            self,
+            "set-cdr!",
+            |c, e| match e.len() {
+                2 => {
+                    let (car, cdr) = e.split_car()?;
+                    let new = cdr.car()?;
 
-                match car {
-                    Atom(Symbol(key)) => {
-                        if let Some(mut val) = c.get(&key) {
-                            val.set_cdr(c.eval(new)?)?;
-                            c.set(&key, val)
-                        } else {
-                            Err(Error::UndefinedSymbol { sym: key })
+                    match car {
+                        Atom(Symbol(key)) => {
+                            if let Some(mut val) = c.get(&key) {
+                                val.set_cdr(c.eval(new)?)?;
+                                c.set(&key, val)
+                            } else {
+                                Err(Error::UndefinedSymbol { sym: key })
+                            }
                         }
+                        other => Err(Error::Type {
+                            expected: "symbol",
+                            given: other.type_of().to_string(),
+                        }),
                     }
-                    other => Err(Error::Type {
-                        expected: "symbol",
-                        given: other.type_of().to_string(),
-                    }),
                 }
-            }
-            given => Err(Error::Arity { expected: 2, given }),
-        });
+                given => Err(Error::Arity { expected: 2, given }),
+            },
+            Arity::Exact(2)
+        );
 
         define_with!(
             self,
@@ -207,15 +262,35 @@ impl Context {
         );
 
         // i/o
-        define_ctx!(self, "display", |e, c| Self::do_print(e, c, false, false));
-        define_ctx!(self, "displayln", |e, c| Self::do_print(e, c, true, false));
-        define_ctx!(self, "write", |e, c| Self::do_print(e, c, false, true));
-        define_ctx!(self, "writeln", |e, c| Self::do_print(e, c, true, true));
+        define_ctx!(
+            self,
+            "display",
+            |e, c| Self::do_print(e, c, false, false),
+            Arity::Exact(1)
+        );
+        define_ctx!(
+            self,
+            "displayln",
+            |e, c| Self::do_print(e, c, true, false),
+            Arity::Exact(1)
+        );
+        define_ctx!(
+            self,
+            "write",
+            |e, c| Self::do_print(e, c, false, true),
+            Arity::Exact(1)
+        );
+        define_ctx!(
+            self,
+            "writeln",
+            |e, c| Self::do_print(e, c, true, true),
+            Arity::Exact(1)
+        );
 
         // functional goodness
-        define_ctx!(self, "map", Self::eval_map);
-        define_ctx!(self, "foldl", Self::eval_fold);
-        define_ctx!(self, "filter", Self::eval_filter);
+        define_ctx!(self, "map", Self::eval_map, Arity::Exact(2));
+        define_ctx!(self, "foldl", Self::eval_fold, Arity::Exact(3));
+        define_ctx!(self, "filter", Self::eval_filter, Arity::Exact(2));
     }
 
     fn do_print(&mut self, expr: SExp, newline: bool, debug: bool) -> Result {
@@ -315,7 +390,7 @@ impl Context {
     }
 
     fn num_base(&mut self) {
-        define!(self, "zero?", |e: SExp| Ok((e.car()? == 0.into()).into()));
+        define!(self, "zero?", |e: SExp| Ok((e.car()? == 0.into()).into()), Arity::Exact(1));
         define_with!(self, "add1", |e| e + 1., make_unary_numeric);
         define_with!(self, "sub1", |e| e - 1., make_unary_numeric);
 
