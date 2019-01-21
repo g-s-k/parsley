@@ -14,10 +14,11 @@ pub struct Proc {
 }
 
 impl Proc {
-    pub fn new<T, U>(func: T, arity: U, env: Option<Env>, name: Option<&str>) -> Self
+    pub fn new<T, U, V>(func: T, arity: U, env: Option<Env>, name: Option<V>) -> Self
     where
         Arity: From<U>,
         Func: From<T>,
+        String: From<V>,
     {
         Self {
             name: name.map(String::from),
@@ -50,40 +51,38 @@ impl From<Proc> for SExp {
 }
 
 #[derive(Copy, Clone, Debug)]
-pub enum Arity {
-    Exact(usize),
-    Min(usize),
-    Range(usize, usize),
+pub struct Arity {
+    min: usize,
+    max: Option<usize>,
 }
 
 impl From<usize> for Arity {
-    fn from(n: usize) -> Self {
-        Arity::Exact(n)
+    fn from(min: usize) -> Self {
+        Self {
+            min,
+            max: Some(min),
+        }
     }
 }
 
 impl From<(usize,)> for Arity {
-    fn from((n,): (usize,)) -> Self {
-        Arity::Min(n)
+    fn from((min,): (usize,)) -> Self {
+        Self { min, max: None }
     }
 }
 
 impl From<(usize, usize)> for Arity {
-    fn from((n0, n1): (usize, usize)) -> Self {
-        if n0 == n1 {
-            Arity::Exact(n0)
-        } else {
-            Arity::Range(n0, n1)
-        }
+    fn from((min, max): (usize, usize)) -> Self {
+        Self { min, max: Some(max) }
     }
 }
 
 impl Into<SExp> for Arity {
     fn into(self) -> SExp {
-        match self {
-            Arity::Exact(n) => (n as f64, n as f64).into(),
-            Arity::Min(n) => (n as f64, false).into(),
-            Arity::Range(min, max) => (min as f64, max as f64).into(),
+        if let Some(n) = self.max {
+            (self.min as f64, n as f64).into()
+        } else {
+            (self.min as f64, false).into()
         }
     }
 }
