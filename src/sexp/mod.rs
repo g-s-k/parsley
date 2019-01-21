@@ -8,8 +8,7 @@ mod eval;
 mod iter;
 mod parse;
 
-use super::primitives::proc::Procedure::{Basic, Ctx};
-use super::{utils, Context, Error, Primitive, Result};
+use super::{utils, Error, Primitive, Result};
 
 use self::SExp::{Atom, Null, Pair, Vector};
 
@@ -143,29 +142,5 @@ impl SExp {
             Pair { .. } => "list",
             Vector(_) => "vector",
         }
-    }
-
-    /// Make a basic (pure fuctional) procedure.
-    pub fn proc<F>(f: F, name: Option<&str>) -> Self
-    where
-        F: Fn(Self) -> Result + 'static,
-    {
-        Atom(Primitive::Procedure {
-            f: Basic(Rc::new(f)),
-            name: name.map(String::from),
-            env: None,
-        })
-    }
-
-    /// Make a procedure that can mutate or query its execution context.
-    pub fn ctx_proc<F>(f: F, name: Option<&str>) -> Self
-    where
-        F: Fn(&mut Context, Self) -> Result + 'static,
-    {
-        Atom(Primitive::Procedure {
-            f: Ctx(Rc::new(f)),
-            name: name.map(String::from),
-            env: None,
-        })
     }
 }

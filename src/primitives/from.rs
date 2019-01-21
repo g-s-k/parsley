@@ -2,9 +2,8 @@ use std::rc::Rc;
 use std::str::FromStr;
 use std::string::String as CoreString;
 
-use super::super::{utils, Error, Result, SExp};
-use super::proc::Procedure::Basic;
-use super::Primitive::{self, Boolean, Character, Number, Procedure, String, Symbol};
+use super::super::{utils, Error};
+use super::Primitive::{self, Boolean, Character, Number, String, Symbol};
 
 impl FromStr for Primitive {
     type Err = Error;
@@ -80,18 +79,5 @@ impl From<&str> for Primitive {
 impl From<CoreString> for Primitive {
     fn from(s: CoreString) -> Self {
         String(s)
-    }
-}
-
-impl<F> From<F> for Primitive
-where
-    F: Fn(SExp) -> Result + 'static,
-{
-    fn from(f: F) -> Self {
-        Procedure {
-            f: Basic(Rc::new(f)),
-            name: None,
-            env: None,
-        }
     }
 }

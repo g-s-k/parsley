@@ -1,6 +1,7 @@
 use super::Primitive::{self, Undefined};
 use super::SExp::{self, Atom};
 use super::{Env, Error, Result};
+use super::proc::{Func, Proc};
 
 mod base;
 mod core;
@@ -233,7 +234,6 @@ impl Context {
     /// assert_eq!(ctx.eval(exp2).unwrap(), SExp::from(10));
     /// ```
     pub fn eval(&mut self, expr: SExp) -> Result {
-        use super::primitives::proc::Procedure::Ctx;
         use SExp::{Atom, Null, Pair, Vector};
 
         match expr {
@@ -245,7 +245,7 @@ impl Context {
             Atom(_) | Vector(_) => Ok(expr),
             Pair { head, tail } => {
                 let proc = self.eval(*head)?;
-                let applic = if let Atom(Primitive::Procedure { f: Ctx(_), .. }) = proc {
+                let applic = if let Atom(Primitive::Procedure(Proc { func: Func::Ctx(_), .. })) = proc {
                     *tail
                 } else {
                     tail.into_iter().map(|e| self.eval(e)).collect::<Result>()?
@@ -257,16 +257,16 @@ impl Context {
     }
 
     fn apply(&mut self, expr: SExp) -> Result {
-        use super::primitives::proc::Procedure::{Basic, Ctx};
+        use Func::{Ctx, Pure};
         use SExp::{Atom, Null, Pair, Vector};
 
         match expr {
             Null | Atom(_) | Vector(_) => Ok(expr),
             Pair { head, tail } => match *head {
-                Atom(Primitive::Procedure { f, env, .. }) => {
+                Atom(Primitive::Procedure(Proc { func, env, .. })) => {
                     self.overlay_env(env);
-                    let result = match f {
-                        Basic(p) => p(*tail),
+                    let result = match func {
+                        Pure(p) => p(*tail),
                         Ctx(p) => p(self, *tail),
                     };
                     self.overlay_env(None);
