@@ -217,18 +217,20 @@ impl Context {
     /// # Examples
     /// ```
     /// use parsley::prelude::*;
-    /// let result = sexp![SExp::sym("eq?"), 0, 1].eval(&mut Context::base());
+    /// let result = Context::base().eval(
+    ///     sexp![SExp::sym("eq?"), 0, 1]
+    /// );
     /// assert_eq!(result.unwrap(), SExp::from(false));
     /// ```
     /// ```
     /// use parsley::prelude::*;
+    /// let mut ctx = Context::base();
+    ///
     /// let exp1 = sexp![SExp::sym("define"), SExp::sym("x"), 10];
     /// let exp2 = SExp::sym("x");
     ///
-    /// let mut ctx = Context::base();
-    ///
-    /// exp1.eval(&mut ctx);
-    /// assert_eq!(exp2.eval(&mut ctx).unwrap(), SExp::from(10));
+    /// ctx.eval(exp1);
+    /// assert_eq!(ctx.eval(exp2).unwrap(), SExp::from(10));
     /// ```
     pub fn eval(&mut self, expr: SExp) -> Result {
         use super::primitives::proc::Procedure::Ctx;
@@ -279,7 +281,7 @@ impl Context {
                 } => {
                     let the_proc = self.eval(*proc)?;
                     self.eval(tail2.cons(the_proc))
-                },
+                }
                 _ => Ok(tail.cons(*head)),
             },
         }

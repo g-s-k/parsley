@@ -8,7 +8,7 @@ fn s(n: &str) -> SExp {
 }
 
 fn eval(e: SExp) -> Result {
-    e.eval(&mut Context::base())
+    Context::base().eval(e)
 }
 
 macro_rules! assert_eval_eq {

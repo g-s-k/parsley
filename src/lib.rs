@@ -30,10 +30,12 @@
 
 use std::collections::HashMap;
 
+#[macro_use]
+mod sexp;
+
 mod context;
 mod errors;
 mod primitives;
-mod sexp;
 mod utils;
 
 pub use self::context::{utils as proc_utils, Context};

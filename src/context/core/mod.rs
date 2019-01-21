@@ -5,6 +5,8 @@ use super::super::SExp::{self, Atom, Null, Pair, Vector};
 use super::super::{Env, Error, Primitive, Result};
 use super::Context;
 
+mod tests;
+
 macro_rules! tup_ctx_env {
     ( $name:expr, $proc:expr ) => {
         (
@@ -266,7 +268,7 @@ impl Context {
             .collect::<Vec<_>>();
         let env = self.close(syms_to_close);
         Atom(Primitive::Procedure {
-            f: Ctx(Rc::new(move |the_ctx: &mut Context, args: SExp| {
+            f: Ctx(Rc::new(move |the_ctx: &mut Self, args: SExp| {
                 // check arity
                 let given = args.iter().count();
                 if given != expected {
@@ -315,13 +317,14 @@ impl Context {
                                     head: val,
                                     tail: box Null,
                                 },
-                        } => match *val {
-                            Null => self.define(&key, Null),
-                            _ => {
+                        } => {
+                            if let Null = *val {
+                                self.define(&key, Null)
+                            } else {
                                 let inter = self.eval(*val)?;
                                 self.define(&key, inter)
                             }
-                        },
+                        }
                         exp => {
                             return Err(Error::Syntax {
                                 exp: exp.to_string(),

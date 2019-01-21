@@ -92,6 +92,15 @@ impl SExp {
         }
     }
 
+    /// Easy way to check for `Null` if you're planning on iterating
+    pub fn is_empty(&self) -> bool {
+        if let Null = self {
+            true
+        } else {
+            false
+        }
+    }
+
     /// Get the length of an S-Expression (vector or list)
     ///
     /// # Example

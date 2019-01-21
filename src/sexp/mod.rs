@@ -107,10 +107,10 @@ impl SExp {
     /// let mut ctx = Context::base();
     ///
     /// // A null list is an empty application
-    /// assert!(SExp::Null.eval(&mut ctx).is_err());
+    /// assert!(ctx.eval(SExp::Null).is_err());
     ///
-    /// // The symbol `null` (defined in `Context::base`) creates a quoted null list
-    /// let result = SExp::sym("null").eval(&mut ctx).unwrap();
+    /// // The symbol `null` (defined in `Context::base`) creates a null when evaluated
+    /// let result = ctx.run("null").unwrap();
     /// assert_eq!(result, SExp::Null);
     /// ```
     pub fn sym(sym: &str) -> Self {

@@ -51,7 +51,9 @@ impl Context {
     /// let mut ctx = Context::base();
     ///
     /// assert_eq!(
-    ///     sexp![SExp::sym("null?"), SExp::sym("null")].eval(&mut ctx).unwrap(),
+    ///     ctx.eval(
+    ///         sexp![SExp::sym("null?"), SExp::sym("null")]
+    ///     ).unwrap(),
     ///     SExp::from(true),
     /// );
     ///
@@ -273,10 +275,13 @@ impl Context {
                                 tail: box Null,
                             },
                     },
-            } => self.eval(*exp)?.into_iter().fold(Ok(*init), |a, e| match a {
-                Ok(acc) => self.eval(Null.cons(e).cons(acc).cons((*head).to_owned())),
-                err => err,
-            }),
+            } => self
+                .eval(*exp)?
+                .into_iter()
+                .fold(Ok(*init), |a, e| match a {
+                    Ok(acc) => self.eval(Null.cons(e).cons(acc).cons((*head).to_owned())),
+                    err => err,
+                }),
             exp => Err(Error::Syntax {
                 exp: exp.to_string(),
             }),

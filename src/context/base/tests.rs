@@ -2,56 +2,35 @@
 
 use super::*;
 
+fn eval(e: SExp) -> Result {
+    Context::base().eval(e)
+}
+
 #[test]
 fn eq_test() {
     let eq = || SExp::sym("eq?");
     let null = || SExp::sym("null");
 
+    assert_eq!(eval(sexp![eq(), null(), null()]).unwrap(), SExp::from(true));
+
+    assert_eq!(eval(sexp![eq(), null(), 2]).unwrap(), SExp::from(false));
+
     assert_eq!(
-        SExp::from(vec![eq(), null(), null()])
-            .eval(&mut Context::base())
-            .unwrap(),
+        eval(sexp![eq(), "woohoo", "woohoo"]).unwrap(),
         SExp::from(true)
     );
 
     assert_eq!(
-        SExp::from(vec![eq(), null(), 2.into()])
-            .eval(&mut Context::base())
-            .unwrap(),
-        SExp::from(false)
-    );
-
-    assert_eq!(
-        SExp::from(vec![eq(), "woohoo".into(), "woohoo".into()])
-            .eval(&mut Context::base())
-            .unwrap(),
+        eval(sexp![eq(), 1 + 2 + 3, 9. - 3.5 + 0.25 * 2.]).unwrap(),
         SExp::from(true)
     );
 
     assert_eq!(
-        SExp::from(vec![
-            eq(),
-            (1 + 2 + 3).into(),
-            (9. - 3.5 + 0.25 * 2.).into()
-        ])
-        .eval(&mut Context::base())
-        .unwrap(),
+        eval(sexp![eq(), (1, (2,)), (1, (2,))]).unwrap(),
         SExp::from(true)
     );
 
-    assert_eq!(
-        SExp::from(vec![eq(), (1, (2,)).into(), (1, (2,)).into()])
-            .eval(&mut Context::base())
-            .unwrap(),
-        SExp::from(true)
-    );
-
-    assert_eq!(
-        SExp::from(vec![eq(), 0.into(), (1, (2,)).into()])
-            .eval(&mut Context::base())
-            .unwrap(),
-        SExp::from(false)
-    );
+    assert_eq!(eval(sexp![eq(), 0, (1, (2,))]).unwrap(), SExp::from(false));
 }
 
 #[test]
@@ -61,68 +40,43 @@ fn null_test() {
     let quote = || SExp::sym("quote");
 
     assert_eq!(
-        SExp::from(vec![null(), (vec![quote(), SExp::sym("test")]).into()])
-            .eval(&mut Context::base())
-            .unwrap(),
+        eval(sexp![null(), sexp![quote(), SExp::sym("test")]]).unwrap(),
         SExp::from(false)
     );
 
+    assert_eq!(eval(sexp![null(), null_c()]).unwrap(), SExp::from(true));
+
     assert_eq!(
-        SExp::from(vec![null(), null_c()])
-            .eval(&mut Context::base())
-            .unwrap(),
+        eval(sexp![null(), (quote(), ((),))]).unwrap(),
         SExp::from(true)
     );
 
     assert_eq!(
-        SExp::from(vec![null(), ((quote(), ((),))).into()])
-            .eval(&mut Context::base())
-            .unwrap(),
-        SExp::from(true)
-    );
-
-    assert_eq!(
-        SExp::from(vec![null(), (vec![quote(), (false, ((),)).into()]).into()])
-            .eval(&mut Context::base())
-            .unwrap(),
+        eval(sexp![null(), sexp![quote(), (false, ((),))]]).unwrap(),
         SExp::from(false)
     );
 }
 
 #[test]
 fn null_const() {
-    assert_eq!(SExp::sym("null").eval(&mut Context::base()).unwrap(), Null);
+    assert_eq!(eval(SExp::sym("null")).unwrap(), Null);
 }
 
 #[test]
 fn not() {
     let not = || SExp::sym("not");
 
-    assert_eq!(
-        SExp::from(vec![not(), false.into()])
-            .eval(&mut Context::base())
-            .unwrap(),
-        SExp::from(true)
-    );
+    assert_eq!(eval(sexp![not(), false]).unwrap(), SExp::from(true));
+
+    assert_eq!(eval(sexp![not(), true]).unwrap(), SExp::from(false));
 
     assert_eq!(
-        SExp::from(vec![not(), true.into()])
-            .eval(&mut Context::base())
-            .unwrap(),
+        eval(sexp![not(), SExp::sym("null")]).unwrap(),
         SExp::from(false)
     );
 
     assert_eq!(
-        SExp::from(vec![not(), SExp::sym("null")])
-            .eval(&mut Context::base())
-            .unwrap(),
-        SExp::from(false)
-    );
-
-    assert_eq!(
-        SExp::from(vec![not(), (vec![1, 2, 3, 4]).into()])
-            .eval(&mut Context::base())
-            .unwrap(),
+        eval(sexp![not(), vec![1, 2, 3, 4]]).unwrap(),
         SExp::from(false)
     );
 }
@@ -144,23 +98,17 @@ fn cons() {
     );
 
     assert_eq!(
-        SExp::from(vec![cons(), item_1(), item_3()])
-            .eval(&mut Context::base())
-            .unwrap(),
+        eval(sexp![cons(), item_1(), item_3()]).unwrap(),
         Null.cons(item_1())
     );
 
     assert_eq!(
-        SExp::from(vec![cons(), item_1(), item_2()])
-            .eval(&mut Context::base())
-            .unwrap(),
+        eval(sexp![cons(), item_1(), item_2()]).unwrap(),
         item_2().cons(item_1())
     );
 
     assert_eq!(
-        SExp::from(vec![cons(), item_1(), vec![item_2()].into()])
-            .eval(&mut Context::base())
-            .unwrap(),
+        eval(sexp![cons(), item_1(), vec![item_2()]]).unwrap(),
         Null.cons(item_2()).cons(item_1())
     );
 }
@@ -169,40 +117,22 @@ fn cons() {
 fn car() {
     let car = || SExp::sym("car");
 
-    assert!(SExp::from(Null.cons(Null).cons(car()))
-        .eval(&mut Context::base())
-        .is_err());
+    assert!(eval(SExp::from(Null.cons(Null).cons(car()))).is_err());
 
-    assert!(SExp::from(Null.cons("test".into()).cons(car()))
-        .eval(&mut Context::base())
-        .is_err());
+    assert!(eval(SExp::from(Null.cons("test".into()).cons(car()))).is_err());
 
-    assert_eq!(
-        SExp::from(vec![car(), (3, (5,)).into()])
-            .eval(&mut Context::base())
-            .unwrap(),
-        SExp::from(3)
-    )
+    assert_eq!(eval(sexp![car(), (3, (5,))]).unwrap(), SExp::from(3))
 }
 
 #[test]
 fn cdr() {
     let cdr = || SExp::sym("cdr");
 
-    assert!(SExp::from(Null.cons(Null).cons(cdr()))
-        .eval(&mut Context::base())
-        .is_err());
+    assert!(eval(SExp::from(Null.cons(Null).cons(cdr()))).is_err());
 
-    assert!(SExp::from(Null.cons("test".into()).cons(cdr()))
-        .eval(&mut Context::base())
-        .is_err());
+    assert!(eval(SExp::from(Null.cons("test".into()).cons(cdr()))).is_err());
 
-    assert_eq!(
-        SExp::from(vec![cdr(), (3, (5,)).into()])
-            .eval(&mut Context::base())
-            .unwrap(),
-        SExp::from((5,))
-    )
+    assert_eq!(eval(sexp![cdr(), (3, (5,))]).unwrap(), SExp::from((5,)))
 }
 
 #[test]
@@ -210,66 +140,38 @@ fn type_of() {
     let tpf = || SExp::sym("type-of");
 
     assert_eq!(
-        SExp::from(vec![tpf(), SExp::sym("null")])
-            .eval(&mut Context::base())
-            .unwrap(),
-        SExp::from(vec![tpf(), Null.cons(Null).cons(SExp::sym("quote"))])
-            .eval(&mut Context::base())
-            .unwrap(),
+        eval(sexp![tpf(), SExp::sym("null")]).unwrap(),
+        eval(sexp![tpf(), Null.cons(Null).cons(SExp::sym("quote"))]).unwrap(),
     );
 
     // ha, get it
     assert_eq!(
-        SExp::from(vec![tpf(), 3.into()])
-            .eval(&mut Context::base())
-            .unwrap(),
-        SExp::from(vec![tpf(), std::f64::consts::PI.into()])
-            .eval(&mut Context::base())
-            .unwrap(),
+        eval(sexp![tpf(), 3]).unwrap(),
+        eval(sexp![tpf(), std::f64::consts::PI]).unwrap(),
     );
 
     assert_eq!(
-        SExp::from(vec![tpf(), 'b'.into()])
-            .eval(&mut Context::base())
-            .unwrap(),
-        SExp::from(vec![tpf(), '\n'.into()])
-            .eval(&mut Context::base())
-            .unwrap(),
+        eval(sexp![tpf(), 'b']).unwrap(),
+        eval(sexp![tpf(), '\n']).unwrap(),
     );
 
     assert_eq!(
-        SExp::from(vec![tpf(), true.into()])
-            .eval(&mut Context::base())
-            .unwrap(),
-        SExp::from(vec![tpf(), false.into()])
-            .eval(&mut Context::base())
-            .unwrap(),
+        eval(sexp![tpf(), true]).unwrap(),
+        eval(sexp![tpf(), false]).unwrap(),
     );
 
     assert_eq!(
-        SExp::from(vec![tpf(), "yes".into()])
-            .eval(&mut Context::base())
-            .unwrap(),
-        SExp::from(vec![tpf(), "potato".into()])
-            .eval(&mut Context::base())
-            .unwrap(),
+        eval(sexp![tpf(), "yes"]).unwrap(),
+        eval(sexp![tpf(), "potato"]).unwrap(),
     );
 
     assert_eq!(
-        SExp::from(vec![tpf(), SExp::sym("null?")])
-            .eval(&mut Context::base())
-            .unwrap(),
-        SExp::from(vec![tpf(), SExp::sym("+")])
-            .eval(&mut Context::base())
-            .unwrap(),
+        eval(sexp![tpf(), SExp::sym("null?")]).unwrap(),
+        eval(sexp![tpf(), SExp::sym("+")]).unwrap(),
     );
 
     assert_eq!(
-        SExp::from(vec![tpf(), ("abc", (123,)).into()])
-            .eval(&mut Context::base())
-            .unwrap(),
-        SExp::from(vec![tpf(), (false, ('\0',)).into()])
-            .eval(&mut Context::base())
-            .unwrap(),
+        eval(sexp![tpf(), ("abc", (123,))]).unwrap(),
+        eval(sexp![tpf(), (false, ('\0',))]).unwrap(),
     );
 }
