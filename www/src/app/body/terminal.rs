@@ -72,7 +72,7 @@ impl Component for Terminal {
                 // show command in history
                 writeln!(self.history, "> {}", self.value).unwrap();
                 // evaluate
-                let evaled = run_in(&self.value, &mut self.context);
+                let evaled = self.context.run(&self.value);
                 // print side effects
                 let side_effects = self.context.get_output().unwrap_or_else(String::new);
                 if !side_effects.is_empty() {
