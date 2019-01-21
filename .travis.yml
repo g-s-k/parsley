@@ -12,12 +12,12 @@ jobs:
       script: cargo test --verbose
     - stage: build_www
       before_script: which cargo-web || cargo install cargo-web
-      script: cd www && cargo web deploy --release
+      script: cargo web deploy --package www --release
       deploy:
         provider: pages
         skip-cleanup: true
         github-token: $GITHUB_TOKEN
-        local-dir: www/target/deploy/
+        local-dir: target/deploy
         keep-history: true
         on:
           branch: master
