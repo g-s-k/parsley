@@ -1,8 +1,8 @@
 use yew::prelude::*;
 
-use header::Header;
-use footer::Footer;
 use body::Body;
+use footer::Footer;
+use header::Header;
 
 mod body;
 mod footer;

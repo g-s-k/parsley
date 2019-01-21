@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use std::rc::Rc;
 
-use super::super::proc::{Arity, Func, Proc};
+use super::super::proc::{Func, Proc};
 use super::super::SExp::{self, Atom, Null, Pair, Vector};
 use super::super::{Env, Error, Primitive, Result};
 use super::Context;
@@ -31,29 +31,21 @@ impl Context {
                     let first_layer = c.eval(e.car()?)?;
                     c.eval(first_layer)
                 },
-                Arity::Exact(1)
+                1
             ),
-            tup_ctx_env!("apply", Self::do_apply, Arity::Exact(2)),
-            tup_ctx_env!("and", Self::eval_and, Arity::Min(0)),
-            tup_ctx_env!("begin", Self::eval_begin, Arity::Min(0)),
-            tup_ctx_env!("case", Self::eval_case, Arity::Min(2)),
-            tup_ctx_env!("cond", Self::eval_cond, Arity::Min(1)),
-            tup_ctx_env!("define", Self::eval_define, Arity::Min(2)),
-            tup_ctx_env!("if", Self::eval_if, Arity::Exact(3)),
-            tup_ctx_env!(
-                "lambda",
-                |e, c| Self::eval_lambda(e, c, false),
-                Arity::Min(2)
-            ),
-            tup_ctx_env!("let", Self::eval_let, Arity::Min(2)),
-            tup_ctx_env!(
-                "named-lambda",
-                |e, c| Self::eval_lambda(e, c, true),
-                Arity::Min(2)
-            ),
-            tup_ctx_env!("or", Self::eval_or, Arity::Min(0)),
-            tup_ctx_env!("quote", Self::eval_quote, Arity::Exact(1)),
-            tup_ctx_env!("set!", Self::eval_set, Arity::Exact(2)),
+            tup_ctx_env!("apply", Self::do_apply, 2),
+            tup_ctx_env!("and", Self::eval_and, 0),
+            tup_ctx_env!("begin", Self::eval_begin, 0),
+            tup_ctx_env!("case", Self::eval_case, 2),
+            tup_ctx_env!("cond", Self::eval_cond, 1),
+            tup_ctx_env!("define", Self::eval_define, 2),
+            tup_ctx_env!("if", Self::eval_if, 3),
+            tup_ctx_env!("lambda", |e, c| Self::eval_lambda(e, c, false), 2),
+            tup_ctx_env!("let", Self::eval_let, 2),
+            tup_ctx_env!("named-lambda", |e, c| Self::eval_lambda(e, c, true), 2),
+            tup_ctx_env!("or", Self::eval_or, 0),
+            tup_ctx_env!("quote", Self::eval_quote, 1),
+            tup_ctx_env!("set!", Self::eval_set, 2),
         ]
         .iter()
         .cloned()
@@ -306,7 +298,7 @@ impl Context {
                 the_ctx.pop();
                 result
             })),
-            Arity::Exact(expected),
+            expected,
             if env.is_empty() { None } else { Some(env) },
             name,
         ))

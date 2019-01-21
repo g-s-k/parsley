@@ -1,7 +1,7 @@
+use super::proc::{Func, Proc};
 use super::Primitive::{self, Undefined};
 use super::SExp::{self, Atom};
 use super::{Env, Error, Result};
-use super::proc::{Func, Proc};
 
 mod base;
 mod core;
@@ -245,7 +245,10 @@ impl Context {
             Atom(_) | Vector(_) => Ok(expr),
             Pair { head, tail } => {
                 let proc = self.eval(*head)?;
-                let applic = if let Atom(Primitive::Procedure(Proc { func: Func::Ctx(_), .. })) = proc {
+                let applic = if let Atom(Primitive::Procedure(Proc {
+                    func: Func::Ctx(_), ..
+                })) = proc
+                {
                     *tail
                 } else {
                     tail.into_iter().map(|e| self.eval(e)).collect::<Result>()?

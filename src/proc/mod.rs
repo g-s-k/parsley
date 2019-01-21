@@ -1,3 +1,5 @@
+#![allow(clippy::cast_precision_loss)]
+
 use std::fmt;
 use std::rc::Rc;
 
@@ -12,13 +14,14 @@ pub struct Proc {
 }
 
 impl Proc {
-    pub fn new<T>(func: T, arity: Arity, env: Option<Env>, name: Option<&str>) -> Self
+    pub fn new<T, U>(func: T, arity: U, env: Option<Env>, name: Option<&str>) -> Self
     where
+        Arity: From<U>,
         Func: From<T>,
     {
         Self {
             name: name.map(String::from),
-            arity,
+            arity: arity.into(),
             env,
             func: func.into(),
         }
@@ -53,14 +56,34 @@ pub enum Arity {
     Range(usize, usize),
 }
 
+impl From<usize> for Arity {
+    fn from(n: usize) -> Self {
+        Arity::Exact(n)
+    }
+}
+
+impl From<(usize,)> for Arity {
+    fn from((n,): (usize,)) -> Self {
+        Arity::Min(n)
+    }
+}
+
+impl From<(usize, usize)> for Arity {
+    fn from((n0, n1): (usize, usize)) -> Self {
+        if n0 == n1 {
+            Arity::Exact(n0)
+        } else {
+            Arity::Range(n0, n1)
+        }
+    }
+}
+
 impl Into<SExp> for Arity {
     fn into(self) -> SExp {
-        use Arity::*;
-
         match self {
-            Exact(n) => (n as f64, n as f64).into(),
-            Min(n) => (n as f64, false).into(),
-            Range(min, max) => (min as f64, max as f64).into(),
+            Arity::Exact(n) => (n as f64, n as f64).into(),
+            Arity::Min(n) => (n as f64, false).into(),
+            Arity::Range(min, max) => (min as f64, max as f64).into(),
         }
     }
 }

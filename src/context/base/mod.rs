@@ -4,7 +4,7 @@ use super::super::Primitive::{
     Boolean, Character, Env, Procedure, String as LispString, Symbol, Undefined, Void,
 };
 use super::super::SExp::{self, Atom, Null, Pair};
-use super::super::{Arity, Error, Result};
+use super::super::{Error, Result};
 
 use super::utils::*;
 use super::Context;
@@ -117,7 +117,7 @@ impl Context {
                 },
                 given => Err(Error::Arity { expected: 1, given }),
             },
-            Arity::Exact(1)
+            1
         );
         define!(
             ret,
@@ -148,7 +148,7 @@ impl Context {
                     given: e.type_of().to_string()
                 }),
             },
-            Arity::Exact(1)
+            1
         );
 
         ret
@@ -162,24 +162,14 @@ impl Context {
                 2 => Ok((e[0] == e[1]).into()),
                 given => Err(Error::Arity { expected: 2, given }),
             },
-            Arity::Exact(2)
+            2
         );
 
-        define!(
-            self,
-            "null?",
-            |e| Ok((e == ((),).into()).into()),
-            Arity::Exact(1)
-        );
+        define!(self, "null?", |e| Ok((e == ((),).into()).into()), 1);
         self.lang.insert("null".to_string(), Null);
-        define!(self, "void", |_| Ok(Atom(Void)), Arity::Exact(0));
-        define!(self, "list", Ok, Arity::Min(0));
-        define!(
-            self,
-            "not",
-            |e| Ok((e == (false,).into()).into()),
-            Arity::Exact(1)
-        );
+        define!(self, "void", |_| Ok(Atom(Void)), 0);
+        define!(self, "list", Ok, (0,));
+        define!(self, "not", |e| Ok((e == (false,).into()).into()), 1);
 
         define!(
             self,
@@ -192,7 +182,7 @@ impl Context {
                 }
                 given => Err(Error::Arity { expected: 2, given }),
             },
-            Arity::Exact(2)
+            2
         );
 
         define_with!(self, "car", SExp::car, make_unary_expr);
@@ -223,7 +213,7 @@ impl Context {
                 }
                 given => Err(Error::Arity { expected: 2, given }),
             },
-            Arity::Exact(2)
+            2
         );
 
         define_ctx!(
@@ -251,7 +241,7 @@ impl Context {
                 }
                 given => Err(Error::Arity { expected: 2, given }),
             },
-            Arity::Exact(2)
+            2
         );
 
         define_with!(
@@ -266,31 +256,21 @@ impl Context {
             self,
             "display",
             |e, c| Self::do_print(e, c, false, false),
-            Arity::Exact(1)
+            1
         );
         define_ctx!(
             self,
             "displayln",
             |e, c| Self::do_print(e, c, true, false),
-            Arity::Exact(1)
+            1
         );
-        define_ctx!(
-            self,
-            "write",
-            |e, c| Self::do_print(e, c, false, true),
-            Arity::Exact(1)
-        );
-        define_ctx!(
-            self,
-            "writeln",
-            |e, c| Self::do_print(e, c, true, true),
-            Arity::Exact(1)
-        );
+        define_ctx!(self, "write", |e, c| Self::do_print(e, c, false, true), 1);
+        define_ctx!(self, "writeln", |e, c| Self::do_print(e, c, true, true), 1);
 
         // functional goodness
-        define_ctx!(self, "map", Self::eval_map, Arity::Exact(2));
-        define_ctx!(self, "foldl", Self::eval_fold, Arity::Exact(3));
-        define_ctx!(self, "filter", Self::eval_filter, Arity::Exact(2));
+        define_ctx!(self, "map", Self::eval_map, 2);
+        define_ctx!(self, "foldl", Self::eval_fold, 3);
+        define_ctx!(self, "filter", Self::eval_filter, 2);
     }
 
     fn do_print(&mut self, expr: SExp, newline: bool, debug: bool) -> Result {
@@ -390,7 +370,12 @@ impl Context {
     }
 
     fn num_base(&mut self) {
-        define!(self, "zero?", |e: SExp| Ok((e.car()? == 0.into()).into()), Arity::Exact(1));
+        define!(
+            self,
+            "zero?",
+            |e: SExp| Ok((e.car()? == 0.into()).into()),
+            1
+        );
         define_with!(self, "add1", |e| e + 1., make_unary_numeric);
         define_with!(self, "sub1", |e| e - 1., make_unary_numeric);
 
