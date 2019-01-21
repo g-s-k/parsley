@@ -36,6 +36,7 @@ mod sexp;
 mod context;
 mod errors;
 mod primitives;
+mod proc;
 mod utils;
 
 pub use self::context::{utils as proc_utils, Context};
