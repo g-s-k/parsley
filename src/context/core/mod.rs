@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 use std::rc::Rc;
 
+use super::super::proc::{Arity, Func, Proc};
 use super::super::SExp::{self, Atom, Null, Pair, Vector};
 use super::super::{Env, Error, Primitive, Result};
 use super::Context;
@@ -8,10 +9,15 @@ use super::Context;
 mod tests;
 
 macro_rules! tup_ctx_env {
-    ( $name:expr, $proc:expr ) => {
+    ( $name:expr, $proc:expr, $arity:expr ) => {
         (
             $name.to_string(),
-            $crate::SExp::ctx_proc($proc, Some($name)),
+            $crate::SExp::from($crate::Proc::new(
+                $crate::Func::Ctx(::std::rc::Rc::new($proc)),
+                $arity,
+                None,
+                Some($name),
+            )),
         )
     };
 }
@@ -19,23 +25,35 @@ macro_rules! tup_ctx_env {
 impl Context {
     pub(super) fn core() -> Env {
         [
-            tup_ctx_env!("eval", |c, e| {
-                let first_layer = c.eval(e.car()?)?;
-                c.eval(first_layer)
-            }),
-            tup_ctx_env!("apply", Self::do_apply),
-            tup_ctx_env!("and", Self::eval_and),
-            tup_ctx_env!("begin", Self::eval_begin),
-            tup_ctx_env!("case", Self::eval_case),
-            tup_ctx_env!("cond", Self::eval_cond),
-            tup_ctx_env!("define", Self::eval_define),
-            tup_ctx_env!("if", Self::eval_if),
-            tup_ctx_env!("lambda", |e, c| Self::eval_lambda(e, c, false)),
-            tup_ctx_env!("let", Self::eval_let),
-            tup_ctx_env!("named-lambda", |e, c| Self::eval_lambda(e, c, true)),
-            tup_ctx_env!("or", Self::eval_or),
-            tup_ctx_env!("quote", Self::eval_quote),
-            tup_ctx_env!("set!", Self::eval_set),
+            tup_ctx_env!(
+                "eval",
+                |c: &mut Self, e: SExp| {
+                    let first_layer = c.eval(e.car()?)?;
+                    c.eval(first_layer)
+                },
+                Arity::Exact(1)
+            ),
+            tup_ctx_env!("apply", Self::do_apply, Arity::Exact(2)),
+            tup_ctx_env!("and", Self::eval_and, Arity::Min(0)),
+            tup_ctx_env!("begin", Self::eval_begin, Arity::Min(0)),
+            tup_ctx_env!("case", Self::eval_case, Arity::Min(2)),
+            tup_ctx_env!("cond", Self::eval_cond, Arity::Min(1)),
+            tup_ctx_env!("define", Self::eval_define, Arity::Min(2)),
+            tup_ctx_env!("if", Self::eval_if, Arity::Exact(3)),
+            tup_ctx_env!(
+                "lambda",
+                |e, c| Self::eval_lambda(e, c, false),
+                Arity::Min(2)
+            ),
+            tup_ctx_env!("let", Self::eval_let, Arity::Min(2)),
+            tup_ctx_env!(
+                "named-lambda",
+                |e, c| Self::eval_lambda(e, c, true),
+                Arity::Min(2)
+            ),
+            tup_ctx_env!("or", Self::eval_or, Arity::Min(0)),
+            tup_ctx_env!("quote", Self::eval_quote, Arity::Exact(1)),
+            tup_ctx_env!("set!", Self::eval_set, Arity::Exact(2)),
         ]
         .iter()
         .cloned()
@@ -215,20 +233,19 @@ impl Context {
                         tail: b_t,
                     },
             } => {
-                let (name, params) = if is_named {
+                let fn_body = b_t.cons(*b_h);
+                if is_named {
                     if let Atom(Primitive::Symbol(s)) = *p_h {
-                        (Some(s), *p_t)
+                        Ok(self.make_proc(Some(&s), *p_t, fn_body))
                     } else {
-                        return Err(Error::Type {
+                        Err(Error::Type {
                             expected: "symbol",
                             given: p_h.type_of().to_string(),
-                        });
+                        })
                     }
                 } else {
-                    (None, p_t.cons(*p_h))
-                };
-                let fn_body = b_t.cons(*b_h);
-                Ok(self.make_proc(name, params, fn_body))
+                    Ok(self.make_proc(None, p_t.cons(*p_h), fn_body))
+                }
             }
             Pair {
                 head: box Null,
@@ -244,9 +261,7 @@ impl Context {
         }
     }
 
-    fn make_proc(&mut self, name: Option<String>, params: SExp, fn_body: SExp) -> SExp {
-        use super::super::primitives::proc::Procedure::Ctx;
-
+    fn make_proc(&mut self, name: Option<&str>, params: SExp, fn_body: SExp) -> SExp {
         let expected = params.iter().count();
         let mut params_as_set = params
             .iter()
@@ -267,8 +282,8 @@ impl Context {
             .cloned()
             .collect::<Vec<_>>();
         let env = self.close(syms_to_close);
-        Atom(Primitive::Procedure {
-            f: Ctx(Rc::new(move |the_ctx: &mut Self, args: SExp| {
+        SExp::from(Proc::new(
+            Func::Ctx(Rc::new(move |the_ctx: &mut Self, args: SExp| {
                 // check arity
                 let given = args.iter().count();
                 if given != expected {
@@ -291,9 +306,10 @@ impl Context {
                 the_ctx.pop();
                 result
             })),
+            Arity::Exact(expected),
+            if env.is_empty() { None } else { Some(env) },
             name,
-            env: if env.is_empty() { None } else { Some(env) },
-        })
+        ))
     }
 
     fn eval_let(&mut self, expr: SExp) -> Result {

@@ -6,9 +6,9 @@
     clippy::cast_possible_truncation
 )]
 
-use super::super::super::Error;
 use super::super::super::Primitive::{Number, Symbol, Undefined};
 use super::super::super::SExp::{Atom, Null, Pair, Vector};
+use super::super::super::{Arity, Error};
 use super::super::utils::*;
 use super::super::Context;
 
@@ -20,8 +20,16 @@ macro_rules! define_with {
 }
 
 macro_rules! define_ctx {
-    ( $ctx:ident, $name:expr, $proc:expr ) => {
-        define_with!($ctx, $name, $proc, $crate::SExp::ctx_proc)
+    ( $ctx:ident, $name:expr, $proc:expr, $arity:expr ) => {
+        $ctx.lang.insert(
+            $name.to_string(),
+            $crate::SExp::from($crate::Proc::new(
+                $crate::Func::Ctx(::std::rc::Rc::new($proc)),
+                $arity,
+                None,
+                Some($name),
+            )),
+        )
     };
 }
 
@@ -96,58 +104,68 @@ impl Context {
             make_binary_expr
         );
 
-        define_ctx!(self, "vector-set!", |ctx, expr| if let Pair {
-            head: box Atom(Symbol(sym)),
-            tail:
-                box Pair {
-                    head: box Atom(Number(n)),
-                    tail:
-                        box Pair {
-                            head,
-                            tail: box Null,
-                        },
-                },
-        } = expr
-        {
-            match ctx.get(&sym) {
-                Some(Vector(mut vec)) => {
-                    vec[n as usize] = *head;
-                    ctx.set(&sym, Vector(vec)).unwrap();
-                    Ok(Atom(Undefined))
+        define_ctx!(
+            self,
+            "vector-set!",
+            |ctx, expr| if let Pair {
+                head: box Atom(Symbol(sym)),
+                tail:
+                    box Pair {
+                        head: box Atom(Number(n)),
+                        tail:
+                            box Pair {
+                                head,
+                                tail: box Null,
+                            },
+                    },
+            } = expr
+            {
+                match ctx.get(&sym) {
+                    Some(Vector(mut vec)) => {
+                        vec[n as usize] = *head;
+                        ctx.set(&sym, Vector(vec)).unwrap();
+                        Ok(Atom(Undefined))
+                    }
+                    Some(val) => Err(Error::Type {
+                        expected: "vector",
+                        given: val.type_of().to_string(),
+                    }),
+                    None => Err(Error::UndefinedSymbol { sym }),
                 }
-                Some(val) => Err(Error::Type {
+            } else {
+                Err(Error::Type {
                     expected: "vector",
-                    given: val.type_of().to_string(),
-                }),
-                None => Err(Error::UndefinedSymbol { sym }),
-            }
-        } else {
-            Err(Error::Type {
-                expected: "vector",
-                given: expr.type_of().to_string(),
-            })
-        });
+                    given: expr.type_of().to_string(),
+                })
+            },
+            Arity::Exact(2)
+        );
 
-        define_ctx!(self, "vector-map", |ctx, expr| if let Pair {
-            head: box proc,
-            tail:
-                box Pair {
-                    head: box Vector(vec),
-                    tail: box Null,
-                },
-        } = expr
-        {
-            let mut new_vec = Vec::new();
-            for expression in vec {
-                new_vec.push(ctx.eval(Null.cons(expression).cons(proc.clone()))?);
-            }
-            Ok(Vector(new_vec))
-        } else {
-            Err(Error::Type {
-                expected: "procedure",
-                given: expr.type_of().to_string(),
-            })
-        });
+        define_ctx!(
+            self,
+            "vector-map",
+            |ctx, expr| if let Pair {
+                head: box proc,
+                tail:
+                    box Pair {
+                        head: box Vector(vec),
+                        tail: box Null,
+                    },
+            } = expr
+            {
+                let mut new_vec = Vec::new();
+                for expression in vec {
+                    new_vec.push(ctx.eval(Null.cons(expression).cons(proc.clone()))?);
+                }
+                Ok(Vector(new_vec))
+            } else {
+                Err(Error::Type {
+                    expected: "procedure",
+                    given: expr.type_of().to_string(),
+                })
+            },
+            Arity::Exact(2)
+        );
 
         define_with!(
             self,
