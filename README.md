@@ -10,10 +10,10 @@ what if scheme...but rust. still working on a backronym.
 ## on the horizon
 
 - improve test coverage, especially e2e tests
-- (eventually) build on stable. blockers are:
-  - `www` builds against unstable `wasm32-unknown-unkown` target
-  - `box_patterns` feature
-- (very eventually) ANSI compliance
+- (eventually) build on stable. this is blocked by the `box_patterns` feature,
+  which is nice to use, but possible to work around - and it looks unlikely that
+  it will land in stable any time soon.
+- (very eventually) R7RS compliance
 
 ## License
 
