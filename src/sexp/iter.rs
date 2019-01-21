@@ -36,35 +36,23 @@ impl IntoIterator for SExp {
 }
 
 pub struct SExpRefIterator<'a> {
-    exp: SExpRef<'a>,
-}
-
-enum SExpRef<'a> {
-    List(&'a SExp),
-    Vect(&'a [SExp]),
+    exp: &'a SExp,
 }
 
 impl<'a> Iterator for SExpRefIterator<'a> {
     type Item = &'a SExp;
 
     fn next(&mut self) -> Option<Self::Item> {
-        use SExpRef::*;
         match self.exp {
-            List(exp) => match exp {
-                Pair { head, tail } => {
-                    self.exp = List(&*tail);
-                    Some(&*head)
-                }
-                a @ Atom(_) => {
-                    self.exp = List(&Null);
-                    Some(&a)
-                }
-                _ => None,
-            },
-            Vect(v) => {
-                self.exp = Vect(&v[1..]);
-                Some(&v[0])
+            Pair { head, tail } => {
+                self.exp = &*tail;
+                Some(&*head)
             }
+            a @ Atom(_) | a @ Vector(_) => {
+                self.exp = &Null;
+                Some(&a)
+            }
+            Null => None,
         }
     }
 }
@@ -81,15 +69,7 @@ impl SExp {
     /// );
     /// ```
     pub fn iter(&self) -> SExpRefIterator {
-        if let Vector(v) = self {
-            SExpRefIterator {
-                exp: SExpRef::Vect(&v),
-            }
-        } else {
-            SExpRefIterator {
-                exp: SExpRef::List(self),
-            }
-        }
+        SExpRefIterator { exp: &self }
     }
 
     /// Easy way to check for `Null` if you're planning on iterating
