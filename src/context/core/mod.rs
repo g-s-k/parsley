@@ -34,16 +34,16 @@ impl Context {
                 1
             ),
             tup_ctx_env!("apply", Self::do_apply, 2),
-            tup_ctx_env!("and", Self::eval_and, 0),
-            tup_ctx_env!("begin", Self::eval_begin, 0),
-            tup_ctx_env!("case", Self::eval_case, 2),
-            tup_ctx_env!("cond", Self::eval_cond, 1),
-            tup_ctx_env!("define", Self::eval_define, 2),
+            tup_ctx_env!("and", Self::eval_and, (0,)),
+            tup_ctx_env!("begin", Self::eval_begin, (0,)),
+            tup_ctx_env!("case", Self::eval_case, (2,)),
+            tup_ctx_env!("cond", Self::eval_cond, (0,)),
+            tup_ctx_env!("define", Self::eval_define, (1,)),
             tup_ctx_env!("if", Self::eval_if, 3),
-            tup_ctx_env!("lambda", |e, c| Self::eval_lambda(e, c, false), 2),
-            tup_ctx_env!("let", Self::eval_let, 2),
-            tup_ctx_env!("named-lambda", |e, c| Self::eval_lambda(e, c, true), 2),
-            tup_ctx_env!("or", Self::eval_or, 0),
+            tup_ctx_env!("lambda", |e, c| Self::eval_lambda(e, c, false), (2,)),
+            tup_ctx_env!("let", Self::eval_let, (2,)),
+            tup_ctx_env!("named-lambda", |e, c| Self::eval_lambda(e, c, true), (2,)),
+            tup_ctx_env!("or", Self::eval_or, (0,)),
             tup_ctx_env!("quote", Self::eval_quote, 1),
             tup_ctx_env!("set!", Self::eval_set, 2),
         ]
@@ -271,11 +271,6 @@ impl Context {
         let env = self.close(syms_to_close);
         SExp::from(Proc::new(
             Func::Ctx(Rc::new(move |the_ctx: &mut Self, args: SExp| {
-                // check arity
-                let given = args.iter().count();
-                if given != expected {
-                    return Err(Error::Arity { expected, given });
-                }
                 // evaluate arguments
                 let evalled_args = args
                     .into_iter()

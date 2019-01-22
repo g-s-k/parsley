@@ -143,7 +143,7 @@ where
                 Err(err) => Err(err),
             }
         })),
-        0,
+        (0,),
         None,
         name,
     ))
@@ -208,7 +208,7 @@ where
                 }),
             }
         })),
-        1,
+        (1,),
         None,
         name,
     ))
