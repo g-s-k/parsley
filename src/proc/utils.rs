@@ -81,11 +81,7 @@ where
 
             match (arg0, arg1) {
                 (Atom(Number(n0)), Atom(Number(n1))) => Ok((f(n0, n1)).into()),
-                (Atom(Number(_)), e) => Err(Error::Type {
-                    expected: "number",
-                    given: e.type_of().to_string(),
-                }),
-                (e, _) => Err(Error::Type {
+                (Atom(Number(_)), e) | (e, _) => Err(Error::Type {
                     expected: "number",
                     given: e.type_of().to_string(),
                 }),
