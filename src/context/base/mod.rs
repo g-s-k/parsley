@@ -6,7 +6,7 @@ use super::super::Primitive::{
 use super::super::SExp::{self, Atom, Null, Pair};
 use super::super::{Error, Result};
 
-use super::utils::*;
+use super::super::proc::utils::*;
 use super::Context;
 
 mod tests;

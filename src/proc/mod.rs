@@ -5,6 +5,8 @@ use std::rc::Rc;
 
 use super::{Context, Env, Error, Primitive, Result, SExp};
 
+pub mod utils;
+
 #[derive(Clone)]
 pub struct Proc {
     name: Option<String>,

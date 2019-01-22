@@ -6,7 +6,6 @@ use super::{Env, Error, Result};
 mod base;
 mod core;
 mod math;
-pub mod utils;
 mod write;
 
 /// Evaluation context for LISP expressions.
