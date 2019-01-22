@@ -3,7 +3,7 @@
 use std::fmt;
 use std::rc::Rc;
 
-use super::{Context, Env, Primitive, Result, SExp};
+use super::{Context, Env, Error, Primitive, Result, SExp};
 
 #[derive(Clone)]
 pub struct Proc {
@@ -26,6 +26,14 @@ impl Proc {
             env,
             func: func.into(),
         }
+    }
+
+    pub fn thunk(&self) -> bool {
+        self.arity.thunk()
+    }
+
+    pub fn check_arity(&self, n_args: usize) -> std::result::Result<(), Error> {
+        self.arity.check(n_args)
     }
 }
 
@@ -56,6 +64,34 @@ pub struct Arity {
     max: Option<usize>,
 }
 
+impl Arity {
+    fn thunk(&self) -> bool {
+        self.min == 0 && self.max == Some(0)
+    }
+
+    fn check(&self, given: usize) -> std::result::Result<(), Error> {
+        if given < self.min {
+            match self.max {
+                Some(n) if n == self.min => Err(Error::Arity {
+                    expected: self.min,
+                    given,
+                }),
+                _ => Err(Error::ArityMin {
+                    expected: self.min,
+                    given,
+                }),
+            }
+        } else {
+            match self.max {
+                None => Ok(()),
+                Some(n) if given <= n => Ok(()),
+                Some(expected) if expected == self.min => Err(Error::Arity { expected, given }),
+                Some(expected) => Err(Error::ArityMax { expected, given }),
+            }
+        }
+    }
+}
+
 impl From<usize> for Arity {
     fn from(min: usize) -> Self {
         Self {
@@ -73,7 +109,10 @@ impl From<(usize,)> for Arity {
 
 impl From<(usize, usize)> for Arity {
     fn from((min, max): (usize, usize)) -> Self {
-        Self { min, max: Some(max) }
+        Self {
+            min,
+            max: Some(max),
+        }
     }
 }
 
