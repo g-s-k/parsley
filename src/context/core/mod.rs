@@ -136,54 +136,47 @@ impl Context {
     }
 
     fn eval_define(&mut self, expr: SExp) -> Result {
-        match expr {
-            Null => Err(Error::ArityMin {
-                expected: 2,
-                given: 0,
-            }),
-            Atom(a) => Err(Error::NotAList {
-                atom: a.to_string(),
-            }),
-            Vector(_) => Err(Error::NotAList {
-                atom: expr.to_string(),
-            }),
-            Pair {
-                head: head2,
-                tail: defn,
-            } => match *head2 {
-                Atom(Primitive::Symbol(sym)) => match *defn {
-                    Pair {
-                        head: the_defn,
-                        tail: box Null,
-                    } => {
-                        let df = self.eval(*the_defn)?;
-                        self.define(&sym, df);
-                        Ok(Atom(Primitive::Undefined))
+        let (signature, defn) = expr.split_car()?;
+
+        let (sym, the_defn) = match signature {
+            // procedure
+            Pair { head, tail } => {
+                let sym = match *head {
+                    Atom(Primitive::Symbol(ref sym)) => sym.to_owned(),
+                    other => {
+                        return Err(Error::Type {
+                            expected: "symbol",
+                            given: other.type_of().to_string(),
+                        });
                     }
-                    Null => {
-                        self.define(&sym, Atom(Primitive::Undefined));
-                        Ok(Atom(Primitive::Undefined))
-                    }
-                    exp => Err(Error::Syntax {
-                        exp: exp.to_string(),
-                    }),
-                },
-                Pair {
-                    head: box Atom(Primitive::Symbol(sym)),
-                    tail: fn_params,
-                } => {
-                    let func = self.eval_lambda(
-                        defn.cons(fn_params.cons(Atom(Primitive::Symbol(sym.clone())))),
-                        true,
-                    )?;
-                    self.define(&sym, func);
-                    Ok(Atom(Primitive::Undefined))
+                };
+
+                (sym, self.eval_lambda(defn.cons(tail.cons(*head)), true)?)
+            }
+            // simple value - can be nothing or something
+            Atom(Primitive::Symbol(sym)) => {
+                match defn.len() {
+                    0 | 1 => (),
+                    given => return Err(Error::ArityMax { expected: 1, given }),
                 }
-                exp => Err(Error::Syntax {
-                    exp: exp.to_string(),
-                }),
-            },
-        }
+
+                match defn {
+                    Null => (sym, Atom(Primitive::Undefined)),
+                    p @ Pair { .. } => (sym, self.eval(p.car()?)?),
+                    other => (sym, self.eval(other)?),
+                }
+            }
+            other => {
+                return Err(Error::Type {
+                    expected: "symbol",
+                    given: other.type_of().to_string(),
+                });
+            }
+        };
+
+        // actually persist the definition to the environment
+        self.define(&sym, the_defn);
+        Ok(Atom(Primitive::Undefined))
     }
 
     fn eval_if(&mut self, expr: SExp) -> Result {
@@ -200,51 +193,35 @@ impl Context {
     }
 
     fn eval_lambda(&mut self, expr: SExp, is_named: bool) -> Result {
-        match expr {
-            Null => Err(Error::ArityMin {
-                expected: 2,
-                given: 0,
-            }),
-            Atom(a) => Err(Error::NotAList {
-                atom: a.to_string(),
-            }),
-            Pair {
-                head:
-                    box Pair {
-                        head: p_h,
-                        tail: p_t,
-                    },
-                tail:
-                    box Pair {
-                        head: b_h,
-                        tail: b_t,
-                    },
-            } => {
-                let fn_body = b_t.cons(*b_h);
-                if is_named {
-                    if let Atom(Primitive::Symbol(s)) = *p_h {
-                        Ok(self.make_proc(Some(&s), *p_t, fn_body))
-                    } else {
-                        Err(Error::Type {
-                            expected: "symbol",
-                            given: p_h.type_of().to_string(),
-                        })
-                    }
-                } else {
-                    Ok(self.make_proc(None, p_t.cons(*p_h), fn_body))
-                }
+        let (signature, fn_body) = expr.split_car()?;
+
+        match signature {
+            Pair { .. } => (),
+            other => {
+                return Err(Error::Type {
+                    expected: "list",
+                    given: other.type_of().to_string(),
+                });
             }
-            Pair {
-                head: box Null,
-                tail:
-                    box Pair {
-                        head: b_h,
-                        tail: b_t,
-                    },
-            } => Ok(self.make_proc(None, Null, b_t.cons(*b_h))),
-            exp => Err(Error::Syntax {
-                exp: exp.to_string(),
-            }),
+        }
+
+        for sym in signature.iter() {
+            if let Atom(Primitive::Symbol(_)) = sym {
+                ()
+            } else {
+                return Err(Error::Type {
+                    expected: "symbol",
+                    given: sym.type_of().to_string(),
+                });
+            }
+        }
+
+        if is_named {
+            let (name, signature) = signature.split_car()?;
+            let name = name.sym_to_str().unwrap();
+            Ok(self.make_proc(Some(name), signature, fn_body))
+        } else {
+            Ok(self.make_proc(None, signature, fn_body))
         }
     }
 
