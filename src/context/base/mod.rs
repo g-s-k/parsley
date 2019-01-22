@@ -254,99 +254,52 @@ impl Context {
     }
 
     fn do_print(&mut self, expr: SExp, newline: bool, debug: bool) -> Result {
-        if let Pair {
-            head,
-            tail: box Null,
-        } = expr
-        {
-            let ending = if newline { "\n" } else { "" };
-            let hevl = self.eval(*head)?;
-            let unescaped = unescape(&if debug {
-                format!("{:?}{}", hevl, ending)
-            } else {
-                format!("{}{}", hevl, ending)
-            });
-            match write!(self, "{}", unescaped) {
-                Ok(()) => Ok(Atom(Undefined)),
-                Err(e) => Err(Error::IO(e)),
-            }
+        let ending = if newline { "\n" } else { "" };
+        let hevl = self.eval(expr.car()?)?;
+        let unescaped = unescape(&if debug {
+            format!("{:?}{}", hevl, ending)
         } else {
-            Err(Error::Syntax {
-                exp: expr.to_string(),
-            })
+            format!("{}{}", hevl, ending)
+        });
+        match write!(self, "{}", unescaped) {
+            Ok(()) => Ok(Atom(Undefined)),
+            Err(e) => Err(Error::IO(e)),
         }
     }
 
     fn eval_map(&mut self, expr: SExp) -> Result {
-        match expr {
-            Pair {
-                head,
-                tail:
-                    box Pair {
-                        head: exp,
-                        tail: box Null,
-                    },
-            } => self
-                .eval(*exp)?
-                .into_iter()
-                .map(|e| self.eval(Null.cons(e).cons((*head).to_owned())))
-                .collect(),
-            exp => Err(Error::Syntax {
-                exp: exp.to_string(),
-            }),
-        }
+        let (head, tail) = expr.split_car()?;
+        self.eval(tail.car()?)?
+            .into_iter()
+            .map(|e| self.eval(Null.cons(e).cons(head.to_owned())))
+            .collect()
     }
 
     fn eval_fold(&mut self, expr: SExp) -> Result {
-        match expr {
-            Pair {
-                head,
-                tail:
-                    box Pair {
-                        head: init,
-                        tail:
-                            box Pair {
-                                head: exp,
-                                tail: box Null,
-                            },
-                    },
-            } => self
-                .eval(*exp)?
-                .into_iter()
-                .fold(Ok(*init), |a, e| match a {
-                    Ok(acc) => self.eval(Null.cons(e).cons(acc).cons((*head).to_owned())),
-                    err => err,
-                }),
-            exp => Err(Error::Syntax {
-                exp: exp.to_string(),
-            }),
-        }
+        let (head, tail) = expr.split_car()?;
+        let (init, tail) = tail.split_car()?;
+
+        self.eval(tail.car()?)?
+            .into_iter()
+            .fold(Ok(init), |a, e| match a {
+                Ok(acc) => self.eval(Null.cons(e).cons(acc).cons(head.to_owned())),
+                err => err,
+            })
     }
 
     fn eval_filter(&mut self, expr: SExp) -> Result {
-        match expr {
-            Pair {
-                head: predicate,
-                tail:
-                    box Pair {
-                        head: list,
-                        tail: box Null,
-                    },
-            } => self
-                .eval(*list)?
-                .into_iter()
-                .filter_map(
-                    |e| match self.eval(Null.cons(e.clone()).cons((*predicate).clone())) {
-                        Ok(Atom(Boolean(false))) => None,
-                        Ok(_) => Some(Ok(e)),
-                        err => Some(err),
-                    },
-                )
-                .collect(),
-            exp => Err(Error::Syntax {
-                exp: exp.to_string(),
-            }),
-        }
+        let (predicate, tail) = expr.split_car()?;
+
+        self.eval(tail.car()?)?
+            .into_iter()
+            .filter_map(
+                |e| match self.eval(Null.cons(e.clone()).cons(predicate.to_owned())) {
+                    Ok(Atom(Boolean(false))) => None,
+                    Ok(_) => Some(Ok(e)),
+                    err => Some(err),
+                },
+            )
+            .collect()
     }
 
     fn num_base(&mut self) {

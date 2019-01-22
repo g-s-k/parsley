@@ -8,7 +8,7 @@
 
 use super::super::super::Error;
 use super::super::super::Primitive::{Number, Symbol, Undefined};
-use super::super::super::SExp::{Atom, Null, Pair, Vector};
+use super::super::super::SExp::{Atom, Null, Vector};
 use super::super::utils::*;
 use super::super::Context;
 
@@ -107,22 +107,33 @@ impl Context {
         define_ctx!(
             self,
             "vector-set!",
-            |ctx, expr| if let Pair {
-                head: box Atom(Symbol(sym)),
-                tail:
-                    box Pair {
-                        head: box Atom(Number(n)),
-                        tail:
-                            box Pair {
-                                head,
-                                tail: box Null,
-                            },
-                    },
-            } = expr
-            {
+            |ctx, expr| {
+                let (s, tail) = expr.split_car()?;
+                let (num, tail) = tail.split_car()?;
+                let head = tail.car()?;
+
+                let sym = match s {
+                    Atom(Symbol(sym)) => sym,
+                    e => {
+                        return Err(Error::Type {
+                            expected: "symbol",
+                            given: e.type_of().to_string(),
+                        });
+                    }
+                };
+                let n = match num {
+                    Atom(Number(n)) => n,
+                    e => {
+                        return Err(Error::Type {
+                            expected: "number",
+                            given: e.type_of().to_string(),
+                        });
+                    }
+                };
+
                 match ctx.get(&sym) {
                     Some(Vector(mut vec)) => {
-                        vec[n as usize] = *head;
+                        vec[n as usize] = head;
                         ctx.set(&sym, Vector(vec)).unwrap();
                         Ok(Atom(Undefined))
                     }
@@ -132,37 +143,31 @@ impl Context {
                     }),
                     None => Err(Error::UndefinedSymbol { sym }),
                 }
-            } else {
-                Err(Error::Type {
-                    expected: "vector",
-                    given: expr.type_of().to_string(),
-                })
             },
-            2
+            3
         );
 
         define_ctx!(
             self,
             "vector-map",
-            |ctx, expr| if let Pair {
-                head: box proc,
-                tail:
-                    box Pair {
-                        head: box Vector(vec),
-                        tail: box Null,
-                    },
-            } = expr
-            {
+            |ctx, expr| {
+                let (proc, tail) = expr.split_car()?;
+
+                let vec = match tail.car()? {
+                    Vector(v) => v,
+                    e => {
+                        return Err(Error::Type {
+                            expected: "vector",
+                            given: e.type_of().to_string(),
+                        });
+                    }
+                };
+
                 let mut new_vec = Vec::new();
                 for expression in vec {
                     new_vec.push(ctx.eval(Null.cons(expression).cons(proc.clone()))?);
                 }
                 Ok(Vector(new_vec))
-            } else {
-                Err(Error::Type {
-                    expected: "procedure",
-                    given: expr.type_of().to_string(),
-                })
             },
             2
         );
