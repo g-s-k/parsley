@@ -187,21 +187,16 @@ impl Context {
     }
 
     fn eval_if(&mut self, expr: SExp) -> Result {
-        match expr.len() {
-            3 => {
-                let (condition, cdr) = expr.split_car()?;
-                let (if_true, cdr) = cdr.split_car()?;
-                let (if_false, _) = cdr.split_car()?;
+        let (condition, cdr) = expr.split_car()?;
+        let (if_true, cdr) = cdr.split_car()?;
+        let (if_false, _) = cdr.split_car()?;
 
-                let cevl = self.eval(condition)?;
-                self.eval(if let Atom(Primitive::Boolean(false)) = cevl {
-                    if_false
-                } else {
-                    if_true
-                })
-            }
-            given => Err(Error::Arity { expected: 3, given }),
-        }
+        let cevl = self.eval(condition)?;
+        self.eval(if let Atom(Primitive::Boolean(false)) = cevl {
+            if_false
+        } else {
+            if_true
+        })
     }
 
     fn eval_lambda(&mut self, expr: SExp, is_named: bool) -> Result {
