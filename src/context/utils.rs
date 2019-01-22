@@ -30,19 +30,17 @@ where
     T: Into<SExp>,
 {
     SExp::from(Proc::new(
-        Func::Pure(Rc::new(move |e| match e {
-            SExp::Pair {
-                head: box SExp::Atom(Primitive::Number(n)),
-                ..
-            } => Ok((f(n)).into()),
-            SExp::Pair {
-                head: box expr,
-                tail: box SExp::Null,
+        Func::Pure(Rc::new(move |e| {
+            let n = e.car()?;
+
+            if let SExp::Atom(Primitive::Number(n)) = n {
+                Ok((f(n)).into())
+            } else {
+                Err(Error::Type {
+                    expected: "number",
+                    given: n.type_of().to_string(),
+                })
             }
-            | expr => Err(Error::Type {
-                expected: "number",
-                given: expr.type_of().to_string(),
-            }),
         })),
         1,
         None,
@@ -73,20 +71,25 @@ pub fn make_binary_numeric<T>(f: impl Fn(f64, f64) -> T + 'static, name: Option<
 where
     T: Into<SExp>,
 {
+    use SExp::Atom;
+    use Primitive::Number;
+
     SExp::from(Proc::new(
-        Func::Pure(Rc::new(move |e| match e {
-            SExp::Pair {
-                head: box SExp::Atom(Primitive::Number(n1)),
-                tail:
-                    box SExp::Pair {
-                        head: box SExp::Atom(Primitive::Number(n2)),
-                        ..
-                    },
-            } => Ok((f(n1, n2)).into()),
-            _ => Err(Error::Type {
-                expected: "list",
-                given: e.type_of().to_string(),
-            }),
+        Func::Pure(Rc::new(move |expr| {
+            let (arg0, tail) = expr.split_car()?;
+            let arg1 = tail.car()?;
+
+            match (arg0, arg1) {
+                (Atom(Number(n0)), Atom(Number(n1))) => Ok((f(n0, n1)).into()),
+                (Atom(Number(_)), e) => Err(Error::Type {
+                    expected: "number",
+                    given: e.type_of().to_string(),
+                }),
+                (e, _) => Err(Error::Type {
+                    expected: "number",
+                    given: e.type_of().to_string(),
+                })
+            }
         })),
         2,
         None,
