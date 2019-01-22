@@ -7,13 +7,21 @@ what if scheme...but rust. still working on a backronym.
 `cargo install parsley` installs the interpreter - see the
 [docs](https://docs.rs/parsley) if you want to use it as a library.
 
+## high-level goals
+
+1. a lightweight Scheme implementation...
+2. that compiles to WebAssembly...
+3. usable inside of a larger application without making too many sacrifices...
+4. that is modular and extensible...
+5. but includes enough definitions to be useful out of the box.
+
 ## on the horizon
 
-- improve test coverage, especially e2e tests
-- (eventually) build on stable. this is blocked by the `box_patterns` feature,
-  which is nice to use, but possible to work around - and it looks unlikely that
-  it will land in stable any time soon.
-- (very eventually) R7RS compliance
+- improve test coverage
+  - More tests from SICP
+  - Better coverage of the standard library
+  - Example crates
+- (eventually) R7RS compliance
 
 ## License
 
