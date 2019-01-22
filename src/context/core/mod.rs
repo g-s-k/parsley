@@ -272,60 +272,23 @@ impl Context {
     }
 
     fn eval_let(&mut self, expr: SExp) -> Result {
-        match expr {
-            Null => Err(Error::ArityMin {
-                expected: 2,
-                given: 0,
-            }),
-            Pair {
-                head: defn_list,
-                tail: statements,
-            } => {
-                self.push();
+        let (defn_list, statements) = expr.split_car()?;
 
-                for defn in *defn_list {
-                    match defn {
-                        Pair {
-                            head: box Atom(Primitive::Symbol(key)),
-                            tail:
-                                box Pair {
-                                    head: val,
-                                    tail: box Null,
-                                },
-                        } => {
-                            if let Null = *val {
-                                self.define(&key, Null)
-                            } else {
-                                let inter = self.eval(*val)?;
-                                self.define(&key, inter)
-                            }
-                        }
-                        exp => {
-                            return Err(Error::Syntax {
-                                exp: exp.to_string(),
-                            });
-                        }
-                    }
-                }
+        self.push();
 
-                let mut result = Err(Error::NullList);
+        for defn in defn_list {
+            let err = self.eval_define(defn);
 
-                for statement in *statements {
-                    result = self.eval(statement);
-
-                    if result.is_err() {
-                        break;
-                    }
-                }
-
+            if err.is_err() {
                 self.pop();
-
-                result
+                return err;
             }
-            exp => Err(Error::Syntax {
-                exp: exp.to_string(),
-            }),
         }
+
+        let result = self.eval_begin(statements);
+
+        self.pop();
+        result
     }
 
     fn eval_or(&mut self, expr: SExp) -> Result {
@@ -343,53 +306,35 @@ impl Context {
 
     fn eval_quote(&mut self, expr: SExp) -> Result {
         match expr {
-            Pair {
-                head,
-                tail: box Null,
-            } => Ok(*head),
-            _ => Err(Error::Type {
+            Pair { .. } => Ok(expr.car()?),
+            Null => Err(Error::Type {
                 expected: "list",
                 given: expr.type_of().to_string(),
             }),
+            _ => Ok(expr),
         }
     }
 
     fn eval_set(&mut self, expr: SExp) -> Result {
-        match expr {
-            Null => Err(Error::Arity {
-                expected: 2,
-                given: 0,
-            }),
-            Pair {
-                head: box Atom(Primitive::Symbol(sym)),
-                tail:
-                    box Pair {
-                        head: defn,
-                        tail: box Null,
-                    },
-            } => self.set(&sym, *defn),
-            exp => Err(Error::Syntax {
-                exp: exp.to_string(),
-            }),
-        }
+        let (name, tail) = expr.split_car()?;
+
+        let sym = match name {
+            Atom(Primitive::Symbol(sym)) => sym,
+            other => {
+                return Err(Error::Type {
+                    expected: "symbol",
+                    given: other.type_of().to_string(),
+                });
+            }
+        };
+
+        self.set(&sym, tail.car()?)
     }
 
     fn do_apply(&mut self, expr: SExp) -> Result {
-        match expr {
-            Pair {
-                head: op,
-                tail:
-                    box Pair {
-                        head: args,
-                        tail: box Null,
-                    },
-            } => {
-                let inter = self.eval(*args)?.cons(*op);
-                self.eval(inter)
-            }
-            exp => Err(Error::Syntax {
-                exp: exp.to_string(),
-            }),
-        }
+        let (op, tail) = expr.split_car()?;
+
+        let args = self.eval(tail.car()?)?;
+        self.eval(args.cons(op))
     }
 }

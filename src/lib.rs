@@ -25,7 +25,6 @@
 //! );
 //! ```
 
-#![feature(box_patterns)]
 #![deny(clippy::pedantic)]
 
 use std::collections::HashMap;
