@@ -6,10 +6,10 @@
     clippy::cast_possible_truncation
 )]
 
+use super::super::super::proc::utils::*;
 use super::super::super::Error;
 use super::super::super::Primitive::{Number, Symbol, Undefined};
 use super::super::super::SExp::{Atom, Null, Vector};
-use super::super::utils::*;
 use super::super::Context;
 
 macro_rules! define_with {
