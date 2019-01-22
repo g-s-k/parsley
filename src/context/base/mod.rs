@@ -1,7 +1,7 @@
 use std::fmt::Write;
 
 use super::super::Primitive::{
-    Boolean, Character, Env, Procedure, String as LispString, Symbol, Undefined, Void,
+    Boolean, Character, Env, Number, Procedure, String as LispString, Symbol, Undefined, Void,
 };
 use super::super::SExp::{self, Atom, Null, Pair};
 use super::super::{Error, Result};
@@ -251,6 +251,59 @@ impl Context {
         define_ctx!(self, "map", Self::eval_map, 2);
         define_ctx!(self, "foldl", Self::eval_fold, 3);
         define_ctx!(self, "filter", Self::eval_filter, 2);
+
+        // procedures
+        define_with!(
+            self,
+            "procedure-arity",
+            |e| match e {
+                Atom(Procedure(p)) => Ok(p.get_arity()),
+                other => Err(Error::Type {
+                    expected: "procedure",
+                    given: other.type_of().to_string(),
+                }),
+            },
+            make_unary_expr
+        );
+        let check_proc_arity = |e0, e1| match (e0, e1) {
+            (Atom(Procedure(p)), Atom(Number(n))) => Ok(p.check_arity(n as usize).is_ok().into()),
+            (Atom(Procedure(_)), other) => Err(Error::Type {
+                expected: "number",
+                given: other.type_of().to_string(),
+            }),
+            (other, _) => Err(Error::Type {
+                expected: "procedure",
+                given: other.type_of().to_string(),
+            }),
+        };
+        define_with!(
+            self,
+            "procedure-arity-valid?",
+            check_proc_arity,
+            make_binary_expr
+        );
+        define_with!(
+            self,
+            "procedure-of-arity?",
+            move |e0, e1| if let Atom(Procedure(_)) = e0 {
+                check_proc_arity(e0, e1)
+            } else {
+                Ok(false.into())
+            },
+            make_binary_expr
+        );
+
+        define_with!(
+            self,
+            "thunk?",
+            |e| Ok(if let Atom(Procedure(p)) = e {
+                p.thunk()
+            } else {
+                false
+            }
+            .into()),
+            make_unary_expr
+        );
     }
 
     fn do_print(&mut self, expr: SExp, newline: bool, debug: bool) -> Result {

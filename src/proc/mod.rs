@@ -30,6 +30,10 @@ impl Proc {
         }
     }
 
+    pub fn get_arity(&self) -> SExp {
+        self.arity.into()
+    }
+
     pub fn thunk(&self) -> bool {
         self.arity.thunk()
     }
