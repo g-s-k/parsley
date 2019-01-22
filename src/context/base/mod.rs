@@ -107,17 +107,14 @@ impl Context {
         define!(
             ret,
             "string->list",
-            |e| match e.len() {
-                1 => match &e[0] {
-                    Atom(LispString(s)) => Ok(s.chars().map(SExp::from).collect()),
-                    exp => Err(Error::Type {
-                        expected: "string",
-                        given: exp.type_of().to_string()
-                    }),
-                },
-                given => Err(Error::Arity { expected: 1, given }),
+            |e| match &e[0] {
+                Atom(LispString(s)) => Ok(s.chars().map(SExp::from).collect()),
+                exp => Err(Error::Type {
+                    expected: "string",
+                    given: exp.type_of().to_string()
+                }),
             },
-            1
+            3
         );
         define!(
             ret,
@@ -155,15 +152,7 @@ impl Context {
     }
 
     fn std(&mut self) {
-        define!(
-            self,
-            "eq?",
-            |e| match e.len() {
-                2 => Ok((e[0] == e[1]).into()),
-                given => Err(Error::Arity { expected: 2, given }),
-            },
-            2
-        );
+        define!(self, "eq?", |e| Ok((e[0] == e[1]).into()), 2);
 
         define!(self, "null?", |e| Ok((e == ((),).into()).into()), 1);
         self.lang.insert("null".to_string(), Null);
@@ -174,13 +163,10 @@ impl Context {
         define!(
             self,
             "cons",
-            |e| match e.len() {
-                2 => {
-                    let (car, cdr) = e.split_car()?;
-                    let (car2, _) = cdr.split_car()?;
-                    Ok(car2.cons(car))
-                }
-                given => Err(Error::Arity { expected: 2, given }),
+            |e| {
+                let (car, cdr) = e.split_car()?;
+                let (car2, _) = cdr.split_car()?;
+                Ok(car2.cons(car))
             },
             2
         );
@@ -191,27 +177,24 @@ impl Context {
         define_ctx!(
             self,
             "set-car!",
-            |c, e| match e.len() {
-                2 => {
-                    let (car, cdr) = e.split_car()?;
-                    let new = cdr.car()?;
+            |c, e| {
+                let (car, cdr) = e.split_car()?;
+                let new = cdr.car()?;
 
-                    match car {
-                        Atom(Symbol(key)) => {
-                            if let Some(mut val) = c.get(&key) {
-                                val.set_car(c.eval(new)?)?;
-                                c.set(&key, val)
-                            } else {
-                                Err(Error::UndefinedSymbol { sym: key })
-                            }
+                match car {
+                    Atom(Symbol(key)) => {
+                        if let Some(mut val) = c.get(&key) {
+                            val.set_car(c.eval(new)?)?;
+                            c.set(&key, val)
+                        } else {
+                            Err(Error::UndefinedSymbol { sym: key })
                         }
-                        other => Err(Error::Type {
-                            expected: "symbol",
-                            given: other.type_of().to_string(),
-                        }),
                     }
+                    other => Err(Error::Type {
+                        expected: "symbol",
+                        given: other.type_of().to_string(),
+                    }),
                 }
-                given => Err(Error::Arity { expected: 2, given }),
             },
             2
         );
@@ -219,27 +202,24 @@ impl Context {
         define_ctx!(
             self,
             "set-cdr!",
-            |c, e| match e.len() {
-                2 => {
-                    let (car, cdr) = e.split_car()?;
-                    let new = cdr.car()?;
+            |c, e| {
+                let (car, cdr) = e.split_car()?;
+                let new = cdr.car()?;
 
-                    match car {
-                        Atom(Symbol(key)) => {
-                            if let Some(mut val) = c.get(&key) {
-                                val.set_cdr(c.eval(new)?)?;
-                                c.set(&key, val)
-                            } else {
-                                Err(Error::UndefinedSymbol { sym: key })
-                            }
+                match car {
+                    Atom(Symbol(key)) => {
+                        if let Some(mut val) = c.get(&key) {
+                            val.set_cdr(c.eval(new)?)?;
+                            c.set(&key, val)
+                        } else {
+                            Err(Error::UndefinedSymbol { sym: key })
                         }
-                        other => Err(Error::Type {
-                            expected: "symbol",
-                            given: other.type_of().to_string(),
-                        }),
                     }
+                    other => Err(Error::Type {
+                        expected: "symbol",
+                        given: other.type_of().to_string(),
+                    }),
                 }
-                given => Err(Error::Arity { expected: 2, given }),
             },
             2
         );
