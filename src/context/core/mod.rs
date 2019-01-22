@@ -207,7 +207,6 @@ impl Context {
 
         for sym in signature.iter() {
             if let Atom(Primitive::Symbol(_)) = sym {
-                ()
             } else {
                 return Err(Error::Type {
                     expected: "symbol",
