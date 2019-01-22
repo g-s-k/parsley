@@ -71,8 +71,8 @@ pub fn make_binary_numeric<T>(f: impl Fn(f64, f64) -> T + 'static, name: Option<
 where
     T: Into<SExp>,
 {
-    use SExp::Atom;
     use Primitive::Number;
+    use SExp::Atom;
 
     SExp::from(Proc::new(
         Func::Pure(Rc::new(move |expr| {
@@ -88,7 +88,7 @@ where
                 (e, _) => Err(Error::Type {
                     expected: "number",
                     given: e.type_of().to_string(),
-                })
+                }),
             }
         })),
         2,
@@ -219,22 +219,7 @@ where
     F: Fn(SExp) -> crate::Result + 'static,
 {
     SExp::from(Proc::new(
-        Func::Pure(Rc::new(move |exp| match exp {
-            SExp::Pair {
-                head: box arg,
-                tail: box SExp::Null,
-            }
-            | arg @ SExp::Atom(_)
-            | arg @ SExp::Vector(_) => f(arg),
-            SExp::Pair { .. } => Err(Error::Arity {
-                expected: 1,
-                given: 2,
-            }),
-            SExp::Null => Err(Error::Arity {
-                expected: 1,
-                given: 0,
-            }),
-        })),
+        Func::Pure(Rc::new(move |exp| f(exp.car()?))),
         1,
         None,
         name,
@@ -246,32 +231,10 @@ where
     F: Fn(SExp, SExp) -> crate::Result + 'static,
 {
     SExp::from(Proc::new(
-        Func::Pure(Rc::new(move |exp| match exp {
-            SExp::Pair {
-                head: box arg0,
-                tail:
-                    box SExp::Pair {
-                        head: box arg1,
-                        tail: box SExp::Null,
-                    },
-            } => f(arg0, arg1),
-            SExp::Pair {
-                tail: box SExp::Null,
-                ..
-            }
-            | SExp::Atom(_)
-            | SExp::Vector(_) => Err(Error::Arity {
-                expected: 2,
-                given: 1,
-            }),
-            p @ SExp::Pair { .. } => Err(Error::Arity {
-                expected: 2,
-                given: p.iter().count(),
-            }),
-            SExp::Null => Err(Error::Arity {
-                expected: 2,
-                given: 0,
-            }),
+        Func::Pure(Rc::new(move |exp| {
+            let (arg0, tail) = exp.split_car()?;
+
+            f(arg0, tail.car()?)
         })),
         2,
         None,
@@ -284,23 +247,11 @@ where
     F: Fn(SExp, SExp, SExp) -> crate::Result + 'static,
 {
     SExp::from(Proc::new(
-        Func::Pure(Rc::new(move |exp| match exp {
-            SExp::Pair {
-                head: box arg0,
-                tail:
-                    box SExp::Pair {
-                        head: box arg1,
-                        tail:
-                            box SExp::Pair {
-                                head: box arg2,
-                                tail: box SExp::Null,
-                            },
-                    },
-            } => f(arg0, arg1, arg2),
-            other_variant => Err(Error::Arity {
-                expected: 3,
-                given: other_variant.iter().count(),
-            }),
+        Func::Pure(Rc::new(move |exp| {
+            let (arg0, tail) = exp.split_car()?;
+            let (arg1, tail) = tail.split_car()?;
+
+            f(arg0, arg1, tail.car()?)
         })),
         3,
         None,
