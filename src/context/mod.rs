@@ -266,9 +266,10 @@ impl Context {
         match expr {
             Null | Atom(_) | Vector(_) => Ok(expr),
             Pair { head, tail } => match *head {
-                Atom(Primitive::Procedure(Proc { func, env, .. })) => {
-                    self.overlay_env(env);
-                    let result = match func {
+                Atom(Primitive::Procedure(proc)) => {
+                    proc.check_arity(tail.len())?;
+                    self.overlay_env(proc.env);
+                    let result = match proc.func {
                         Pure(p) => p(*tail),
                         Ctx(p) => p(self, *tail),
                     };
