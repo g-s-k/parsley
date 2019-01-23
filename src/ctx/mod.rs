@@ -192,12 +192,10 @@ impl Context {
     }
 
     /// Push a new partial continuation onto the stack.
-    pub fn push_cont(&mut self, env: Option<Env>) {
-        self.cont = Cont::new(
-            Some(self.cont.clone()),
-            Rc::new(env.unwrap_or_else(Env::new)),
-        )
-        .as_link();
+    pub fn push_cont(&mut self, new: Option<Rc<Cont>>) {
+        if let Some(c) = new {
+            self.cont = Cont::new(Some(self.cont.clone()), c.env()).as_link();
+        }
     }
 
     /// Pop the most recent partial continuation off of the stack.
@@ -283,7 +281,7 @@ impl Context {
             Pair { head, tail } => match *head {
                 Atom(Primitive::Procedure(proc)) => {
                     proc.check_arity(tail.len())?;
-                    self.push_cont(proc.env);
+                    self.push_cont(proc.cont);
                     let result = match proc.func {
                         Pure(p) => p(*tail),
                         Ctx(p) => p(self, *tail),

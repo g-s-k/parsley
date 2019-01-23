@@ -2,8 +2,11 @@ use std::rc::Rc;
 
 use super::Env;
 
+type Link = Option<Rc<Cont>>;
+
+#[derive(Clone)]
 pub struct Cont {
-    cont: Option<Rc<Cont>>,
+    cont: Link,
     envt: Rc<Env>,
 }
 
@@ -21,14 +24,14 @@ impl Cont {
         Rc::new(self)
     }
 
-    pub fn new(parent: Option<Rc<Self>>, env: Rc<Env>) -> Self {
+    pub fn new(parent: Link, env: Rc<Env>) -> Self {
         Self {
             cont: parent,
             envt: env,
         }
     }
 
-    pub fn parent(&self) -> Option<Rc<Self>> {
+    pub fn parent(&self) -> Link {
         self.cont.clone()
     }
 

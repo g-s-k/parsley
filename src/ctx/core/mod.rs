@@ -233,18 +233,6 @@ impl Context {
         if let Some(ref n) = name {
             params_as_set.insert(n);
         }
-        let syms_to_close = fn_body
-            .iter()
-            .flat_map(|e| {
-                e.iter()
-                    .flat_map(|e| e.iter().flat_map(|e| e.iter().flat_map(SExp::iter)))
-            })
-            .filter_map(SExp::sym_to_str)
-            .collect::<HashSet<_>>()
-            .difference(&params_as_set)
-            .cloned()
-            .collect::<Vec<_>>();
-        let env = self.close(syms_to_close);
         SExp::from(Proc::new(
             Func::Ctx(Rc::new(move |the_ctx: &mut Self, args: SExp| {
                 // evaluate arguments
@@ -265,7 +253,7 @@ impl Context {
                 result
             })),
             expected,
-            if env.is_empty() { None } else { Some(env) },
+            Some(self.cont.clone()),
             name,
         ))
     }
