@@ -5,8 +5,7 @@ use parsley::Error;
 #[test]
 fn sicp_2_1() -> Result<(), Error> {
     let mut ctx = Context::base();
-    let ex_1 = include_str!("sicp/ch2/ex_1.ss");
-    ctx.run(ex_1)?;
+    ctx.run(include_str!("sicp/ch2/ex_1.ss"))?;
 
     assert_eq!(
         ctx.run("(add-rat one-half one-third)")?,
@@ -29,8 +28,7 @@ fn sicp_2_1() -> Result<(), Error> {
 #[test]
 fn sicp_2_2() -> Result<(), Error> {
     let mut ctx = Context::base();
-    let ex_2 = include_str!("sicp/ch2/ex_2.ss");
-    ctx.run(ex_2)?;
+    ctx.run(include_str!("sicp/ch2/ex_2.ss"))?;
 
     assert_eq!(
         ctx.run("(midpoint-segment (make-segment (make-point -5 4) (make-point 7 -2)))")?,
@@ -43,8 +41,7 @@ fn sicp_2_2() -> Result<(), Error> {
 #[test]
 fn sicp_2_3() -> Result<(), Error> {
     let mut ctx = Context::base();
-    let ex_3 = include_str!("sicp/ch2/ex_3.ss");
-    ctx.run(ex_3)?;
+    ctx.run(include_str!("sicp/ch2/ex_3.ss"))?;
 
     ctx.run("(define r (make-rect (make-point 2 3) 7 4))")?;
 
