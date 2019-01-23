@@ -39,3 +39,24 @@ fn sicp_2_2() -> Result<(), Error> {
 
     Ok(())
 }
+
+#[test]
+fn sicp_2_3() -> Result<(), Error> {
+    let mut ctx = Context::base();
+    let ex_3 = include_str!("sicp/ch2/ex_3.ss");
+    ctx.run(ex_3)?;
+
+    ctx.run("(define r (make-rect (make-point 2 3) 7 4))")?;
+
+    assert_eq!(
+        ctx.run("(rect-area r)")?,
+        SExp::from(28)
+    );
+
+    assert_eq!(
+        ctx.run("(rect-perimeter r)")?,
+        SExp::from(22)
+    );
+
+    Ok(())
+}
