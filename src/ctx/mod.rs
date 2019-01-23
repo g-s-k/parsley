@@ -1,7 +1,10 @@
+use std::mem;
+use std::rc::Rc;
+
 use super::proc::{Func, Proc};
 use super::Primitive::{self, Undefined};
 use super::SExp::{self, Atom};
-use super::{Env, Error, Result};
+use super::{Cont, Env, Error, Result};
 
 mod base;
 mod core;
@@ -22,13 +25,13 @@ mod write;
 /// case keeps the other environments immutable once they have been initialized.
 pub struct Context {
     core: Env,
+    cont: Rc<Cont>,
     /// You can `insert` additional definitions here to make them available
     /// throughout the runtime. These definitions will not go out of scope
     /// automatically, but can be overridden (see [`get`](#method.get) for
     /// semantic details).
     pub lang: Env,
     user: Vec<Env>,
-    overlay: Option<Env>,
     out: Option<String>,
 }
 
@@ -36,9 +39,9 @@ impl Default for Context {
     fn default() -> Self {
         Self {
             core: Self::core(),
+            cont: Cont::default().as_link(),
             lang: Env::new(),
             user: vec![Env::new()],
-            overlay: None,
             out: None,
         }
     }
@@ -128,10 +131,9 @@ impl Context {
         }
 
         // then check the overlay
-        if let Some(env) = &self.overlay {
-            if let Some(exp) = env.get(key) {
-                return Some(exp.clone());
-            }
+        let env = self.cont.env();
+        if let Some(exp) = env.get(key) {
+            return Some(exp.clone());
         }
 
         // then check user definitions (could have overridden library definitions)
@@ -189,9 +191,23 @@ impl Context {
         out
     }
 
-    /// Use definitions from a closure (or purge the existing ones)
-    pub fn overlay_env(&mut self, env: Option<Env>) {
-        self.overlay = env;
+    /// Push a new partial continuation onto the stack.
+    pub fn push_cont(&mut self, env: Option<Env>) {
+        self.cont = Cont::new(
+            Some(self.cont.clone()),
+            Rc::new(env.unwrap_or_else(Env::new)),
+        )
+        .as_link();
+    }
+
+    /// Pop the most recent partial continuation off of the stack.
+    pub fn pop_cont(&mut self) {
+        let parent = if let Some(parent) = self.cont.parent() {
+            parent
+        } else {
+            Cont::default().as_link()
+        };
+        mem::replace(&mut self.cont, parent);
     }
 
     /// Run a code snippet in an existing `Context`.
@@ -267,12 +283,12 @@ impl Context {
             Pair { head, tail } => match *head {
                 Atom(Primitive::Procedure(proc)) => {
                     proc.check_arity(tail.len())?;
-                    self.overlay_env(proc.env);
+                    self.push_cont(proc.env);
                     let result = match proc.func {
                         Pure(p) => p(*tail),
                         Ctx(p) => p(self, *tail),
                     };
-                    self.overlay_env(None);
+                    self.pop_cont();
                     result
                 }
                 Atom(Primitive::Symbol(sym)) => Err(Error::NotAProcedure {

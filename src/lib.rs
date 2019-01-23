@@ -32,13 +32,15 @@ use std::collections::HashMap;
 #[macro_use]
 mod sexp;
 
-mod context;
+mod cont;
+mod ctx;
 mod errors;
 mod primitives;
 mod proc;
 mod utils;
 
-pub use self::context::Context;
+use self::cont::Cont;
+pub use self::ctx::Context;
 pub use self::errors::Error;
 use self::primitives::Primitive;
 pub use self::sexp::SExp;
