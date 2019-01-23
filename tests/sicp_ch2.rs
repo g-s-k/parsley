@@ -25,3 +25,17 @@ fn sicp_2_1() -> Result<(), Error> {
 
     Ok(())
 }
+
+#[test]
+fn sicp_2_2() -> Result<(), Error> {
+    let mut ctx = Context::base();
+    let ex_2 = include_str!("sicp/ch2/ex_2.ss");
+    ctx.run(ex_2)?;
+
+    assert_eq!(
+        ctx.run("(midpoint-segment (make-segment (make-point -5 4) (make-point 7 -2)))")?,
+        ctx.run("(make-point 1 1)")?
+    );
+
+    Ok(())
+}
