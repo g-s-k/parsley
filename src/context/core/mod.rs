@@ -2,7 +2,7 @@ use std::collections::HashSet;
 use std::rc::Rc;
 
 use super::super::proc::{Func, Proc};
-use super::super::SExp::{self, Atom, Null, Pair, Vector};
+use super::super::SExp::{self, Atom, Null, Pair};
 use super::super::{Env, Error, Primitive, Result};
 use super::Context;
 
@@ -94,7 +94,7 @@ impl Context {
 
                 self.eval_case(hvl)
             }
-            Atom(_) | Vector(_) => Ok(Atom(Primitive::Undefined)),
+            Atom(_) => Ok(Atom(Primitive::Undefined)),
             Null => Err(Error::ArityMin {
                 expected: 1,
                 given: 0,

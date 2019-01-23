@@ -1,7 +1,7 @@
 use std::iter::FromIterator;
 use std::ops::Index;
 
-use super::SExp::{self, Atom, Null, Pair, Vector};
+use super::SExp::{self, Atom, Null, Pair};
 
 /// An iterator over an S-Expression. Returns list elements until the end of a chain of pairs.
 pub struct SExpIterator {
@@ -48,7 +48,7 @@ impl<'a> Iterator for SExpRefIterator<'a> {
                 self.exp = &*tail;
                 Some(&*head)
             }
-            a @ Atom(_) | a @ Vector(_) => {
+            a @ Atom(_) => {
                 self.exp = &Null;
                 Some(&a)
             }

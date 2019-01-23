@@ -233,7 +233,7 @@ impl Context {
     /// assert_eq!(ctx.eval(exp2).unwrap(), SExp::from(10));
     /// ```
     pub fn eval(&mut self, expr: SExp) -> Result {
-        use SExp::{Atom, Null, Pair, Vector};
+        use SExp::{Atom, Null, Pair};
 
         match expr {
             Null => Err(Error::NullList),
@@ -241,7 +241,7 @@ impl Context {
                 None | Some(Atom(Primitive::Undefined)) => Err(Error::UndefinedSymbol { sym }),
                 Some(exp) => Ok(exp),
             },
-            Atom(_) | Vector(_) => Ok(expr),
+            Atom(_) => Ok(expr),
             Pair { head, tail } => {
                 let proc = self.eval(*head)?;
                 let applic = if let Atom(Primitive::Procedure(Proc {
@@ -260,10 +260,10 @@ impl Context {
 
     fn apply(&mut self, expr: SExp) -> Result {
         use Func::{Ctx, Pure};
-        use SExp::{Atom, Null, Pair, Vector};
+        use SExp::{Atom, Null, Pair};
 
         match expr {
-            Null | Atom(_) | Vector(_) => Ok(expr),
+            Null | Atom(_) => Ok(expr),
             Pair { head, tail } => match *head {
                 Atom(Primitive::Procedure(proc)) => {
                     proc.check_arity(tail.len())?;

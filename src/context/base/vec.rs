@@ -8,8 +8,8 @@
 
 use super::super::super::proc::utils::*;
 use super::super::super::Error;
-use super::super::super::Primitive::{Number, Symbol, Undefined};
-use super::super::super::SExp::{Atom, Null, Vector};
+use super::super::super::Primitive::{Number, Symbol, Undefined, Vector};
+use super::super::super::SExp::{Atom, Null};
 use super::super::Context;
 
 macro_rules! define_with {
@@ -39,7 +39,7 @@ impl Context {
             self,
             "make-vector",
             |e| match e {
-                Atom(Number(n)) => Ok(Vector(vec![Null; n.floor() as usize])),
+                Atom(Number(n)) => Ok(Atom(Vector(vec![Null; n.floor() as usize]))),
                 _ => Err(Error::Type {
                     expected: "number",
                     given: e.type_of().to_string(),
@@ -52,7 +52,7 @@ impl Context {
             self,
             "vector-copy",
             |v| match v {
-                Vector(vec) => Ok(Vector(vec.clone())),
+                Atom(Vector(vec)) => Ok(Atom(Vector(vec.clone()))),
                 _ => Err(Error::Type {
                     expected: "vector",
                     given: v.type_of().to_string(),
@@ -65,7 +65,7 @@ impl Context {
             self,
             "vector?",
             |e| match e {
-                Vector(_) => Ok(true.into()),
+                Atom(Vector(_)) => Ok(true.into()),
                 _ => Ok(false.into()),
             },
             make_unary_expr
@@ -75,7 +75,7 @@ impl Context {
             self,
             "vector-length",
             |v| match v {
-                Vector(vec) => Ok((vec.len() as f64).into()),
+                Atom(Vector(vec)) => Ok((vec.len() as f64).into()),
                 _ => Err(Error::Type {
                     expected: "vector",
                     given: v.type_of().to_string(),
@@ -88,11 +88,11 @@ impl Context {
             self,
             "vector-ref",
             |v, i| match (v, i) {
-                (Vector(vec), Atom(Number(n))) => vec
+                (Atom(Vector(vec)), Atom(Number(n))) => vec
                     .get(n as usize)
                     .map(ToOwned::to_owned)
                     .ok_or(Error::Index { i: n as usize }),
-                (Vector(_), i) => Err(Error::Type {
+                (Atom(Vector(_)), i) => Err(Error::Type {
                     expected: "number",
                     given: i.type_of().to_string(),
                 }),
@@ -132,9 +132,9 @@ impl Context {
                 };
 
                 match ctx.get(&sym) {
-                    Some(Vector(mut vec)) => {
+                    Some(Atom(Vector(mut vec))) => {
                         vec[n as usize] = head;
-                        ctx.set(&sym, Vector(vec)).unwrap();
+                        ctx.set(&sym, Atom(Vector(vec))).unwrap();
                         Ok(Atom(Undefined))
                     }
                     Some(val) => Err(Error::Type {
@@ -154,7 +154,7 @@ impl Context {
                 let (proc, tail) = expr.split_car()?;
 
                 let vec = match tail.car()? {
-                    Vector(v) => v,
+                    Atom(Vector(v)) => v,
                     e => {
                         return Err(Error::Type {
                             expected: "vector",
@@ -167,7 +167,7 @@ impl Context {
                 for expression in vec {
                     new_vec.push(ctx.eval(Null.cons(expression).cons(proc.clone()))?);
                 }
-                Ok(Vector(new_vec))
+                Ok(Atom(Vector(new_vec)))
             },
             2
         );
@@ -176,7 +176,7 @@ impl Context {
             self,
             "subvector",
             |v, start, end| match (v, start, end) {
-                (Vector(vec), Atom(Number(n0)), Atom(Number(n1))) => {
+                (Atom(Vector(vec)), Atom(Number(n0)), Atom(Number(n1))) => {
                     let (i0, i1) = (n0 as usize, n1 as usize);
                     if i0 >= vec.len() {
                         return Err(Error::Index { i: i0 });
@@ -185,13 +185,13 @@ impl Context {
                         return Err(Error::Index { i: i1 });
                     }
 
-                    Ok(Vector(vec[i0..i1].to_vec()))
+                    Ok(Atom(Vector(vec[i0..i1].to_vec())))
                 }
-                (Vector(_), Atom(Number(_)), end) => Err(Error::Type {
+                (Atom(Vector(_)), Atom(Number(_)), end) => Err(Error::Type {
                     expected: "number",
                     given: end.type_of().to_string(),
                 }),
-                (Vector(_), start, _) => Err(Error::Type {
+                (Atom(Vector(_)), start, _) => Err(Error::Type {
                     expected: "number",
                     given: start.type_of().to_string(),
                 }),
@@ -207,15 +207,15 @@ impl Context {
             self,
             "vector-head",
             |v, end| match (v, end) {
-                (Vector(vec), Atom(Number(n1))) => {
+                (Atom(Vector(vec)), Atom(Number(n1))) => {
                     let i1 = n1 as usize;
                     if i1 >= vec.len() {
                         return Err(Error::Index { i: i1 });
                     }
 
-                    Ok(Vector(vec[..i1].to_vec()))
+                    Ok(Atom(Vector(vec[..i1].to_vec())))
                 }
-                (Vector(_), end) => Err(Error::Type {
+                (Atom(Vector(_)), end) => Err(Error::Type {
                     expected: "number",
                     given: end.type_of().to_string(),
                 }),
@@ -231,15 +231,15 @@ impl Context {
             self,
             "vector-tail",
             |v, start| match (v, start) {
-                (Vector(vec), Atom(Number(n0))) => {
+                (Atom(Vector(vec)), Atom(Number(n0))) => {
                     let i0 = n0 as usize;
                     if i0 >= vec.len() {
                         return Err(Error::Index { i: i0 });
                     }
 
-                    Ok(Vector(vec[i0..].to_vec()))
+                    Ok(Atom(Vector(vec[i0..].to_vec())))
                 }
-                (Vector(_), start) => Err(Error::Type {
+                (Atom(Vector(_)), start) => Err(Error::Type {
                     expected: "number",
                     given: start.type_of().to_string(),
                 }),

@@ -3,9 +3,10 @@ use std::string::String as CoreString;
 
 use super::proc::Proc;
 use super::Env as Environment;
+use super::SExp;
 
 use self::Primitive::{
-    Boolean, Character, Env, Number, Procedure, String, Symbol, Undefined, Void,
+    Boolean, Character, Env, Number, Procedure, String, Symbol, Undefined, Vector, Void,
 };
 
 mod from;
@@ -21,6 +22,7 @@ pub enum Primitive {
     Symbol(CoreString),
     Env(Environment),
     Procedure(Proc),
+    Vector(Vec<SExp>),
 }
 
 impl fmt::Debug for Primitive {
@@ -35,6 +37,14 @@ impl fmt::Debug for Primitive {
             Symbol(s) => write!(f, "{}", s),
             Env(_) => write!(f, "#<environment>"),
             Procedure(p) => write!(f, "{}", p),
+            Vector(v) => write!(
+                f,
+                "#({})",
+                v.iter()
+                    .map(|e| format!("{:?}", e))
+                    .collect::<Vec<_>>()
+                    .join(" ")
+            ),
         }
     }
 }
@@ -49,6 +59,11 @@ impl fmt::Display for Primitive {
             String(s) | Symbol(s) => f.write_str(s),
             Env(_) => write!(f, "#<environment>"),
             Procedure(p) => write!(f, "{}", p),
+            Vector(v) => write!(
+                f,
+                "#({})",
+                v.iter().map(SExp::to_string).collect::<Vec<_>>().join(" ")
+            ),
         }
     }
 }
@@ -79,6 +94,7 @@ impl Primitive {
             Symbol(_) => "symbol",
             Env(_) => "environment",
             Procedure { .. } => "procedure",
+            Vector(_) => "vector",
         }
     }
 }

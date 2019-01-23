@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use super::SExp::{self, Atom, Null, Pair, Vector};
+use super::SExp::{self, Atom, Null, Pair};
 use super::{utils, Error, Primitive, Result};
 
 mod tests;
@@ -51,12 +51,12 @@ impl SExp {
             }
         } else if code.starts_with("#(") && code.ends_with(')') {
             match utils::find_closing_delim(code[1..].chars(), '(', ')') {
-                Some(idx) if idx == 1 => Ok(Vector(Vec::new())),
-                Some(idx) => Ok(Vector(
+                Some(idx) if idx == 1 => Ok(Atom(Primitive::Vector(Vec::new()))),
+                Some(idx) => Ok(Atom(Primitive::Vector(
                     Self::parse_list_from_str(&code[2..=idx])?
                         .into_iter()
                         .collect::<Vec<_>>(),
-                )),
+                ))),
                 None => Err(Error::Syntax {
                     exp: code.to_string(),
                 }),
