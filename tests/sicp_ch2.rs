@@ -57,3 +57,23 @@ fn sicp_2_3() -> Result<(), Error> {
 
     Ok(())
 }
+
+// This test fails, because scoping is busted (again).
+// This would be solved by implementing continuations.
+// #[test]
+fn _sicp_2_4() -> Result<(), Error> {
+    let mut ctx = Context::base();
+    ctx.run(include_str!("sicp/ch2/ex_4.ss"))?;
+
+    assert_eq!(
+        ctx.run("(car (cons 3 4))")?,
+        SExp::from(3)
+    );
+
+    assert_eq!(
+        ctx.run("(cdr (cons 3 4))")?,
+        SExp::from(4)
+    );
+
+    Ok(())
+}
