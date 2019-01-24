@@ -27,13 +27,12 @@
 
 #![deny(clippy::pedantic)]
 
-use std::collections::HashMap;
-
 #[macro_use]
 mod sexp;
 
 mod cont;
 mod ctx;
+mod env;
 mod errors;
 mod primitives;
 mod proc;
@@ -41,6 +40,7 @@ mod utils;
 
 use self::cont::Cont;
 pub use self::ctx::Context;
+use self::env::{Env, Ns};
 pub use self::errors::Error;
 use self::primitives::Primitive;
 pub use self::sexp::SExp;
@@ -48,9 +48,6 @@ pub use proc::{utils as proc_utils, Arity, Func, Proc};
 
 /// A shorthand Result type.
 pub type Result = ::std::result::Result<SExp, Error>;
-
-/// A type to represent an execution environment.
-type Env = HashMap<String, SExp>;
 
 /// Run a code snippet in the [base context](./struct.Context.html#method.base).
 ///

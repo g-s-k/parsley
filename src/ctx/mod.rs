@@ -4,7 +4,7 @@ use std::rc::Rc;
 use super::proc::{Func, Proc};
 use super::Primitive::{self, Undefined};
 use super::SExp::{self, Atom};
-use super::{Cont, Env, Error, Result};
+use super::{Cont, Env, Error, Ns, Result};
 
 mod base;
 mod core;
@@ -24,14 +24,14 @@ mod write;
 /// the provided methods operate on the "user" environment, as the intended use
 /// case keeps the other environments immutable once they have been initialized.
 pub struct Context {
-    core: Env,
+    core: Ns,
     cont: Rc<Cont>,
     /// You can `insert` additional definitions here to make them available
     /// throughout the runtime. These definitions will not go out of scope
     /// automatically, but can be overridden (see [`get`](#method.get) for
     /// semantic details).
-    pub lang: Env,
-    user: Vec<Env>,
+    pub lang: Ns,
+    user: Vec<Ns>,
     out: Option<String>,
 }
 
@@ -40,8 +40,8 @@ impl Default for Context {
         Self {
             core: Self::core(),
             cont: Cont::default().into_rc(),
-            lang: Env::new(),
-            user: vec![Env::new()],
+            lang: Ns::new(),
+            user: vec![Ns::new()],
             out: None,
         }
     }
@@ -52,7 +52,7 @@ impl Context {
     ///
     /// See [Context::pop](#method.pop) for a usage example.
     pub fn push(&mut self) {
-        self.user.push(Env::new());
+        self.user.push(Ns::new());
     }
 
     /// Remove the most recently added scope.
@@ -131,8 +131,7 @@ impl Context {
         }
 
         // then check the overlay
-        let env = self.cont.env();
-        if let Some(exp) = env.get(key) {
+        if let Some(exp) = self.cont.env().get(key) {
             return Some(exp.clone());
         }
 
@@ -178,24 +177,9 @@ impl Context {
         })
     }
 
-    /// Get a snapshot of environment state for a list of symbols.
-    pub fn close(&self, vars: Vec<&str>) -> Env {
-        let mut out = Env::new();
-
-        for var in vars {
-            if let Some(exp) = self.get_user(var) {
-                out.insert(var.to_string(), exp);
-            }
-        }
-
-        out
-    }
-
     /// Push a new partial continuation onto the stack.
-    pub fn push_cont(&mut self, new: Option<Rc<Cont>>) {
-        if let Some(c) = new {
-            self.cont = Cont::new(Some(self.cont.clone()), c.env()).into_rc();
-        }
+    pub fn push_cont(&mut self, parent: Option<Rc<Env>>) {
+        self.cont = Cont::new(Some(self.cont.clone()), Env::new(parent).into_rc()).into_rc();
     }
 
     /// Pop the most recent partial continuation off of the stack.

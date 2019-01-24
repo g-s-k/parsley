@@ -2,7 +2,7 @@ use std::fmt;
 use std::string::String as CoreString;
 
 use super::proc::Proc;
-use super::Env as Environment;
+use super::Ns;
 use super::SExp;
 
 use self::Primitive::{
@@ -20,7 +20,7 @@ pub enum Primitive {
     Number(f64),
     String(CoreString),
     Symbol(CoreString),
-    Env(Environment),
+    Env(Ns),
     Procedure(Proc),
     Vector(Vec<SExp>),
 }

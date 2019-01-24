@@ -3,7 +3,7 @@
 use std::fmt;
 use std::rc::Rc;
 
-use super::{Cont, Context, Error, Primitive, Result, SExp};
+use super::{Context, Env, Error, Primitive, Result, SExp};
 
 pub mod utils;
 
@@ -11,12 +11,12 @@ pub mod utils;
 pub struct Proc {
     name: Option<String>,
     arity: Arity,
-    pub(crate) cont: Option<Rc<Cont>>,
+    pub(crate) cont: Option<Rc<Env>>,
     pub(crate) func: Func,
 }
 
 impl Proc {
-    pub fn new<T, U, V>(func: T, arity: U, cont: Option<Rc<Cont>>, name: Option<V>) -> Self
+    pub fn new<T, U, V>(func: T, arity: U, cont: Option<Rc<Env>>, name: Option<V>) -> Self
     where
         Arity: From<U>,
         Func: From<T>,

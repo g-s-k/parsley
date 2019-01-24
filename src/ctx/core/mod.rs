@@ -3,7 +3,7 @@ use std::rc::Rc;
 
 use super::super::proc::{Func, Proc};
 use super::super::SExp::{self, Atom, Null, Pair};
-use super::super::{Env, Error, Primitive, Result};
+use super::super::{Error, Ns, Primitive, Result};
 use super::Context;
 
 mod tests;
@@ -23,7 +23,7 @@ macro_rules! tup_ctx_env {
 }
 
 impl Context {
-    pub(super) fn core() -> Env {
+    pub(super) fn core() -> Ns {
         [
             tup_ctx_env!(
                 "eval",
@@ -253,7 +253,7 @@ impl Context {
                 result
             })),
             expected,
-            Some(self.cont.clone()),
+            Some(self.cont.env()),
             name,
         ))
     }

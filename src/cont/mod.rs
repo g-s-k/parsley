@@ -14,7 +14,7 @@ impl Default for Cont {
     fn default() -> Self {
         Self {
             cont: None,
-            envt: Rc::new(Env::new()),
+            envt: Rc::new(Env::default()),
         }
     }
 }
