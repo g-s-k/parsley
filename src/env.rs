@@ -40,6 +40,10 @@ impl Env {
         self.parent().into_iter().count() + 1
     }
 
+    pub fn extend(&self, other: Ns) {
+        self.env.borrow_mut().extend(other.into_iter());
+    }
+
     pub fn get(&self, key: &str) -> Option<SExp> {
         for ns in self.iter() {
             if let Some(val) = ns.env.borrow().get(key) {

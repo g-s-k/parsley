@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::rc::Rc;
 
 use super::super::proc::{Func, Proc};
@@ -38,6 +39,7 @@ impl Context {
             tup_ctx_env!("begin", Self::eval_begin, (0,)),
             tup_ctx_env!("case", Self::eval_case, (2,)),
             tup_ctx_env!("cond", Self::eval_cond, (0,)),
+            tup_ctx_env!("do", Self::eval_do, (3,)),
             tup_ctx_env!("define", Self::eval_define, (1,)),
             tup_ctx_env!("if", Self::eval_if, 3),
             tup_ctx_env!("lambda", |e, c| Self::eval_lambda(e, c, false), (2,)),
@@ -178,6 +180,82 @@ impl Context {
         // actually persist the definition to the environment
         self.define(&sym, the_defn);
         Ok(Atom(Primitive::Undefined))
+    }
+
+    fn eval_do(&mut self, expr: SExp) -> Result {
+        let (vars, rest) = expr.split_car()?;
+        let (term, body) = rest.split_car()?;
+
+        // get definitions for loop vars
+        let mut var_inits = HashMap::new();
+        let mut var_updates = HashMap::new();
+
+        for var in vars {
+            match var.split_car()? {
+                (Atom(Primitive::Symbol(s)), rest) => match rest.len() {
+                    1 => {
+                        var_inits.insert(s, rest.car()?);
+                    }
+                    2 => {
+                        let (defn, tail) = rest.split_car()?;
+                        var_inits.insert(s.clone(), defn);
+                        var_updates.insert(s, tail.car()?);
+                    }
+                    0 => return Err(Error::ArityMin {
+                        expected: 1,
+                        given: 0,
+                    }),
+                    given => return Err(Error::ArityMax {
+                        expected: 2,
+                        given,
+                    }),
+                }
+                (other, _) => return Err(Error::Type {
+                    expected: "symbol",
+                    given: other.type_of().to_string()
+                })
+            }
+        }
+
+        // termination condition and return value
+        let (cond, tmp) = term.split_car()?;
+        let ret = tmp.car()?;
+
+        // add definitions to environment
+        self.push();
+        self.user.extend(var_inits);
+
+        let result = 'eval: loop {
+            // do each step
+            for exp in body.iter() {
+                if let Err(err) = self.eval(exp.to_owned()) {
+                    break 'eval Err(err);
+                }
+            }
+
+            // check termination condition, update vars if necessary
+            match self.eval(cond.clone()) {
+                Ok(Atom(Primitive::Boolean(false))) => {
+                    // we don't want the new values to be in place while we
+                    // evaluate subsequent step variables, so we hold them in a
+                    // temporary map, then insert them all at once
+                    let mut new_map = HashMap::new();
+                    for (key, upd) in var_updates.iter() {
+                        let new_val = match self.eval(upd.to_owned()) {
+                            Ok(v) => v,
+                            err => break 'eval err,
+                        };
+                        new_map.insert(key.to_string(), new_val);
+                    }
+                    self.user.extend(new_map);
+                }
+                Ok(_) => break 'eval self.eval(ret),
+                err => break 'eval err,
+            }
+        };
+
+        self.pop();
+        result
     }
 
     fn eval_if(&mut self, expr: SExp) -> Result {

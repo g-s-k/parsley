@@ -167,6 +167,23 @@ fn begin() {
 }
 
 #[test]
+fn r#do() {
+    assert_eval_eq!(sexp![
+        s("do"),
+        sexp![sexp![s("x"), 0, sexp![s("add1"), s("x")]]],
+        sexp![sexp![s("="), s("x"), 5], s("x")],
+        false
+    ], 5);
+
+    assert_eval_eq!(sexp![
+        s("do"),
+        sexp![sexp![s("v"), 5, sexp![s("*"), s("v"), s("x")]], sexp![s("x"), 4, sexp![s("sub1"), s("x")]]],
+        sexp![sexp![s("="), s("x"), 1], s("v")],
+        false
+    ], 120);
+}
+
+#[test]
 fn r#let() {
     // validate errors for insufficient arguments
     assert!(eval(sexp![s("let")]).is_err());
