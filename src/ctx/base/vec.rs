@@ -28,6 +28,7 @@ macro_rules! define_ctx {
                 $arity,
                 None,
                 Some($name),
+                false,
             )),
         )
     };

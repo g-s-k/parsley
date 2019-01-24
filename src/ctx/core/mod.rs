@@ -16,6 +16,7 @@ macro_rules! tup_ctx_env {
                 $arity,
                 None,
                 Some($name),
+                false,
             )),
         )
     };
@@ -229,16 +230,11 @@ impl Context {
         let expected = params.len();
         SExp::from(Proc::new(
             Func::Ctx(Rc::new(move |the_ctx: &mut Self, args: SExp| {
-                // evaluate arguments
-                let evalled_args = args
-                    .into_iter()
-                    .map(|e| the_ctx.eval(e))
-                    .collect::<Result>()?;
                 // bind arguments to parameters
                 the_ctx.push();
                 params
                     .iter()
-                    .zip(evalled_args.into_iter())
+                    .zip(args.into_iter())
                     .for_each(|(p, v)| the_ctx.define(p, v));
                 // evaluate each body expression
                 let result = the_ctx.eval_begin(fn_body.to_owned());
@@ -248,6 +244,7 @@ impl Context {
             expected,
             Some(self.user.clone()),
             name,
+            true,
         ))
     }
 

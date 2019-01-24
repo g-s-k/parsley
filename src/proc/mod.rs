@@ -9,14 +9,15 @@ pub mod utils;
 
 #[derive(Clone)]
 pub struct Proc {
+    pub(crate) eval_args: bool,
     name: Option<String>,
     arity: Arity,
-    cont: Option<Rc<Env>>,
+    envt: Option<Rc<Env>>,
     func: Func,
 }
 
 impl Proc {
-    pub fn new<T, U, V>(func: T, arity: U, cont: Option<Rc<Env>>, name: Option<V>) -> Self
+    pub fn new<T, U, V>(func: T, arity: U, envt: Option<Rc<Env>>, name: Option<V>, eval_args: bool) -> Self
     where
         Arity: From<U>,
         Func: From<T>,
@@ -25,7 +26,8 @@ impl Proc {
         Self {
             name: name.map(String::from),
             arity: arity.into(),
-            cont,
+            envt,
+            eval_args,
             func: func.into(),
         }
     }
@@ -53,7 +55,7 @@ impl Proc {
     pub fn apply(&self, args: SExp, ctx: &mut Context) -> Result {
         self.check_arity(args.len())?;
 
-        ctx.push_cont(self.cont.clone());
+        ctx.push_cont(self.envt.clone());
         let res = match &self.func {
             Func::Ctx(f) => f(ctx, args),
             Func::Pure(f) => f(args),

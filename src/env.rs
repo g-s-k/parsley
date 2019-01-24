@@ -10,7 +10,7 @@ pub type Ns = HashMap<String, SExp>;
 
 type Link = Option<Rc<Env>>;
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct Env {
     env: RefCell<Ns>,
     parent: Link,

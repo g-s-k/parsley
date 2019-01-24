@@ -1,4 +1,3 @@
-use std::mem;
 use std::rc::Rc;
 
 use super::Primitive;
@@ -24,7 +23,7 @@ mod write;
 /// case keeps the other environments immutable once they have been initialized.
 pub struct Context {
     core: Ns,
-    cont: Rc<Cont>,
+    cont: Option<Rc<Cont>>,
     /// You can `insert` additional definitions here to make them available
     /// throughout the runtime. These definitions will not go out of scope
     /// automatically, but can be overridden (see [`get`](#method.get) for
@@ -38,7 +37,7 @@ impl Default for Context {
     fn default() -> Self {
         Self {
             core: Self::core(),
-            cont: Cont::default().into_rc(),
+            cont: None,
             lang: Ns::new(),
             user: Env::default().into_rc(),
             out: None,
@@ -125,8 +124,10 @@ impl Context {
         }
 
         // then check the overlay
-        if let Some(exp) = self.cont.env().get(key) {
-            return Some(exp);
+        if let Some(c) = &self.cont {
+            if let Some(exp) = c.env().get(key) {
+                return Some(exp);
+            }
         }
 
         // then check user definitions (could have overridden library definitions)
@@ -165,17 +166,14 @@ impl Context {
 
     /// Push a new partial continuation onto the stack.
     pub fn push_cont(&mut self, parent: Option<Rc<Env>>) {
-        self.cont = Cont::new(Some(self.cont.clone()), parent.unwrap_or_default()).into_rc();
+        self.cont = Some(Cont::new(self.cont.clone(), parent.unwrap_or_default()).into_rc());
     }
 
     /// Pop the most recent partial continuation off of the stack.
     pub fn pop_cont(&mut self) {
-        let parent = if let Some(parent) = self.cont.parent() {
-            parent
-        } else {
-            Cont::default().into_rc()
-        };
-        mem::replace(&mut self.cont, parent);
+        if let Some(c) = &self.cont {
+            self.cont = c.parent();
+        }
     }
 
     /// Run a code snippet in an existing `Context`.
@@ -229,7 +227,7 @@ impl Context {
             Pair { head, tail } => {
                 let proc = self.eval(*head)?;
                 let applic = match &proc {
-                    Atom(Primitive::Procedure(p)) if p.needs_ctx() => *tail,
+                    Atom(Primitive::Procedure(p)) if !p.eval_args => *tail,
                     _ => tail.into_iter().map(|e| self.eval(e)).collect::<Result>()?,
                 }
                 .cons(proc);

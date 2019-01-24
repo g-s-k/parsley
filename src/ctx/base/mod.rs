@@ -34,6 +34,7 @@ macro_rules! define_ctx {
                 $arity,
                 None,
                 ::std::option::Option::Some($name),
+                false,
             )),
         )
     };
@@ -48,6 +49,7 @@ macro_rules! define {
                 $arity,
                 None,
                 Some($name),
+                true,
             )),
         )
     };
