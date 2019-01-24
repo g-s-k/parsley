@@ -44,6 +44,7 @@ impl Context {
             tup_ctx_env!("let", Self::eval_let, (2,)),
             tup_ctx_env!("named-lambda", |e, c| Self::eval_lambda(e, c, true), (2,)),
             tup_ctx_env!("or", Self::eval_or, (0,)),
+            tup_ctx_env!("quasiquote", Self::eval_quasiquote, 1),
             tup_ctx_env!("quote", Self::eval_quote, 1),
             tup_ctx_env!("set!", Self::eval_set, 2),
         ]
@@ -279,6 +280,22 @@ impl Context {
         }
 
         Ok(false.into())
+    }
+
+    fn eval_quasiquote(&mut self, expr: SExp) -> Result {
+        match expr.car()? {
+            p @ Pair { .. } => p
+                .into_iter()
+                .map(|sub_expr| match sub_expr {
+                    Pair { head, tail } => match *head {
+                        Atom(Primitive::Symbol(ref s)) if s == "unquote" => self.eval(tail.car()?),
+                        _ => Ok(tail.cons(*head)),
+                    },
+                    _ => Ok(sub_expr),
+                })
+                .collect::<Result>(),
+            other => Ok(other),
+        }
     }
 
     fn eval_quote(&mut self, expr: SExp) -> Result {

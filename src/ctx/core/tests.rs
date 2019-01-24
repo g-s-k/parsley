@@ -30,11 +30,32 @@ fn atom() {
 }
 
 #[test]
-fn list_quote() {
+fn quote() {
     assert_eval_eq!(sexp![s("quote"), Null], Null);
 
     let list = sexp![s("abc"), s("xyz")];
     assert_eval_eq!(sexp![s("quote"), list.clone()], list);
+}
+
+#[test]
+fn quasiquote() {
+    assert_eval_eq!(sexp![s("quasiquote"), Null], Null);
+
+    let list = sexp![1, 2, false, "foobar"];
+    assert_eval_eq!(sexp![s("quasiquote"), list.clone()], list);
+
+    assert_eval_eq!(
+        sexp![
+            s("quasiquote"),
+            sexp![
+                'a',
+                "hello world",
+                sexp![s("unquote"), sexp![s("null?"), s("null")]],
+                6
+            ]
+        ],
+        sexp!['a', "hello world", true, 6]
+    );
 }
 
 #[test]

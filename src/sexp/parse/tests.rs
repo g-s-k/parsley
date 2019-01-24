@@ -104,3 +104,29 @@ fn quote_syntax() {
         Null.cons(SExp::sym("potato")).cons(SExp::sym("quote")),
     );
 }
+
+#[test]
+fn quasiquote_syntax() {
+    do_parse_and_assert("`1", Null.cons(1.into()).cons(SExp::sym("quasiquote")));
+    do_parse_and_assert(
+        "`(a b c d)",
+        Null.cons(
+            Null.cons(SExp::sym("d"))
+                .cons(SExp::sym("c"))
+                .cons(SExp::sym("b"))
+                .cons(SExp::sym("a")),
+        )
+        .cons(SExp::sym("quasiquote")),
+    );
+
+    do_parse_and_assert(
+        "`(a b ,() d)",
+        Null.cons(
+            Null.cons(SExp::sym("d"))
+                .cons(Null.cons(Null).cons(SExp::sym("unquote")))
+                .cons(SExp::sym("b"))
+                .cons(SExp::sym("a")),
+        )
+        .cons(SExp::sym("quasiquote")),
+    );
+}

@@ -51,6 +51,26 @@ impl SExp {
                     .cons(Self::parse_str(&code[1..])?)
                     .cons(Self::sym("quote")))
             }
+        } else if code.starts_with('`') {
+            if code.len() == 1 {
+                Err(Error::Syntax {
+                    exp: code.to_string(),
+                })
+            } else {
+                Ok(Null
+                   .cons(Self::parse_str(&code[1..])?)
+                   .cons(Self::sym("quasiquote")))
+            }
+        } else if code.starts_with(',') {
+            if code.len() == 1 {
+                Err(Error::Syntax {
+                    exp: code.to_string(),
+                })
+            } else {
+                Ok(Null
+                   .cons(Self::parse_str(&code[1..])?)
+                   .cons(Self::sym("unquote")))
+            }
         } else if code.chars().all(utils::is_atom_char) {
             Ok(Atom(code.parse::<Primitive>()?))
         } else if code.starts_with('(') && code.ends_with(')') {
@@ -114,8 +134,13 @@ impl SExp {
                                 new_idx -= 1;
                             }
                             // quotes
-                            while let Some('\'') = list_str.chars().nth(new_idx - 1) {
-                                new_idx -= 1;
+                            loop {
+                                match list_str.chars().nth(new_idx - 1) {
+                                    Some('\'') | Some('`') | Some(',') => {
+                                        new_idx -= 1;
+                                    }
+                                    _ => break,
+                                }
                             }
                         }
 
