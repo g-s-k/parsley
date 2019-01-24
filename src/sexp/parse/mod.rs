@@ -84,7 +84,6 @@ impl SExp {
         let mut list_out = Null;
 
         while !list_str.is_empty() {
-            println!("{}", list_str);
             match (
                 list_str.find(';'),
                 list_str.rfind(';'),
@@ -99,8 +98,6 @@ impl SExp {
                 }
                 _ => (),
             }
-
-            println!("{}\n", list_str);
 
             if list_str.ends_with(')') {
                 match utils::find_closing_delim(list_str.chars().rev(), ')', '(') {
