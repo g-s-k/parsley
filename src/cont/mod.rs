@@ -20,7 +20,7 @@ impl Default for Cont {
 }
 
 impl Cont {
-    pub fn as_link(self) -> Rc<Self> {
+    pub fn into_rc(self) -> Rc<Self> {
         Rc::new(self)
     }
 

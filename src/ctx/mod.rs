@@ -39,7 +39,7 @@ impl Default for Context {
     fn default() -> Self {
         Self {
             core: Self::core(),
-            cont: Cont::default().as_link(),
+            cont: Cont::default().into_rc(),
             lang: Env::new(),
             user: vec![Env::new()],
             out: None,
@@ -194,7 +194,7 @@ impl Context {
     /// Push a new partial continuation onto the stack.
     pub fn push_cont(&mut self, new: Option<Rc<Cont>>) {
         if let Some(c) = new {
-            self.cont = Cont::new(Some(self.cont.clone()), c.env()).as_link();
+            self.cont = Cont::new(Some(self.cont.clone()), c.env()).into_rc();
         }
     }
 
@@ -203,7 +203,7 @@ impl Context {
         let parent = if let Some(parent) = self.cont.parent() {
             parent
         } else {
-            Cont::default().as_link()
+            Cont::default().into_rc()
         };
         mem::replace(&mut self.cont, parent);
     }
