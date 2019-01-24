@@ -1,7 +1,6 @@
 use parsley::prelude::*;
 use parsley::Error;
 
-
 #[test]
 fn sicp_2_1() -> Result<(), Error> {
     let mut ctx = Context::base();
@@ -45,15 +44,9 @@ fn sicp_2_3() -> Result<(), Error> {
 
     ctx.run("(define r (make-rect (make-point 2 3) 7 4))")?;
 
-    assert_eq!(
-        ctx.run("(rect-area r)")?,
-        SExp::from(28)
-    );
+    assert_eq!(ctx.run("(rect-area r)")?, SExp::from(28));
 
-    assert_eq!(
-        ctx.run("(rect-perimeter r)")?,
-        SExp::from(22)
-    );
+    assert_eq!(ctx.run("(rect-perimeter r)")?, SExp::from(22));
 
     Ok(())
 }
@@ -65,15 +58,9 @@ fn _sicp_2_4() -> Result<(), Error> {
     let mut ctx = Context::base();
     ctx.run(include_str!("sicp/ch2/ex_4.ss"))?;
 
-    assert_eq!(
-        ctx.run("(car (cons 3 4))")?,
-        SExp::from(3)
-    );
+    assert_eq!(ctx.run("(car (cons 3 4))")?, SExp::from(3));
 
-    assert_eq!(
-        ctx.run("(cdr (cons 3 4))")?,
-        SExp::from(4)
-    );
+    assert_eq!(ctx.run("(cdr (cons 3 4))")?, SExp::from(4));
 
     Ok(())
 }

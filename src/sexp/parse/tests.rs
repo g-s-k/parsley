@@ -37,6 +37,24 @@ fn list_of_atoms() {
 }
 
 #[test]
+fn comments() {
+    do_parse_and_assert(
+        r#"
+; leading comment
+(1 ;; double semicolon
+(2 null)
+; in between
+(x)
+;; not included: 5)
+)
+"#,
+        Null.cons(Null.cons(SExp::sym("x")))
+            .cons(Null.cons(SExp::sym("null")).cons(2.into()))
+            .cons(1.into()),
+    );
+}
+
+#[test]
 fn primitive_types() {
     do_parse_and_assert("#f", SExp::from(false));
     do_parse_and_assert("#t", SExp::from(true));

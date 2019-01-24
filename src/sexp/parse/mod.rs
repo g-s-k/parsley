@@ -27,7 +27,19 @@ impl FromStr for SExp {
 
 impl SExp {
     fn parse_str(s: &str) -> Result {
-        let code = s.trim();
+        let mut code = s.trim();
+
+        if code.starts_with(';') {
+            if let Some(new_idx) = code.find('\n') {
+                code = &code[new_idx..].trim();
+            } else {
+                code = "";
+            }
+        }
+
+        if code.is_empty() {
+            return Ok(Atom(Primitive::Void));
+        }
 
         if code.starts_with('\'') {
             if code.len() == 1 {
@@ -72,6 +84,24 @@ impl SExp {
         let mut list_out = Null;
 
         while !list_str.is_empty() {
+            println!("{}", list_str);
+            match (
+                list_str.find(';'),
+                list_str.rfind(';'),
+                list_str.rfind('\n'),
+            ) {
+                (Some(_), Some(last), Some(n)) if n < last => {
+                    let first_in_line = list_str[n..].find(';').unwrap();
+                    list_str = &list_str[..n + first_in_line].trim();
+                }
+                (Some(first), Some(_), None) => {
+                    list_str = &list_str[..first].trim();
+                }
+                _ => (),
+            }
+
+            println!("{}\n", list_str);
+
             if list_str.ends_with(')') {
                 match utils::find_closing_delim(list_str.chars().rev(), ')', '(') {
                     None => {
