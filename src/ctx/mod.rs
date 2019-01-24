@@ -2,8 +2,8 @@ use std::mem;
 use std::rc::Rc;
 
 use super::proc::{Func, Proc};
-use super::Primitive::{self, Undefined};
-use super::SExp::{self, Atom};
+use super::Primitive;
+use super::SExp;
 use super::{Cont, Env, Error, Ns, Result};
 
 mod base;
@@ -31,7 +31,7 @@ pub struct Context {
     /// automatically, but can be overridden (see [`get`](#method.get) for
     /// semantic details).
     pub lang: Ns,
-    user: Vec<Ns>,
+    user: Rc<Env>,
     out: Option<String>,
 }
 
@@ -41,7 +41,7 @@ impl Default for Context {
             core: Self::core(),
             cont: Cont::default().into_rc(),
             lang: Ns::new(),
-            user: vec![Ns::new()],
+            user: Env::default().into_rc(),
             out: None,
         }
     }
@@ -52,7 +52,7 @@ impl Context {
     ///
     /// See [Context::pop](#method.pop) for a usage example.
     pub fn push(&mut self) {
-        self.user.push(Ns::new());
+        self.user = Env::new(Some(self.user.clone())).into_rc();
     }
 
     /// Remove the most recently added scope.
@@ -73,25 +73,20 @@ impl Context {
     /// assert_eq!(ctx.get("x"), None);
     /// ```
     pub fn pop(&mut self) {
-        self.user.pop();
-
-        if self.user.is_empty() {
-            self.push();
-        }
+        let parent = self
+            .user
+            .parent()
+            .unwrap_or_else(|| Env::default().into_rc());
+        self.user = parent;
     }
 
     /// Create a new definition in the current scope.
     pub fn define(&mut self, key: &str, value: SExp) {
-        let num_frames = self.user.len();
-        self.user[num_frames - 1].insert(key.to_string(), value);
+        self.user.define(key, value);
     }
 
     fn get_user(&self, key: &str) -> Option<SExp> {
-        self.user
-            .iter()
-            .rev()
-            .find_map(|w| w.get(key))
-            .map(Clone::clone)
+        self.user.get(key)
     }
 
     /// Get the definition for a symbol in the execution environment.
@@ -132,7 +127,7 @@ impl Context {
 
         // then check the overlay
         if let Some(exp) = self.cont.env().get(key) {
-            return Some(exp.clone());
+            return Some(exp);
         }
 
         // then check user definitions (could have overridden library definitions)
@@ -166,20 +161,12 @@ impl Context {
     /// assert_eq!(ctx.get("x"), Some(SExp::from("potato"))); // check that its value is now "potato"
     /// ```
     pub fn set(&mut self, key: &str, value: SExp) -> Result {
-        for frame in self.user.iter_mut().rev() {
-            if frame.contains_key(key) {
-                frame.insert(key.to_string(), value);
-                return Ok(Atom(Undefined));
-            }
-        }
-        Err(Error::UndefinedSymbol {
-            sym: key.to_string(),
-        })
+        self.user.set(key, value)
     }
 
     /// Push a new partial continuation onto the stack.
     pub fn push_cont(&mut self, parent: Option<Rc<Env>>) {
-        self.cont = Cont::new(Some(self.cont.clone()), Env::new(parent).into_rc()).into_rc();
+        self.cont = Cont::new(Some(self.cont.clone()), parent.unwrap_or_default()).into_rc();
     }
 
     /// Pop the most recent partial continuation off of the stack.

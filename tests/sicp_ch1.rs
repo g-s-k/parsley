@@ -1,4 +1,5 @@
 use parsley::prelude::*;
+use parsley::Error;
 
 // Exercise 1.1
 #[test]
@@ -48,18 +49,18 @@ fn sicp_1_2() {
 
 // Exercise 1.3
 #[test]
-fn sicp_1_3() {
-    let func = include_str!("./sicp/ch1/ex_3.ss");
-
+fn sicp_1_3() -> Result<(), Error> {
     let mut ctx = Context::base();
-    ctx.run(func).unwrap();
+    ctx.run(include_str!("./sicp/ch1/ex_3.ss"))?;
 
     let example_nums = "2 3 4";
     let answer = 25.;
     let invocation = format!("(big-2-sum-sqrs {})", example_nums);
 
-    let evaluated = ctx.run(&invocation).unwrap();
+    let evaluated = ctx.run(&invocation)?;
     assert_eq!(evaluated, SExp::from(answer));
+
+    Ok(())
 }
 
 // Exercise 1.4
@@ -81,33 +82,37 @@ fn sicp_1_4() {
 
 // Exercise 1.10
 #[test]
-fn sicp_1_10() {
+fn sicp_1_10() -> Result<(), Error> {
     let ack = include_str!("./sicp/ch1/ex_5.ss");
 
     let mut ctx = Context::base();
-    ctx.run(ack).unwrap();
+    ctx.run(ack)?;
 
     let invoc_1 = "(A 1 10)";
-    assert_eq!(ctx.run(invoc_1).unwrap(), SExp::from(1024));
+    assert_eq!(ctx.run(invoc_1)?, SExp::from(1024));
     let invoc_2 = "(A 2 4)";
-    assert_eq!(ctx.run(invoc_2).unwrap(), SExp::from(65536));
+    assert_eq!(ctx.run(invoc_2)?, SExp::from(65536));
     let invoc_3 = "(A 3 3)";
-    assert_eq!(ctx.run(invoc_3).unwrap(), SExp::from(65536));
+    assert_eq!(ctx.run(invoc_3)?, SExp::from(65536));
+
+    Ok(())
 }
 
 // Exercise 1.11
 #[test]
-fn sicp_1_11() {
+fn sicp_1_11() -> Result<(), Error> {
     let func_rec = include_str!("./sicp/ch1/ex_11_rec.ss");
     let func_itr = include_str!("./sicp/ch1/ex_11_iter.ss");
 
     let mut ctx = Context::base();
-    ctx.run(func_rec).unwrap();
-    ctx.run(func_itr).unwrap();
+    ctx.run(func_rec)?;
+    ctx.run(func_itr)?;
 
     let invoc_r = "(f-r 12)";
     let invoc_i = "(f-i 12)";
-    assert_eq!(ctx.run(invoc_r).unwrap(), ctx.run(invoc_i).unwrap());
+    assert_eq!(ctx.run(invoc_r)?, ctx.run(invoc_i)?);
+
+    Ok(())
 }
 
 // TODO: Exercises 1.12 through 1.15
