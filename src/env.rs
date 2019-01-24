@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::iter::IntoIterator;
 use std::rc::Rc;
 
-use super::{Error, Primitive::Undefined, Result, SExp};
+use super::{Error, Result, SExp};
 
 /// A type to represent an execution environment.
 pub type Ns = HashMap<String, SExp>;
@@ -55,16 +55,21 @@ impl Env {
     }
 
     pub fn set(&self, key: &str, val: SExp) -> Result {
+        let possible_err = Error::UndefinedSymbol {
+            sym: key.to_string(),
+        };
+
         for ns in self.iter() {
             if ns.env.borrow().get(key).is_some() {
-                ns.env.borrow_mut().insert(key.to_string(), val);
-                return Ok(SExp::Atom(Undefined));
+                return ns
+                    .env
+                    .borrow_mut()
+                    .insert(key.to_string(), val)
+                    .ok_or(possible_err);
             }
         }
 
-        Err(Error::UndefinedSymbol {
-            sym: key.to_string(),
-        })
+        Err(possible_err)
     }
 }
 
