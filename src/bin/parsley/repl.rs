@@ -16,8 +16,6 @@ The following special commands are available:
 const REPL_EXIT_MSG: &str = "\nLeaving PARSLEY.\n";
 
 pub fn repl(ctx: &mut Context) -> Result<String, ReadlineError> {
-    ctx.push();
-
     print!(
         "\n{0}\n'(){1:^72}'()\n'(){2:^72}'()\n{0}\n\n",
         REPL_WELCOME_BORDER,
@@ -40,7 +38,6 @@ pub fn repl(ctx: &mut Context) -> Result<String, ReadlineError> {
                     ".clear" => {
                         rl.clear_history();
                         ctx.pop();
-                        ctx.push();
                     }
                     ".help" => {
                         println!("{}", REPL_HELP);
