@@ -1,7 +1,6 @@
 use std::mem;
 use std::rc::Rc;
 
-use super::proc::{Func, Proc};
 use super::Primitive;
 use super::SExp;
 use super::{Cont, Env, Error, Ns, Result};
@@ -229,13 +228,9 @@ impl Context {
             Atom(_) => Ok(expr),
             Pair { head, tail } => {
                 let proc = self.eval(*head)?;
-                let applic = if let Atom(Primitive::Procedure(Proc {
-                    func: Func::Ctx(_), ..
-                })) = proc
-                {
-                    *tail
-                } else {
-                    tail.into_iter().map(|e| self.eval(e)).collect::<Result>()?
+                let applic = match &proc {
+                    Atom(Primitive::Procedure(p)) if p.needs_ctx() => *tail,
+                    _ => tail.into_iter().map(|e| self.eval(e)).collect::<Result>()?,
                 }
                 .cons(proc);
                 self.apply(applic)
@@ -244,22 +239,12 @@ impl Context {
     }
 
     fn apply(&mut self, expr: SExp) -> Result {
-        use Func::{Ctx, Pure};
         use SExp::{Atom, Null, Pair};
 
         match expr {
             Null | Atom(_) => Ok(expr),
             Pair { head, tail } => match *head {
-                Atom(Primitive::Procedure(proc)) => {
-                    proc.check_arity(tail.len())?;
-                    self.push_cont(proc.cont);
-                    let result = match proc.func {
-                        Pure(p) => p(*tail),
-                        Ctx(p) => p(self, *tail),
-                    };
-                    self.pop_cont();
-                    result
-                }
+                Atom(Primitive::Procedure(proc)) => proc.apply(*tail, self),
                 Atom(Primitive::Symbol(sym)) => Err(Error::NotAProcedure {
                     exp: sym.to_string(),
                 }),

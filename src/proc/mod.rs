@@ -11,8 +11,8 @@ pub mod utils;
 pub struct Proc {
     name: Option<String>,
     arity: Arity,
-    pub(crate) cont: Option<Rc<Env>>,
-    pub(crate) func: Func,
+    cont: Option<Rc<Env>>,
+    func: Func,
 }
 
 impl Proc {
@@ -40,6 +40,26 @@ impl Proc {
 
     pub fn check_arity(&self, n_args: usize) -> std::result::Result<(), Error> {
         self.arity.check(n_args)
+    }
+
+    pub fn needs_ctx(&self) -> bool {
+        if let Func::Ctx(_) = self.func {
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn apply(&self, args: SExp, ctx: &mut Context) -> Result {
+        self.check_arity(args.len())?;
+
+        ctx.push_cont(self.cont.clone());
+        let res = match &self.func {
+            Func::Ctx(f) => f(ctx, args),
+            Func::Pure(f) => f(args),
+        };
+        ctx.pop_cont();
+        res
     }
 }
 
