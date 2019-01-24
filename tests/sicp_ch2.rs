@@ -51,8 +51,6 @@ fn sicp_2_3() -> Result<(), Error> {
     Ok(())
 }
 
-// This test fails, because scoping is busted (again).
-// This would be solved by implementing continuations.
 #[test]
 fn sicp_2_4() -> Result<(), Error> {
     let mut ctx = Context::base();
