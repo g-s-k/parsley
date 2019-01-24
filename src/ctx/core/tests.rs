@@ -168,6 +168,7 @@ fn begin() {
 
 #[test]
 fn r#do() {
+    // simplest possible case
     assert_eval_eq!(
         sexp![
             s("do"),
@@ -178,6 +179,7 @@ fn r#do() {
         5
     );
 
+    // interdependent variable values
     assert_eval_eq!(
         sexp![
             s("do"),
@@ -189,6 +191,23 @@ fn r#do() {
             false
         ],
         120
+    );
+
+    // multiple return expressions
+    assert_eval_eq!(
+        sexp![
+            s("do"),
+            sexp![sexp![s("x"), 0, sexp![s("add1"), s("x")]]],
+            sexp![
+                sexp![s("="), s("x"), 5],
+                s("x"),
+                true,
+                'b',
+                sexp![s("+"), s("x"), 3]
+            ],
+            false
+        ],
+        8
     );
 }
 

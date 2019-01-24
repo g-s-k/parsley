@@ -219,8 +219,7 @@ impl Context {
         }
 
         // termination condition and return value
-        let (cond, tmp) = term.split_car()?;
-        let return_expr = tmp.car()?;
+        let (cond, return_expr) = term.split_car()?;
 
         // add definitions to environment
         self.push();
@@ -250,7 +249,7 @@ impl Context {
                     }
                     self.user.extend(new_map);
                 }
-                Ok(_) => break 'eval self.eval(return_expr),
+                Ok(_) => break 'eval self.eval_begin(return_expr),
                 err => break 'eval err,
             }
         };
