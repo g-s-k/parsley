@@ -58,8 +58,8 @@ impl SExp {
                 })
             } else {
                 Ok(Null
-                   .cons(Self::parse_str(&code[1..])?)
-                   .cons(Self::sym("quasiquote")))
+                    .cons(Self::parse_str(&code[1..])?)
+                    .cons(Self::sym("quasiquote")))
             }
         } else if code.starts_with(',') {
             if code.len() == 1 {
@@ -68,8 +68,8 @@ impl SExp {
                 })
             } else {
                 Ok(Null
-                   .cons(Self::parse_str(&code[1..])?)
-                   .cons(Self::sym("unquote")))
+                    .cons(Self::parse_str(&code[1..])?)
+                    .cons(Self::sym("unquote")))
             }
         } else if code.chars().all(utils::is_atom_char) {
             Ok(Atom(code.parse::<Primitive>()?))

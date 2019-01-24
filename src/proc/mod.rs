@@ -17,7 +17,13 @@ pub struct Proc {
 }
 
 impl Proc {
-    pub fn new<T, U, V>(func: T, arity: U, envt: Option<Rc<Env>>, name: Option<V>, eval_args: bool) -> Self
+    pub fn new<T, U, V>(
+        func: T,
+        arity: U,
+        envt: Option<Rc<Env>>,
+        name: Option<V>,
+        eval_args: bool,
+    ) -> Self
     where
         Arity: From<U>,
         Func: From<T>,
