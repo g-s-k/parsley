@@ -201,25 +201,26 @@ impl Context {
                         var_inits.insert(s.clone(), defn);
                         var_updates.insert(s, tail.car()?);
                     }
-                    0 => return Err(Error::ArityMin {
-                        expected: 1,
-                        given: 0,
-                    }),
-                    given => return Err(Error::ArityMax {
-                        expected: 2,
-                        given,
-                    }),
+                    0 => {
+                        return Err(Error::ArityMin {
+                            expected: 1,
+                            given: 0,
+                        });
+                    }
+                    given => return Err(Error::ArityMax { expected: 2, given }),
+                },
+                (other, _) => {
+                    return Err(Error::Type {
+                        expected: "symbol",
+                        given: other.type_of().to_string(),
+                    });
                 }
-                (other, _) => return Err(Error::Type {
-                    expected: "symbol",
-                    given: other.type_of().to_string()
-                })
             }
         }
 
         // termination condition and return value
         let (cond, tmp) = term.split_car()?;
-        let ret = tmp.car()?;
+        let return_expr = tmp.car()?;
 
         // add definitions to environment
         self.push();
@@ -240,7 +241,7 @@ impl Context {
                     // evaluate subsequent step variables, so we hold them in a
                     // temporary map, then insert them all at once
                     let mut new_map = HashMap::new();
-                    for (key, upd) in var_updates.iter() {
+                    for (key, upd) in &var_updates {
                         let new_val = match self.eval(upd.to_owned()) {
                             Ok(v) => v,
                             err => break 'eval err,
@@ -249,7 +250,7 @@ impl Context {
                     }
                     self.user.extend(new_map);
                 }
-                Ok(_) => break 'eval self.eval(ret),
+                Ok(_) => break 'eval self.eval(return_expr),
                 err => break 'eval err,
             }
         };
