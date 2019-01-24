@@ -113,14 +113,6 @@ impl SExp {
         Atom(Primitive::Symbol(sym.to_string()))
     }
 
-    pub(super) fn sym_to_str(&self) -> Option<&str> {
-        if let Atom(Primitive::Symbol(s)) = self {
-            Some(s)
-        } else {
-            None
-        }
-    }
-
     /// Printable type for an expression.
     ///
     /// # Example

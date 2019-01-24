@@ -1,4 +1,3 @@
-use std::collections::HashSet;
 use std::rc::Rc;
 
 use super::super::proc::{Func, Proc};
@@ -205,34 +204,29 @@ impl Context {
             }
         }
 
-        for sym in signature.iter() {
-            if let Atom(Primitive::Symbol(_)) = sym {
-            } else {
-                return Err(Error::Type {
-                    expected: "symbol",
-                    given: sym.type_of().to_string(),
-                });
-            }
-        }
+        let str_sig = signature
+            .into_iter()
+            .map(|e| {
+                if let Atom(Primitive::Symbol(sym)) = e {
+                    Ok(sym)
+                } else {
+                    Err(Error::Type {
+                        expected: "symbol",
+                        given: e.type_of().to_string(),
+                    })
+                }
+            })
+            .collect::<std::result::Result<Vec<_>, Error>>()?;
 
         if is_named {
-            let (name, signature) = signature.split_car()?;
-            let name = name.sym_to_str().unwrap();
-            Ok(self.make_proc(Some(name), signature, fn_body))
+            Ok(self.make_proc(Some(&str_sig[0]), str_sig[1..].to_vec(), fn_body))
         } else {
-            Ok(self.make_proc(None, signature, fn_body))
+            Ok(self.make_proc(None, str_sig, fn_body))
         }
     }
 
-    fn make_proc(&mut self, name: Option<&str>, params: SExp, fn_body: SExp) -> SExp {
-        let expected = params.iter().count();
-        let mut params_as_set = params
-            .iter()
-            .filter_map(SExp::sym_to_str)
-            .collect::<HashSet<_>>();
-        if let Some(ref n) = name {
-            params_as_set.insert(n);
-        }
+    fn make_proc(&mut self, name: Option<&str>, params: Vec<String>, fn_body: SExp) -> SExp {
+        let expected = params.len();
         SExp::from(Proc::new(
             Func::Ctx(Rc::new(move |the_ctx: &mut Self, args: SExp| {
                 // evaluate arguments
@@ -244,7 +238,6 @@ impl Context {
                 the_ctx.push();
                 params
                     .iter()
-                    .filter_map(SExp::sym_to_str)
                     .zip(evalled_args.into_iter())
                     .for_each(|(p, v)| the_ctx.define(p, v));
                 // evaluate each body expression
@@ -253,7 +246,7 @@ impl Context {
                 result
             })),
             expected,
-            Some(self.cont.env()),
+            Some(self.user.clone()),
             name,
         ))
     }
