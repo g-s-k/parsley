@@ -37,7 +37,7 @@ impl Default for Context {
     fn default() -> Self {
         Self {
             core: Self::core(),
-            cont: Rc::new(RefCell::new(Cont::default())),
+            cont: Cont::default().into_rc(),
             lang: Ns::new(),
             out: None,
         }
@@ -149,19 +149,20 @@ impl Context {
     }
 
     /// Push a new partial continuation with an existing environment.
-    pub(super) fn use_closure(&mut self, envt: Rc<Env>) {
-        self.cont = Rc::new(RefCell::new(Cont::new(
+    pub(super) fn use_closure(&mut self, envt: &Rc<Env>) {
+        self.cont = Cont::new(
             Some(self.cont.clone()),
             envt.clone(),
-        )));
+        ).into_rc();
     }
 
+    #[allow(dead_code)]
     /// Push a new partial continuation onto the stack.
     pub(super) fn push_cont(&mut self) {
-        self.cont = Rc::new(RefCell::new(Cont::new(
+        self.cont = Cont::new(
             Some(self.cont.clone()),
             Env::default().into_rc(),
-        )));
+        ).into_rc();
     }
 
     /// Pop the most recent partial continuation off of the stack.

@@ -55,7 +55,7 @@ impl Proc {
             Func::Ctx(f) => f(ctx, args),
             Func::Pure(f) => f(args),
             Func::Lambda { body, envt, params } => {
-                ctx.use_closure(envt.clone());
+                ctx.use_closure(&envt);
                 // start new scope and bind args to parameters
                 ctx.push();
                 params
