@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::mem;
 use std::rc::Rc;
 
 use super::Primitive;
@@ -169,6 +170,13 @@ impl Context {
     pub(super) fn pop_cont(&mut self) {
         let new = self.cont.borrow().parent().unwrap_or_default();
         self.cont = new;
+    }
+
+    pub(super) fn call_cc(&mut self, expr: SExp, mut cont: Rc<RefCell<Cont>>) -> Result {
+        mem::swap(&mut self.cont, &mut cont);
+        let out = self.eval(expr);
+        mem::swap(&mut self.cont, &mut cont);
+        out
     }
 
     /// Run a code snippet in an existing `Context`.

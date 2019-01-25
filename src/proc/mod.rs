@@ -1,9 +1,11 @@
 #![allow(clippy::cast_precision_loss)]
 
+use std::cell::RefCell;
 use std::fmt;
+use std::ops::Deref;
 use std::rc::Rc;
 
-use super::{Context, Env, Error, Primitive, Result, SExp};
+use super::{Cont, Context, Env, Error, Primitive, Result, SExp};
 
 pub mod utils;
 
@@ -54,6 +56,7 @@ impl Proc {
         match &self.func {
             Func::Ctx(f) => f(ctx, args),
             Func::Pure(f) => f(args),
+            Func::Thunk { body, cont } => ctx.call_cc(body.deref().to_owned(), cont.clone()),
             Func::Lambda { body, envt, params } => {
                 // start new scope and bind args to parameters
                 ctx.push();
@@ -182,6 +185,10 @@ pub enum Func {
         body: Rc<SExp>,
         envt: Rc<Env>,
         params: Vec<String>,
+    },
+    Thunk {
+        body: Rc<SExp>,
+        cont: Rc<RefCell<Cont>>,
     },
 }
 
