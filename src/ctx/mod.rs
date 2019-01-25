@@ -162,11 +162,7 @@ impl Context {
 
     /// Push a new partial continuation onto the stack.
     pub(super) fn push_cont(&mut self) {
-        let current_env = self.cont.borrow().env();
-        self.cont = Cont::new(
-            Some(self.cont.clone()),
-            current_env,
-        ).into_rc();
+        self.cont = Cont::from(&self.cont).into_rc();
     }
 
     /// Pop the most recent partial continuation off of the stack.

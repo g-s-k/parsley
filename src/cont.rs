@@ -18,11 +18,14 @@ impl Cont {
         Rc::new(RefCell::new(self))
     }
 
-    pub fn new(parent: OptLink, env: Rc<Env>) -> Self {
+    pub fn from(parent: &Link) -> Self {
+        let clos = parent.borrow().clos.clone();
+        let envt = parent.borrow().envt.clone();
+
         Self {
-            cont: parent,
-            clos: None,
-            envt: env,
+            cont: Some(parent.clone()),
+            clos,
+            envt,
         }
     }
 
