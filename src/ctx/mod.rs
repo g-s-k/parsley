@@ -30,6 +30,7 @@ pub struct Context {
     /// semantic details).
     pub lang: Ns,
     user: Rc<Env>,
+    closure: Option<Rc<Env>>,
     out: Option<String>,
 }
 
@@ -40,6 +41,7 @@ impl Default for Context {
             cont: None,
             lang: Ns::new(),
             user: Env::default().into_rc(),
+            closure: None,
             out: None,
         }
     }
@@ -123,9 +125,9 @@ impl Context {
             return Some(exp.clone());
         }
 
-        // then check the overlay
-        if let Some(c) = &self.cont {
-            if let Some(exp) = c.env().get(key) {
+        // then check the closure
+        if let Some(c) = &self.closure {
+            if let Some(exp) = c.get(key) {
                 return Some(exp);
             }
         }
@@ -164,9 +166,14 @@ impl Context {
         self.user.set(key, value)
     }
 
+    /// Use definitions from an environment.
+    pub fn use_closure(&mut self, closure: Option<Rc<Env>>) {
+        self.closure = closure;
+    }
+
     /// Push a new partial continuation onto the stack.
-    pub fn push_cont(&mut self, parent: Option<Rc<Env>>) {
-        self.cont = Some(Cont::new(self.cont.clone(), parent.unwrap_or_default()).into_rc());
+    pub fn push_cont(&mut self) {
+        self.cont = Some(Cont::new(self.cont.clone(), self.user.clone()).into_rc());
     }
 
     /// Pop the most recent partial continuation off of the stack.

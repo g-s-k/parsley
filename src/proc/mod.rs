@@ -61,12 +61,12 @@ impl Proc {
     pub fn apply(&self, args: SExp, ctx: &mut Context) -> Result {
         self.check_arity(args.len())?;
 
-        ctx.push_cont(self.envt.clone());
+        ctx.use_closure(self.envt.clone());
         let res = match &self.func {
             Func::Ctx(f) => f(ctx, args),
             Func::Pure(f) => f(args),
         };
-        ctx.pop_cont();
+        ctx.use_closure(None);
         res
     }
 }
