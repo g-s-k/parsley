@@ -221,7 +221,7 @@ impl Context {
 
         // add definitions to environment
         self.push();
-        self.user.extend(var_inits);
+        self.cont.borrow().env().extend(var_inits);
 
         let result = 'eval: loop {
             // do each step
@@ -245,7 +245,7 @@ impl Context {
                         };
                         new_map.insert(key.to_string(), new_val);
                     }
-                    self.user.extend(new_map);
+                    self.cont.borrow().env().extend(new_map);
                 }
                 Ok(_) => break 'eval self.eval_begin(return_expr),
                 err => break 'eval err,
@@ -308,7 +308,7 @@ impl Context {
         SExp::from(Proc::new(
             Func::Lambda {
                 body: Rc::new(fn_body),
-                envt: self.user.clone(),
+                envt: self.cont.borrow().env(),
                 params,
             },
             expected,

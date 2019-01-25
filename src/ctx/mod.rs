@@ -1,8 +1,9 @@
+use std::cell::RefCell;
 use std::rc::Rc;
 
 use super::Primitive;
 use super::SExp;
-use super::{/*Cont,*/ Env, Error, Ns, Result};
+use super::{Cont, Env, Error, Ns, Result};
 
 mod base;
 mod core;
@@ -23,14 +24,12 @@ mod write;
 /// case keeps the other environments immutable once they have been initialized.
 pub struct Context {
     core: Ns,
-    // cont: Option<Rc<Cont>>,
+    cont: Rc<RefCell<Cont>>,
     /// You can `insert` additional definitions here to make them available
     /// throughout the runtime. These definitions will not go out of scope
     /// automatically, but can be overridden (see [`get`](#method.get) for
     /// semantic details).
     pub lang: Ns,
-    user: Rc<Env>,
-    closure: Option<Rc<Env>>,
     out: Option<String>,
 }
 
@@ -38,10 +37,8 @@ impl Default for Context {
     fn default() -> Self {
         Self {
             core: Self::core(),
-            // cont: None,
+            cont: Rc::new(RefCell::new(Cont::default())),
             lang: Ns::new(),
-            user: Env::default().into_rc(),
-            closure: None,
             out: None,
         }
     }
@@ -52,7 +49,7 @@ impl Context {
     ///
     /// See [Context::pop](#method.pop) for a usage example.
     pub fn push(&mut self) {
-        self.user = Env::new(Some(self.user.clone())).into_rc();
+        self.cont.borrow_mut().push();
     }
 
     /// Remove the most recently added scope.
@@ -73,12 +70,12 @@ impl Context {
     /// assert_eq!(ctx.get("x"), None);
     /// ```
     pub fn pop(&mut self) {
-        self.user = self.user.parent().unwrap_or_default();
+        self.cont.borrow_mut().pop();
     }
 
     /// Create a new definition in the current scope.
     pub fn define(&mut self, key: &str, value: SExp) {
-        self.user.define(key, value);
+        self.cont.borrow().env().define(key, value)
     }
 
     /// Get the definition for a symbol in the execution environment.
@@ -117,15 +114,8 @@ impl Context {
             return Some(exp.clone());
         }
 
-        // then check the closure
-        if let Some(c) = &self.closure {
-            if let Some(exp) = c.get(key) {
-                return Some(exp);
-            }
-        }
-
-        // then check user definitions (could have overridden library definitions)
-        if let Some(exp) = self.user.get(key) {
+        // then check the environment stack
+        if let Some(exp) = self.cont.borrow().env().get(key) {
             return Some(exp);
         }
 
@@ -155,25 +145,30 @@ impl Context {
     /// assert_eq!(ctx.get("x"), Some(SExp::from("potato"))); // check that its value is now "potato"
     /// ```
     pub fn set(&mut self, key: &str, value: SExp) -> Result {
-        self.user.set(key, value)
+        self.cont.borrow().env().set(key, value)
     }
 
-    /// Use definitions from an environment.
-    pub(super) fn use_closure(&mut self, closure: Option<Rc<Env>>) {
-        self.closure = closure;
+    /// Push a new partial continuation with an existing environment.
+    pub(super) fn use_closure(&mut self, envt: Rc<Env>) {
+        self.cont = Rc::new(RefCell::new(Cont::new(
+            Some(self.cont.clone()),
+            envt.clone(),
+        )));
     }
 
     /// Push a new partial continuation onto the stack.
-    // pub(super) fn push_cont(&mut self) {
-    //     self.cont = Some(Cont::new(self.cont.clone(), self.user.clone()).into_rc());
-    // }
+    pub(super) fn push_cont(&mut self) {
+        self.cont = Rc::new(RefCell::new(Cont::new(
+            Some(self.cont.clone()),
+            Env::default().into_rc(),
+        )));
+    }
 
     /// Pop the most recent partial continuation off of the stack.
-    // pub(super) fn pop_cont(&mut self) {
-    //     if let Some(c) = &self.cont {
-    //         self.cont = c.parent();
-    //     }
-    // }
+    pub(super) fn pop_cont(&mut self) {
+        let new = self.cont.borrow().parent().unwrap_or_default();
+        self.cont = new;
+    }
 
     /// Run a code snippet in an existing `Context`.
     ///

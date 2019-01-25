@@ -55,7 +55,7 @@ impl Proc {
             Func::Ctx(f) => f(ctx, args),
             Func::Pure(f) => f(args),
             Func::Lambda { body, envt, params } => {
-                ctx.use_closure(Some(envt.clone()));
+                ctx.use_closure(envt.clone());
                 // start new scope and bind args to parameters
                 ctx.push();
                 params
@@ -76,7 +76,7 @@ impl Proc {
 
                 // clean up and return
                 ctx.pop();
-                ctx.use_closure(None);
+                ctx.pop_cont();
                 result
             }
         }
