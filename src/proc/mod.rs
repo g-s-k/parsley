@@ -12,18 +12,11 @@ pub struct Proc {
     pub(crate) eval_args: bool,
     name: Option<String>,
     arity: Arity,
-    envt: Option<Rc<Env>>,
     func: Func,
 }
 
 impl Proc {
-    pub fn new<T, U, V>(
-        func: T,
-        arity: U,
-        envt: Option<Rc<Env>>,
-        name: Option<V>,
-        eval_args: bool,
-    ) -> Self
+    pub fn new<T, U, V>(func: T, arity: U, name: Option<V>, eval_args: bool) -> Self
     where
         Arity: From<U>,
         Func: From<T>,
@@ -32,7 +25,6 @@ impl Proc {
         Self {
             name: name.map(String::from),
             arity: arity.into(),
-            envt,
             eval_args,
             func: func.into(),
         }
@@ -50,24 +42,38 @@ impl Proc {
         self.arity.check(n_args)
     }
 
-    pub fn needs_ctx(&self) -> bool {
-        if let Func::Ctx(_) = self.func {
-            true
-        } else {
-            false
-        }
-    }
-
     pub fn apply(&self, args: SExp, ctx: &mut Context) -> Result {
         self.check_arity(args.len())?;
 
-        ctx.use_closure(self.envt.clone());
-        let res = match &self.func {
+        match &self.func {
             Func::Ctx(f) => f(ctx, args),
             Func::Pure(f) => f(args),
-        };
-        ctx.use_closure(None);
-        res
+            Func::Lambda { body, envt, params } => {
+                ctx.use_closure(Some(envt.clone()));
+                // start new scope and bind args to parameters
+                ctx.push();
+                params
+                    .iter()
+                    .zip(args.into_iter())
+                    .for_each(|(p, v)| ctx.define(p, v));
+
+                // evaluate each body expression
+                let mut result = Ok(SExp::Atom(Primitive::Undefined));
+
+                for expr in body.iter() {
+                    result = ctx.eval(expr.to_owned());
+
+                    if result.is_err() {
+                        break;
+                    }
+                }
+
+                // clean up and return
+                ctx.pop();
+                ctx.use_closure(None);
+                result
+            }
+        }
     }
 }
 
@@ -164,6 +170,11 @@ impl Into<SExp> for Arity {
 pub enum Func {
     Ctx(Rc<Fn(&mut Context, SExp) -> Result>),
     Pure(Rc<Fn(SExp) -> Result>),
+    Lambda {
+        body: Rc<SExp>,
+        envt: Rc<Env>,
+        params: Vec<String>,
+    },
 }
 
 impl From<Rc<dyn Fn(&mut Context, SExp) -> Result>> for Func {

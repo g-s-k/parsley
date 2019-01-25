@@ -43,7 +43,6 @@ where
             }
         })),
         1,
-        None,
         name,
         true,
     ))
@@ -89,7 +88,6 @@ where
             }
         })),
         2,
-        None,
         name,
         true,
     ))
@@ -142,7 +140,6 @@ where
             }
         })),
         (0,),
-        None,
         name,
         true,
     ))
@@ -208,7 +205,6 @@ where
             }
         })),
         (1,),
-        None,
         name,
         true,
     ))
@@ -221,7 +217,6 @@ where
     SExp::from(Proc::new(
         Func::Pure(Rc::new(move |exp| f(exp.car()?))),
         1,
-        None,
         name,
         true,
     ))
@@ -238,7 +233,6 @@ where
             f(arg0, tail.car()?)
         })),
         2,
-        None,
         name,
         true,
     ))
@@ -256,7 +250,6 @@ where
             f(arg0, arg1, tail.car()?)
         })),
         3,
-        None,
         name,
         true,
     ))

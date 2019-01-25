@@ -26,7 +26,6 @@ macro_rules! define_ctx {
             $crate::SExp::from($crate::Proc::new(
                 $crate::Func::Ctx(::std::rc::Rc::new($proc)),
                 $arity,
-                None,
                 Some($name),
                 false,
             )),

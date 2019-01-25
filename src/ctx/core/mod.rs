@@ -15,7 +15,6 @@ macro_rules! tup_ctx_env {
             $crate::SExp::from($crate::Proc::new(
                 $crate::Func::Ctx(::std::rc::Rc::new($proc)),
                 $arity,
-                None,
                 Some($name),
                 false,
             )),
@@ -308,30 +307,12 @@ impl Context {
     fn make_proc(&mut self, name: Option<&str>, params: Vec<String>, fn_body: SExp) -> SExp {
         let expected = params.len();
         SExp::from(Proc::new(
-            Func::Ctx(Rc::new(move |the_ctx: &mut Self, args: SExp| {
-                // bind arguments to parameters
-                the_ctx.push();
-                params
-                    .iter()
-                    .zip(args.into_iter())
-                    .for_each(|(p, v)| the_ctx.define(p, v));
-                // evaluate each body expression
-                let mut result = Ok(Atom(Primitive::Undefined));
-                for expr in fn_body.iter() {
-                    // the_ctx.push_cont();
-                    result = the_ctx.eval(expr.to_owned());
-                    // the_ctx.pop_cont();
-
-                    if result.is_err() {
-                        break;
-                    }
-                }
-                // clean up and return
-                the_ctx.pop();
-                result
-            })),
+            Func::Lambda {
+                body: Rc::new(fn_body),
+                envt: self.user.clone(),
+                params,
+            },
             expected,
-            Some(self.user.clone()),
             name,
             true,
         ))
