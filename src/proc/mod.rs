@@ -9,14 +9,13 @@ pub mod utils;
 
 #[derive(Clone)]
 pub struct Proc {
-    pub(crate) eval_args: bool,
     name: Option<String>,
     arity: Arity,
     func: Func,
 }
 
 impl Proc {
-    pub fn new<T, U, V>(func: T, arity: U, name: Option<V>, eval_args: bool) -> Self
+    pub fn new<T, U, V>(func: T, arity: U, name: Option<V>) -> Self
     where
         Arity: From<U>,
         Func: From<T>,
@@ -25,7 +24,6 @@ impl Proc {
         Self {
             name: name.map(String::from),
             arity: arity.into(),
-            eval_args,
             func: func.into(),
         }
     }
@@ -40,6 +38,14 @@ impl Proc {
 
     pub fn check_arity(&self, n_args: usize) -> std::result::Result<(), Error> {
         self.arity.check(n_args)
+    }
+
+    pub(crate) fn defer_eval(&self) -> bool {
+        if let Func::Ctx(_) = self.func {
+            true
+        } else {
+            false
+        }
     }
 
     pub fn apply(&self, args: SExp, ctx: &mut Context) -> Result {

@@ -16,7 +16,6 @@ macro_rules! tup_ctx_env {
                 $crate::Func::Ctx(::std::rc::Rc::new($proc)),
                 $arity,
                 Some($name),
-                false,
             )),
         )
     };
@@ -314,7 +313,6 @@ impl Context {
             },
             expected,
             name,
-            true,
         ))
     }
 

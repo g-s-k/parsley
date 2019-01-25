@@ -33,7 +33,6 @@ macro_rules! define_ctx {
                 $crate::Func::Ctx(::std::rc::Rc::new($proc)),
                 $arity,
                 ::std::option::Option::Some($name),
-                false,
             )),
         )
     };
@@ -47,7 +46,6 @@ macro_rules! define {
                 $crate::Func::Pure(::std::rc::Rc::new($proc)),
                 $arity,
                 Some($name),
-                true,
             )),
         )
     };

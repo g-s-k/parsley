@@ -226,7 +226,7 @@ impl Context {
             Pair { head, tail } => {
                 let proc = self.eval(*head)?;
                 let applic = match &proc {
-                    Atom(Primitive::Procedure(p)) if !p.eval_args => *tail,
+                    Atom(Primitive::Procedure(p)) if p.defer_eval() => *tail,
                     _ => tail.into_iter().map(|e| self.eval(e)).collect::<Result>()?,
                 }
                 .cons(proc);

@@ -44,7 +44,6 @@ where
         })),
         1,
         name,
-        true,
     ))
 }
 
@@ -89,7 +88,6 @@ where
         })),
         2,
         name,
-        true,
     ))
 }
 
@@ -141,7 +139,6 @@ where
         })),
         (0,),
         name,
-        true,
     ))
 }
 
@@ -206,7 +203,6 @@ where
         })),
         (1,),
         name,
-        true,
     ))
 }
 
@@ -218,7 +214,6 @@ where
         Func::Pure(Rc::new(move |exp| f(exp.car()?))),
         1,
         name,
-        true,
     ))
 }
 
@@ -234,7 +229,6 @@ where
         })),
         2,
         name,
-        true,
     ))
 }
 
@@ -251,6 +245,5 @@ where
         })),
         3,
         name,
-        true,
     ))
 }
