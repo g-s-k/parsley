@@ -9,7 +9,7 @@ type OptLink = Option<Link>;
 #[derive(Clone, Default)]
 pub struct Cont {
     cont: OptLink,
-    clos: Option<Rc<Env>>,
+    closure: Option<Rc<Env>>,
     envt: Rc<Env>,
 }
 
@@ -19,12 +19,12 @@ impl Cont {
     }
 
     pub fn from(parent: &Link) -> Self {
-        let clos = parent.borrow().clos.clone();
+        let closure = parent.borrow().closure.clone();
         let envt = parent.borrow().envt.clone();
 
         Self {
             cont: Some(parent.clone()),
-            clos,
+            closure,
             envt,
         }
     }
@@ -33,12 +33,12 @@ impl Cont {
         self.cont.clone()
     }
 
-    pub fn use_cls(&mut self, closure: Option<Rc<Env>>) {
-        self.clos = closure;
+    pub fn use_closure(&mut self, closure: Option<Rc<Env>>) {
+        self.closure = closure;
     }
 
-    pub fn cls(&self) -> Option<Rc<Env>> {
-        self.clos.clone()
+    pub fn closure(&self) -> Option<Rc<Env>> {
+        self.closure.clone()
     }
 
     pub fn env(&self) -> Rc<Env> {

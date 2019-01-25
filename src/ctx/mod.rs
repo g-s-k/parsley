@@ -115,7 +115,7 @@ impl Context {
         }
 
         // then check the closure environment
-        if let Some(c) = self.cont.borrow().cls() {
+        if let Some(c) = self.cont.borrow().closure() {
             if let Some(exp) = c.get(key) {
                 return Some(exp)
             }
@@ -157,7 +157,7 @@ impl Context {
 
     /// Push a new partial continuation with an existing environment.
     pub(super) fn use_closure(&self, envt: Option<Rc<Env>>) {
-        self.cont.borrow_mut().use_cls(envt);
+        self.cont.borrow_mut().use_closure(envt);
     }
 
     /// Push a new partial continuation onto the stack.
