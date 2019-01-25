@@ -316,7 +316,17 @@ impl Context {
                     .zip(args.into_iter())
                     .for_each(|(p, v)| the_ctx.define(p, v));
                 // evaluate each body expression
-                let result = the_ctx.eval_begin(fn_body.to_owned());
+                let mut result = Ok(Atom(Primitive::Undefined));
+                for expr in fn_body.iter() {
+                    // the_ctx.push_cont();
+                    result = the_ctx.eval(expr.to_owned());
+                    // the_ctx.pop_cont();
+
+                    if result.is_err() {
+                        break;
+                    }
+                }
+                // clean up and return
                 the_ctx.pop();
                 result
             })),

@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use super::Primitive;
 use super::SExp;
-use super::{Cont, Env, Error, Ns, Result};
+use super::{/*Cont,*/ Env, Error, Ns, Result};
 
 mod base;
 mod core;
@@ -23,7 +23,7 @@ mod write;
 /// case keeps the other environments immutable once they have been initialized.
 pub struct Context {
     core: Ns,
-    cont: Option<Rc<Cont>>,
+    // cont: Option<Rc<Cont>>,
     /// You can `insert` additional definitions here to make them available
     /// throughout the runtime. These definitions will not go out of scope
     /// automatically, but can be overridden (see [`get`](#method.get) for
@@ -38,7 +38,7 @@ impl Default for Context {
     fn default() -> Self {
         Self {
             core: Self::core(),
-            cont: None,
+            // cont: None,
             lang: Ns::new(),
             user: Env::default().into_rc(),
             closure: None,
@@ -159,21 +159,21 @@ impl Context {
     }
 
     /// Use definitions from an environment.
-    pub fn use_closure(&mut self, closure: Option<Rc<Env>>) {
+    pub(super) fn use_closure(&mut self, closure: Option<Rc<Env>>) {
         self.closure = closure;
     }
 
     /// Push a new partial continuation onto the stack.
-    pub fn push_cont(&mut self) {
-        self.cont = Some(Cont::new(self.cont.clone(), self.user.clone()).into_rc());
-    }
+    // pub(super) fn push_cont(&mut self) {
+    //     self.cont = Some(Cont::new(self.cont.clone(), self.user.clone()).into_rc());
+    // }
 
     /// Pop the most recent partial continuation off of the stack.
-    pub fn pop_cont(&mut self) {
-        if let Some(c) = &self.cont {
-            self.cont = c.parent();
-        }
-    }
+    // pub(super) fn pop_cont(&mut self) {
+    //     if let Some(c) = &self.cont {
+    //         self.cont = c.parent();
+    //     }
+    // }
 
     /// Run a code snippet in an existing `Context`.
     ///

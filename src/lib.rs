@@ -30,7 +30,7 @@
 #[macro_use]
 mod sexp;
 
-mod cont;
+// mod cont;
 mod ctx;
 mod env;
 mod errors;
@@ -38,7 +38,7 @@ mod primitives;
 mod proc;
 mod utils;
 
-use self::cont::Cont;
+// use self::cont::Cont;
 pub use self::ctx::Context;
 use self::env::{Env, Ns};
 pub use self::errors::Error;
