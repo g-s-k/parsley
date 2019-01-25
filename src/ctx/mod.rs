@@ -111,17 +111,24 @@ impl Context {
     pub fn get(&self, key: &str) -> Option<SExp> {
         // first check core (reserved keywords)
         if let Some(exp) = self.core.get(key) {
-            return Some(exp.clone());
+            return Some(exp.clone())
+        }
+
+        // then check the closure environment
+        if let Some(c) = self.cont.borrow().cls() {
+            if let Some(exp) = c.get(key) {
+                return Some(exp)
+            }
         }
 
         // then check the environment stack
         if let Some(exp) = self.cont.borrow().env().get(key) {
-            return Some(exp);
+            return Some(exp)
         }
 
         // then check the stdlib
         if let Some(exp) = self.lang.get(key) {
-            return Some(exp.clone());
+            return Some(exp.clone())
         }
 
         // otherwise fail
@@ -149,19 +156,16 @@ impl Context {
     }
 
     /// Push a new partial continuation with an existing environment.
-    pub(super) fn use_closure(&mut self, envt: &Rc<Env>) {
-        self.cont = Cont::new(
-            Some(self.cont.clone()),
-            envt.clone(),
-        ).into_rc();
+    pub(super) fn use_closure(&self, envt: Option<Rc<Env>>) {
+        self.cont.borrow_mut().use_cls(envt);
     }
 
-    #[allow(dead_code)]
     /// Push a new partial continuation onto the stack.
     pub(super) fn push_cont(&mut self) {
+        let current_env = self.cont.borrow().env();
         self.cont = Cont::new(
             Some(self.cont.clone()),
-            Env::default().into_rc(),
+            current_env,
         ).into_rc();
     }
 

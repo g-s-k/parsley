@@ -6,19 +6,11 @@ use super::Env;
 type Link = Rc<RefCell<Cont>>;
 type OptLink = Option<Link>;
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct Cont {
     cont: OptLink,
+    clos: Option<Rc<Env>>,
     envt: Rc<Env>,
-}
-
-impl Default for Cont {
-    fn default() -> Self {
-        Self {
-            cont: None,
-            envt: Env::default().into_rc(),
-        }
-    }
 }
 
 impl Cont {
@@ -29,12 +21,21 @@ impl Cont {
     pub fn new(parent: OptLink, env: Rc<Env>) -> Self {
         Self {
             cont: parent,
+            clos: None,
             envt: env,
         }
     }
 
     pub fn parent(&self) -> OptLink {
         self.cont.clone()
+    }
+
+    pub fn use_cls(&mut self, closure: Option<Rc<Env>>) {
+        self.clos = closure;
+    }
+
+    pub fn cls(&self) -> Option<Rc<Env>> {
+        self.clos.clone()
     }
 
     pub fn env(&self) -> Rc<Env> {

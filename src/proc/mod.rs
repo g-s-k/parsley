@@ -55,7 +55,6 @@ impl Proc {
             Func::Ctx(f) => f(ctx, args),
             Func::Pure(f) => f(args),
             Func::Lambda { body, envt, params } => {
-                ctx.use_closure(&envt);
                 // start new scope and bind args to parameters
                 ctx.push();
                 params
@@ -67,7 +66,14 @@ impl Proc {
                 let mut result = Ok(SExp::Atom(Primitive::Undefined));
 
                 for expr in body.iter() {
+                    // there must be a better way to do this
+                    ctx.push_cont();
+                    ctx.use_closure(Some(envt.clone()));
+
                     result = ctx.eval(expr.to_owned());
+
+                    ctx.use_closure(None);
+                    ctx.pop_cont();
 
                     if result.is_err() {
                         break;
@@ -76,7 +82,6 @@ impl Proc {
 
                 // clean up and return
                 ctx.pop();
-                ctx.pop_cont();
                 result
             }
         }
