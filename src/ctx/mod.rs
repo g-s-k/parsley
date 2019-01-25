@@ -73,20 +73,12 @@ impl Context {
     /// assert_eq!(ctx.get("x"), None);
     /// ```
     pub fn pop(&mut self) {
-        let parent = self
-            .user
-            .parent()
-            .unwrap_or_else(|| Env::default().into_rc());
-        self.user = parent;
+        self.user = self.user.parent().unwrap_or_default();
     }
 
     /// Create a new definition in the current scope.
     pub fn define(&mut self, key: &str, value: SExp) {
         self.user.define(key, value);
-    }
-
-    fn get_user(&self, key: &str) -> Option<SExp> {
-        self.user.get(key)
     }
 
     /// Get the definition for a symbol in the execution environment.
@@ -133,7 +125,7 @@ impl Context {
         }
 
         // then check user definitions (could have overridden library definitions)
-        if let Some(exp) = self.get_user(key) {
+        if let Some(exp) = self.user.get(key) {
             return Some(exp);
         }
 
