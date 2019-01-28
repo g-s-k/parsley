@@ -118,7 +118,6 @@ impl Context {
             return Some(exp);
         }
 
-
         // then check the stdlib
         if let Some(exp) = self.lang.get(key) {
             return Some(exp.clone());
@@ -251,8 +250,8 @@ impl Context {
                 })) => {
                     self.cont.borrow_mut().set_env(envt);
                     expr = body.deref().to_owned();
-                    continue
-                },
+                    continue;
+                }
                 // cannot reduce further
                 Atom(_) => break Ok(expr),
                 // it's an application
