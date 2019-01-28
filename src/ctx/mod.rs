@@ -284,13 +284,6 @@ impl Context {
                 Atom(Symbol(sym)) => Err(NotAProcedure {
                     exp: sym.to_string(),
                 }),
-                Pair {
-                    head: proc,
-                    tail: tail2,
-                } => {
-                    let the_proc = self.eval(*proc)?;
-                    self.eval(tail2.cons(the_proc))
-                }
                 _ => Ok(tail.cons(*head)),
             },
         }
