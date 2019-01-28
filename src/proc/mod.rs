@@ -13,7 +13,7 @@ pub mod utils;
 pub struct Proc {
     name: Option<String>,
     arity: Arity,
-    func: Func,
+    pub(crate) func: Func,
 }
 
 impl Proc {

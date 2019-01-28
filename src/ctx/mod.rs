@@ -1,8 +1,9 @@
 use std::cell::RefCell;
 use std::mem;
+use std::ops::Deref;
 use std::rc::Rc;
 
-use super::{Cont, Env, Error, Ns, Primitive, Result, SExp};
+use super::{Cont, Env, Error, Ns, Primitive, Proc, Result, SExp};
 
 mod base;
 mod core;
@@ -241,44 +242,57 @@ impl Context {
     /// assert_eq!(ctx.eval(exp2).unwrap(), SExp::from(10));
     /// ```
     pub fn eval(&mut self, mut expr: SExp) -> Result {
+        use super::Func::Tail;
         use Error::{NotAProcedure, NullList, UndefinedSymbol};
         use Primitive::{Procedure, Symbol, Undefined};
         use SExp::{Atom, Null, Pair};
 
         loop {
-            match expr {
-                Null => return Err(NullList),
+            expr = match expr {
+                // cannot evaluate null
+                Null => break Err(NullList),
+                // check if symbol is defined
                 Atom(Symbol(sym)) => match self.get(&sym) {
                     None | Some(Atom(Undefined)) => {
-                        return Err(UndefinedSymbol { sym });
+                        break Err(UndefinedSymbol { sym });
                     }
-                    Some(exp) => return Ok(exp),
+                    Some(exp) => exp,
                 },
-                Atom(Procedure(ref p)) if p.is_tail() => return p.apply(Null, self),
-                Atom(_) => return Ok(expr),
+                // continue evaluation
+                Atom(Procedure(Proc {
+                    func: Tail { body, cont },
+                    ..
+                })) => self.call_cc(body.deref().to_owned(), cont)?,
+                // cannot reduce further
+                Atom(_) => expr,
+                // it's an application
                 Pair { head, tail } => {
-                    // do the application
-                    expr = match self.eval(*head)? {
+                    // evaluate the first element
+                    match self.eval(*head)? {
+                        // if it is indeed a procedure
                         Atom(Procedure(p)) => {
                             let args = if p.defer_eval() {
                                 *tail
                             } else {
                                 self.eval_args(*tail)?
                             };
+                            // then apply it
                             p.apply(args, self)?
                         }
+                        // otherwise complain
                         proc => {
-                            return Err(NotAProcedure {
+                            break Err(NotAProcedure {
                                 exp: proc.to_string(),
                             });
                         }
-                    };
-                    // see if we need to eval again
-                    match expr {
-                        Atom(Procedure(ref p)) if p.is_tail() => continue,
-                        _ => return Ok(expr),
                     }
                 }
+            };
+
+            // see if we need to evaluate again
+            match expr {
+                Atom(Procedure(ref p)) if p.is_tail() => continue,
+                _ => break Ok(expr),
             }
         }
     }
