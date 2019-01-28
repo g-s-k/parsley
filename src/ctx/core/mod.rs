@@ -88,7 +88,7 @@ impl Context {
                     } = case
                     {
                         if *objs == else_ || objs.iter().any(|e| *e == hvl) {
-                            return self.eval_begin(*body);
+                            return self.eval_defer(&*body);
                         }
                     }
                 }
@@ -114,14 +114,14 @@ impl Context {
                 } => {
                     // TODO: check if `else` clause is actually last
                     if *predicate == else_ {
-                        return self.eval_begin(*consequent);
+                        return self.eval_defer(&*consequent);
                     }
 
                     match self.eval(*predicate)? {
                         Atom(Primitive::Boolean(false)) => {
                             continue;
                         }
-                        _ => return self.eval_begin(*consequent),
+                        _ => return self.eval_defer(&*consequent),
                     }
                 }
                 exp => {
@@ -262,11 +262,11 @@ impl Context {
         let (if_false, _) = cdr.split_car()?;
 
         let cevl = self.eval(condition)?;
-        self.eval(if let Atom(Primitive::Boolean(false)) = cevl {
+        Ok(self.defer(if let Atom(Primitive::Boolean(false)) = cevl {
             if_false
         } else {
             if_true
-        })
+        }))
     }
 
     fn eval_lambda(&mut self, expr: SExp, is_named: bool) -> Result {
@@ -303,7 +303,7 @@ impl Context {
         }
     }
 
-    fn make_proc(&mut self, name: Option<&str>, params: Vec<String>, fn_body: SExp) -> SExp {
+    fn make_proc(&self, name: Option<&str>, params: Vec<String>, fn_body: SExp) -> SExp {
         let expected = params.len();
         SExp::from(Proc::new(
             Func::Lambda {
@@ -313,6 +313,17 @@ impl Context {
             },
             expected,
             name,
+        ))
+    }
+
+    pub(super) fn defer(&self, expr: SExp) -> SExp {
+        SExp::from(Proc::new::<_, _, &str>(
+            Func::Tail {
+                body: Rc::new(expr),
+                cont: self.cont.clone(),
+            },
+            0,
+            None,
         ))
     }
 
@@ -330,7 +341,7 @@ impl Context {
             }
         }
 
-        let result = self.eval_begin(statements);
+        let result = self.eval_defer(&statements);
 
         self.pop();
         result

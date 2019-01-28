@@ -50,13 +50,21 @@ impl Proc {
         }
     }
 
+    pub(crate) fn is_tail(&self) -> bool {
+        if let Func::Tail { .. } = self.func {
+            true
+        } else {
+            false
+        }
+    }
+
     pub fn apply(&self, args: SExp, ctx: &mut Context) -> Result {
         self.check_arity(args.len())?;
 
         match &self.func {
             Func::Ctx(f) => f(ctx, args),
             Func::Pure(f) => f(args),
-            Func::Thunk { body, cont } => ctx.call_cc(body.deref().to_owned(), cont.clone()),
+            Func::Tail { body, cont } => ctx.call_cc(body.deref().to_owned(), cont.clone()),
             Func::Lambda { body, envt, params } => {
                 // start new scope and bind args to parameters
                 ctx.push();
@@ -67,17 +75,7 @@ impl Proc {
                     .for_each(|(p, v)| ctx.define(p, v));
 
                 // evaluate each body expression
-                let mut result = Ok(SExp::Atom(Primitive::Undefined));
-
-                for expr in body.iter() {
-                    ctx.push_cont();
-                    result = ctx.eval(expr.to_owned());
-                    ctx.pop_cont();
-
-                    if result.is_err() {
-                        break;
-                    }
-                }
+                let result = ctx.eval_defer(body);
 
                 // clean up and return
                 ctx.use_closure(None);
@@ -186,7 +184,7 @@ pub enum Func {
         envt: Rc<Env>,
         params: Vec<String>,
     },
-    Thunk {
+    Tail {
         body: Rc<SExp>,
         cont: Rc<RefCell<Cont>>,
     },
