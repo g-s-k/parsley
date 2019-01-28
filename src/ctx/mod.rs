@@ -237,7 +237,7 @@ impl Context {
     /// assert_eq!(ctx.eval(exp2).unwrap(), SExp::from(10));
     /// ```
     pub fn eval(&mut self, mut expr: SExp) -> Result {
-        use Error::{NullList, UndefinedSymbol};
+        use Error::{NotAProcedure, NullList, UndefinedSymbol};
         use Primitive::{Procedure, Symbol, Undefined};
         use SExp::{Atom, Null, Pair};
 
@@ -255,13 +255,18 @@ impl Context {
                 Pair { head, tail } => {
                     // evaluate components
                     let proc = self.eval(*head)?;
-                    let applic = match &proc {
+                    let the_tail = match &proc {
+                        Null => return Err(NullList),
                         Atom(Procedure(p)) if p.defer_eval() => *tail,
                         _ => tail.into_iter().map(|e| self.eval(e)).collect::<Result>()?,
-                    }
-                    .cons(proc);
+                    };
                     // do the application
-                    expr = self.apply(applic)?;
+                    expr = match proc {
+                        Atom(Procedure(p)) => p.apply(the_tail, self),
+                        _ => Err(NotAProcedure {
+                            exp: proc.to_string(),
+                        })
+                    }?;
                     // see if we need to eval again
                     match expr {
                         Atom(Procedure(ref p)) if p.is_tail() => continue,
@@ -269,23 +274,6 @@ impl Context {
                     }
                 }
             }
-        }
-    }
-
-    fn apply(&mut self, expr: SExp) -> Result {
-        use Error::NotAProcedure;
-        use Primitive::{Procedure, Symbol};
-        use SExp::{Atom, Null, Pair};
-
-        match expr {
-            Null | Atom(_) => Ok(expr),
-            Pair { head, tail } => match *head {
-                Atom(Procedure(proc)) => proc.apply(*tail, self),
-                Atom(Symbol(sym)) => Err(NotAProcedure {
-                    exp: sym.to_string(),
-                }),
-                _ => Ok(tail.cons(*head)),
-            },
         }
     }
 }
