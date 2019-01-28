@@ -10,6 +10,7 @@ fn eval(e: SExp) -> Result {
 fn eq_test() {
     let eq = || SExp::sym("eq?");
     let null = || SExp::sym("null");
+    let list = || SExp::sym("list");
 
     assert_eq!(eval(sexp![eq(), null(), null()]).unwrap(), SExp::from(true));
 
@@ -26,11 +27,14 @@ fn eq_test() {
     );
 
     assert_eq!(
-        eval(sexp![eq(), (1, (2,)), (1, (2,))]).unwrap(),
+        eval(sexp![eq(), sexp![list(), 1, 2], sexp![list(), 1, 2]]).unwrap(),
         SExp::from(true)
     );
 
-    assert_eq!(eval(sexp![eq(), 0, (1, (2,))]).unwrap(), SExp::from(false));
+    assert_eq!(
+        eval(sexp![eq(), 0, sexp![list(), 1, 2]]).unwrap(),
+        SExp::from(false)
+    );
 }
 
 #[test]
@@ -76,7 +80,7 @@ fn not() {
     );
 
     assert_eq!(
-        eval(sexp![not(), vec![1, 2, 3, 4]]).unwrap(),
+        eval(sexp![not(), sexp![SExp::sym("list"), 1, 2, 3, 4]]).unwrap(),
         SExp::from(false)
     );
 }
@@ -108,7 +112,7 @@ fn cons() {
     );
 
     assert_eq!(
-        eval(sexp![cons(), item_1(), vec![item_2()]]).unwrap(),
+        eval(sexp![cons(), item_1(), sexp![SExp::sym("list"), item_2()]]).unwrap(),
         Null.cons(item_2()).cons(item_1())
     );
 }
@@ -121,7 +125,10 @@ fn car() {
 
     assert!(eval(SExp::from(Null.cons("test".into()).cons(car()))).is_err());
 
-    assert_eq!(eval(sexp![car(), (3, (5,))]).unwrap(), SExp::from(3))
+    assert_eq!(
+        eval(sexp![car(), sexp![SExp::sym("list"), 3, 5]]).unwrap(),
+        SExp::from(3)
+    )
 }
 
 #[test]
@@ -132,7 +139,10 @@ fn cdr() {
 
     assert!(eval(SExp::from(Null.cons("test".into()).cons(cdr()))).is_err());
 
-    assert_eq!(eval(sexp![cdr(), (3, (5,))]).unwrap(), SExp::from((5,)))
+    assert_eq!(
+        eval(sexp![cdr(), sexp![SExp::sym("list"), 3, 5]]).unwrap(),
+        SExp::from((5,))
+    )
 }
 
 #[test]
@@ -171,7 +181,7 @@ fn type_of() {
     );
 
     assert_eq!(
-        eval(sexp![tpf(), ("abc", (123,))]).unwrap(),
-        eval(sexp![tpf(), (false, ('\0',))]).unwrap(),
+        eval(sexp![tpf(), sexp![SExp::sym("list"), "abc", 123]]).unwrap(),
+        eval(sexp![tpf(), sexp![SExp::sym("list"), false, '\0']]).unwrap(),
     );
 }

@@ -3,8 +3,8 @@
 /// # Examples
 /// ```
 /// use parsley::prelude::*;
-/// assert!(eval!(sexp!["potato", true, 5]).is_ok());
-/// assert!(eval!(sexp![SExp::sym("potato"), true, 5]).is_err());
+/// assert!(eval!(sexp![SExp::sym("list"), "potato", true, 5]).is_ok());
+/// assert!(eval!(sexp!["potato", true, 5]).is_err());
 /// ```
 /// ```
 /// use parsley::prelude::*;
