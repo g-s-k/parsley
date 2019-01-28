@@ -1,11 +1,9 @@
 #![allow(clippy::cast_precision_loss)]
 
-use std::cell::RefCell;
 use std::fmt;
-use std::ops::Deref;
 use std::rc::Rc;
 
-use super::{Cont, Context, Env, Error, Primitive, Result, SExp};
+use super::{Context, Env, Error, Primitive, Result, SExp};
 
 pub mod utils;
 
@@ -64,23 +62,18 @@ impl Proc {
         match &self.func {
             Func::Ctx(f) => f(ctx, args),
             Func::Pure(f) => f(args),
-            Func::Tail { body, cont } => ctx.call_cc(body.deref().to_owned(), cont.clone()),
+            Func::Tail { .. } => Ok(self.to_owned().into()),
             Func::Lambda { body, envt, params } => {
                 // start new scope and bind args to parameters
+                ctx.use_env(envt.clone());
                 ctx.push();
-                ctx.use_closure(Some(envt.clone()));
                 params
                     .iter()
                     .zip(args.into_iter())
                     .for_each(|(p, v)| ctx.define(p, v));
 
-                // evaluate each body expression
-                let result = ctx.eval_defer(body);
-
-                // clean up and return
-                ctx.use_closure(None);
-                ctx.pop();
-                result
+                // evaluate each body expression, returning the last as a thunk
+                ctx.eval_defer(body)
             }
         }
     }
@@ -186,7 +179,7 @@ pub enum Func {
     },
     Tail {
         body: Rc<SExp>,
-        cont: Rc<RefCell<Cont>>,
+        envt: Rc<Env>,
     },
 }
 

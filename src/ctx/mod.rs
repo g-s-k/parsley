@@ -1,5 +1,4 @@
 use std::cell::RefCell;
-use std::mem;
 use std::ops::Deref;
 use std::rc::Rc;
 
@@ -114,17 +113,11 @@ impl Context {
             return Some(exp.clone());
         }
 
-        // then check the closure environment
-        if let Some(c) = self.cont.borrow().closure() {
-            if let Some(exp) = c.get(key) {
-                return Some(exp);
-            }
-        }
-
-        // then check the environment stack
+        // then the environment stack
         if let Some(exp) = self.cont.borrow().env().get(key) {
             return Some(exp);
         }
+
 
         // then check the stdlib
         if let Some(exp) = self.lang.get(key) {
@@ -156,8 +149,8 @@ impl Context {
     }
 
     /// Push a new partial continuation with an existing environment.
-    pub(super) fn use_closure(&self, envt: Option<Rc<Env>>) {
-        self.cont.borrow_mut().use_closure(envt);
+    pub(super) fn use_env(&mut self, envt: Rc<Env>) {
+        self.cont.borrow_mut().set_env(envt);
     }
 
     /// Push a new partial continuation onto the stack.
@@ -171,13 +164,6 @@ impl Context {
         self.cont = new;
     }
 
-    pub(super) fn call_cc(&mut self, expr: SExp, mut cont: Rc<RefCell<Cont>>) -> Result {
-        mem::swap(&mut self.cont, &mut cont);
-        let out = self.eval(expr);
-        mem::swap(&mut self.cont, &mut cont);
-        out
-    }
-
     fn eval_args(&mut self, args: SExp) -> Result {
         args.into_iter().map(|a| self.eval(a)).collect()
     }
@@ -188,13 +174,11 @@ impl Context {
         let mut i = body.iter().peekable();
 
         while let Some(expr) = i.next() {
-            self.push_cont();
             if i.peek().is_some() {
                 result = self.eval(expr.to_owned());
             } else {
                 result = Ok(self.defer(expr.to_owned()))
             }
-            self.pop_cont();
 
             if result.is_err() {
                 break;
@@ -247,7 +231,9 @@ impl Context {
         use Primitive::{Procedure, Symbol, Undefined};
         use SExp::{Atom, Null, Pair};
 
-        loop {
+        self.push_cont();
+
+        let res = loop {
             expr = match expr {
                 // cannot evaluate null
                 Null => break Err(NullList),
@@ -260,11 +246,15 @@ impl Context {
                 },
                 // continue evaluation
                 Atom(Procedure(Proc {
-                    func: Tail { body, cont },
+                    func: Tail { body, envt },
                     ..
-                })) => self.call_cc(body.deref().to_owned(), cont)?,
+                })) => {
+                    self.cont.borrow_mut().set_env(envt);
+                    expr = body.deref().to_owned();
+                    continue
+                },
                 // cannot reduce further
-                Atom(_) => expr,
+                Atom(_) => break Ok(expr),
                 // it's an application
                 Pair { head, tail } => {
                     // evaluate the first element
@@ -294,6 +284,9 @@ impl Context {
                 Atom(Procedure(ref p)) if p.is_tail() => continue,
                 _ => break Ok(expr),
             }
-        }
+        };
+
+        self.pop_cont();
+        res
     }
 }

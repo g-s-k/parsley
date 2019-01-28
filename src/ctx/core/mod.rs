@@ -320,7 +320,7 @@ impl Context {
         SExp::from(Proc::new::<_, _, &str>(
             Func::Tail {
                 body: Rc::new(expr),
-                cont: self.cont.clone(),
+                envt: self.cont.borrow().env(),
             },
             0,
             None,
