@@ -330,21 +330,52 @@ impl Context {
     fn eval_let(&mut self, expr: SExp) -> Result {
         let (defn_list, statements) = expr.split_car()?;
 
-        self.push();
+        if let Atom(Primitive::Symbol(let_name)) = defn_list {
+            let (defn_list, statements) = statements.split_car()?;
 
-        for defn in defn_list {
-            let err = self.eval_define(defn);
+            let (params, inits): (Vec<_>, Vec<_>) = defn_list
+                .into_iter()
+                .map(|e| {
+                    let (s, r) = e.split_car()?;
+                    let d = r.car()?;
+                    let sym = if let Atom(Primitive::Symbol(sym)) = s {
+                        sym
+                    } else {
+                        return Err(Error::Type {
+                            expected: "symbol",
+                            given: s.type_of().to_string(),
+                        });
+                    };
+                    Ok((sym, d))
+                })
+                .collect::<std::result::Result<Vec<(String, SExp)>, Error>>()?
+                .into_iter()
+                .unzip();
 
-            if err.is_err() {
-                self.pop();
-                return err;
+            self.push();
+            let proc = self.make_proc(Some(&let_name), params, statements);
+            self.define(&let_name, proc);
+            let applic = SExp::from(inits).cons(Atom(Primitive::Symbol(let_name)));
+            let result = self.eval(applic);
+            self.pop();
+            result
+        } else {
+            self.push();
+
+            for defn in defn_list {
+                let err = self.eval_define(defn);
+
+                if err.is_err() {
+                    self.pop();
+                    return err;
+                }
             }
+
+            let result = self.eval_defer(&statements);
+
+            self.pop();
+            result
         }
-
-        let result = self.eval_defer(&statements);
-
-        self.pop();
-        result
     }
 
     fn eval_or(&mut self, expr: SExp) -> Result {
