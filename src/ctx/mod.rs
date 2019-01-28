@@ -2,9 +2,7 @@ use std::cell::RefCell;
 use std::mem;
 use std::rc::Rc;
 
-use super::Primitive;
-use super::SExp;
-use super::{Cont, Env, Error, Ns, Result};
+use super::{Cont, Env, Error, Ns, Primitive, Result, SExp};
 
 mod base;
 mod core;
@@ -112,24 +110,24 @@ impl Context {
     pub fn get(&self, key: &str) -> Option<SExp> {
         // first check core (reserved keywords)
         if let Some(exp) = self.core.get(key) {
-            return Some(exp.clone())
+            return Some(exp.clone());
         }
 
         // then check the closure environment
         if let Some(c) = self.cont.borrow().closure() {
             if let Some(exp) = c.get(key) {
-                return Some(exp)
+                return Some(exp);
             }
         }
 
         // then check the environment stack
         if let Some(exp) = self.cont.borrow().env().get(key) {
-            return Some(exp)
+            return Some(exp);
         }
 
         // then check the stdlib
         if let Some(exp) = self.lang.get(key) {
-            return Some(exp.clone())
+            return Some(exp.clone());
         }
 
         // otherwise fail
@@ -179,6 +177,27 @@ impl Context {
         out
     }
 
+    pub(super) fn eval_defer(&mut self, body: &SExp) -> Result {
+        let mut result = Ok(SExp::Atom(Primitive::Undefined));
+
+        let mut i = body.iter().peekable();
+
+        while let Some(expr) = i.next() {
+            self.push_cont();
+            if i.peek().is_some() {
+                result = self.eval(expr.to_owned());
+            } else {
+                result = Ok(self.defer(expr.to_owned()))
+            }
+            self.pop_cont();
+
+            if result.is_err() {
+                break;
+            }
+        }
+        result
+    }
+
     /// Run a code snippet in an existing `Context`.
     ///
     /// # Example
@@ -217,24 +236,33 @@ impl Context {
     /// ctx.eval(exp1);
     /// assert_eq!(ctx.eval(exp2).unwrap(), SExp::from(10));
     /// ```
-    pub fn eval(&mut self, expr: SExp) -> Result {
+    pub fn eval(&mut self, mut expr: SExp) -> Result {
         use SExp::{Atom, Null, Pair};
 
-        match expr {
-            Null => Err(Error::NullList),
-            Atom(Primitive::Symbol(sym)) => match self.get(&sym) {
-                None | Some(Atom(Primitive::Undefined)) => Err(Error::UndefinedSymbol { sym }),
-                Some(exp) => Ok(exp),
-            },
-            Atom(_) => Ok(expr),
-            Pair { head, tail } => {
-                let proc = self.eval(*head)?;
-                let applic = match &proc {
-                    Atom(Primitive::Procedure(p)) if p.defer_eval() => *tail,
-                    _ => tail.into_iter().map(|e| self.eval(e)).collect::<Result>()?,
+        loop {
+            match expr {
+                Null => return Err(Error::NullList),
+                Atom(Primitive::Symbol(sym)) => match self.get(&sym) {
+                    None | Some(Atom(Primitive::Undefined)) => {
+                        return Err(Error::UndefinedSymbol { sym });
+                    }
+                    Some(exp) => return Ok(exp),
+                },
+                Atom(Primitive::Procedure(ref p)) if p.is_tail() => return p.apply(Null, self),
+                Atom(_) => return Ok(expr),
+                Pair { head, tail } => {
+                    let proc = self.eval(*head)?;
+                    let applic = match &proc {
+                        Atom(Primitive::Procedure(p)) if p.defer_eval() => *tail,
+                        _ => tail.into_iter().map(|e| self.eval(e)).collect::<Result>()?,
+                    }
+                    .cons(proc);
+                    expr = self.apply(applic)?;
+                    match expr {
+                        Atom(Primitive::Procedure(ref p)) if p.is_tail() => (),
+                        _ => return Ok(expr),
+                    }
                 }
-                .cons(proc);
-                self.apply(applic)
             }
         }
     }
