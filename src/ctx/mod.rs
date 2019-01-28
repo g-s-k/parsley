@@ -177,6 +177,10 @@ impl Context {
         out
     }
 
+    fn eval_args(&mut self, args: SExp) -> Result {
+        args.into_iter().map(|a| self.eval(a)).collect()
+    }
+
     pub(super) fn eval_defer(&mut self, body: &SExp) -> Result {
         let mut result = Ok(SExp::Atom(Primitive::Undefined));
 
@@ -253,20 +257,22 @@ impl Context {
                 Atom(Procedure(ref p)) if p.is_tail() => return p.apply(Null, self),
                 Atom(_) => return Ok(expr),
                 Pair { head, tail } => {
-                    // evaluate components
-                    let proc = self.eval(*head)?;
-                    let the_tail = match &proc {
-                        Null => return Err(NullList),
-                        Atom(Procedure(p)) if p.defer_eval() => *tail,
-                        _ => tail.into_iter().map(|e| self.eval(e)).collect::<Result>()?,
-                    };
                     // do the application
-                    expr = match proc {
-                        Atom(Procedure(p)) => p.apply(the_tail, self),
-                        _ => Err(NotAProcedure {
-                            exp: proc.to_string(),
-                        })
-                    }?;
+                    expr = match self.eval(*head)? {
+                        Atom(Procedure(p)) => {
+                            let args = if p.defer_eval() {
+                                *tail
+                            } else {
+                                self.eval_args(*tail)?
+                            };
+                            p.apply(args, self)?
+                        }
+                        proc => {
+                            return Err(NotAProcedure {
+                                exp: proc.to_string(),
+                            });
+                        }
+                    };
                     // see if we need to eval again
                     match expr {
                         Atom(Procedure(ref p)) if p.is_tail() => continue,
