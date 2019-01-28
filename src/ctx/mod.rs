@@ -237,29 +237,34 @@ impl Context {
     /// assert_eq!(ctx.eval(exp2).unwrap(), SExp::from(10));
     /// ```
     pub fn eval(&mut self, mut expr: SExp) -> Result {
+        use Error::{NullList, UndefinedSymbol};
+        use Primitive::{Procedure, Symbol, Undefined};
         use SExp::{Atom, Null, Pair};
 
         loop {
             match expr {
-                Null => return Err(Error::NullList),
-                Atom(Primitive::Symbol(sym)) => match self.get(&sym) {
-                    None | Some(Atom(Primitive::Undefined)) => {
-                        return Err(Error::UndefinedSymbol { sym });
+                Null => return Err(NullList),
+                Atom(Symbol(sym)) => match self.get(&sym) {
+                    None | Some(Atom(Undefined)) => {
+                        return Err(UndefinedSymbol { sym });
                     }
                     Some(exp) => return Ok(exp),
                 },
-                Atom(Primitive::Procedure(ref p)) if p.is_tail() => return p.apply(Null, self),
+                Atom(Procedure(ref p)) if p.is_tail() => return p.apply(Null, self),
                 Atom(_) => return Ok(expr),
                 Pair { head, tail } => {
+                    // evaluate components
                     let proc = self.eval(*head)?;
                     let applic = match &proc {
-                        Atom(Primitive::Procedure(p)) if p.defer_eval() => *tail,
+                        Atom(Procedure(p)) if p.defer_eval() => *tail,
                         _ => tail.into_iter().map(|e| self.eval(e)).collect::<Result>()?,
                     }
                     .cons(proc);
+                    // do the application
                     expr = self.apply(applic)?;
+                    // see if we need to eval again
                     match expr {
-                        Atom(Primitive::Procedure(ref p)) if p.is_tail() => (),
+                        Atom(Procedure(ref p)) if p.is_tail() => continue,
                         _ => return Ok(expr),
                     }
                 }
@@ -268,13 +273,15 @@ impl Context {
     }
 
     fn apply(&mut self, expr: SExp) -> Result {
+        use Error::NotAProcedure;
+        use Primitive::{Procedure, Symbol};
         use SExp::{Atom, Null, Pair};
 
         match expr {
             Null | Atom(_) => Ok(expr),
             Pair { head, tail } => match *head {
-                Atom(Primitive::Procedure(proc)) => proc.apply(*tail, self),
-                Atom(Primitive::Symbol(sym)) => Err(Error::NotAProcedure {
+                Atom(Procedure(proc)) => proc.apply(*tail, self),
+                Atom(Symbol(sym)) => Err(NotAProcedure {
                     exp: sym.to_string(),
                 }),
                 Pair {
