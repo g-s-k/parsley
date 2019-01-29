@@ -41,6 +41,171 @@ impl Num {
             (Float(f0), Float(f1)) => Float(f0.powf(f1)),
         }
     }
+
+    pub fn is_nan(self) -> bool {
+        match self {
+            Float(f) => f.is_nan(),
+            _ => false,
+        }
+    }
+
+    pub fn is_infinite(self) -> bool {
+        match self {
+            Float(f) => f.is_infinite(),
+            _ => false,
+        }
+    }
+
+    pub fn is_finite(self) -> bool {
+        match self {
+            Float(f) => f.is_finite(),
+            _ => false,
+        }
+    }
+
+    pub fn is_sign_positive(self) -> bool {
+        match self {
+            Float(f) => f.is_sign_positive(),
+            Int(i) => i.is_positive(),
+        }
+    }
+
+    pub fn is_sign_negative(self) -> bool {
+        match self {
+            Float(f) => f.is_sign_negative(),
+            Int(i) => i.is_negative(),
+        }
+    }
+
+    pub fn floor(self) -> Self {
+        match self {
+            Float(f) => Int(f.floor() as IntT),
+            _ => self,
+        }
+    }
+
+    pub fn ceil(self) -> Self {
+        match self {
+            Float(f) => Int(f.ceil() as IntT),
+            _ => self,
+        }
+    }
+
+    pub fn round(self) -> Self {
+        match self {
+            Float(f) => Int(f.round() as IntT),
+            _ => self,
+        }
+    }
+
+    pub fn trunc(self) -> Self {
+        match self {
+            Float(f) => Int(f.trunc() as IntT),
+            _ => self,
+        }
+    }
+
+    pub fn fract(self) -> Self {
+        match self {
+            Float(f) => Float(f.fract()),
+            _ => Int(0),
+        }
+    }
+
+    pub fn signum(self) -> Self {
+        match self {
+            Float(f) => Int(f.signum() as IntT),
+            Int(i) => Int(i.signum()),
+        }
+    }
+
+    pub fn recip(self) -> Self {
+        Float(f64::from(self).recip())
+    }
+
+    pub fn sqrt(self) -> Self {
+        Float(f64::from(self).sqrt())
+    }
+
+    pub fn cbrt(self) -> Self {
+        Float(f64::from(self).cbrt())
+    }
+
+    pub fn exp(self) -> Self {
+        Float(f64::from(self).exp())
+    }
+
+    pub fn ln(self) -> Self {
+        Float(f64::from(self).ln())
+    }
+
+    pub fn exp2(self) -> Self {
+        match self {
+            Float(f) => Float(f.exp2()),
+            Int(i) => Int((2 as IntT).pow(i as u32))
+        }
+    }
+
+    pub fn log2(self) -> Self {
+        Float(f64::from(self).log2())
+    }
+
+    pub fn log10(self) -> Self {
+        Float(f64::from(self).log10())
+    }
+
+    pub fn log<T>(self, other: T) -> Self
+    where
+        Self: From<T>,
+    {
+        Float(f64::from(self).log(f64::from(Self::from(other))))
+    }
+
+    pub fn hypot<T>(self, other: T) -> Self
+    where
+        Self: From<T>,
+    {
+        Float(f64::from(self).hypot(f64::from(Self::from(other))))
+    }
+
+    pub fn sin(self) -> Self {
+        Float(f64::from(self).sin())
+    }
+
+    pub fn cos(self) -> Self {
+        Float(f64::from(self).cos())
+    }
+
+    pub fn tan(self) -> Self {
+        Float(f64::from(self).tan())
+    }
+
+    pub fn asin(self) -> Self {
+        Float(f64::from(self).asin())
+    }
+
+    pub fn acos(self) -> Self {
+        Float(f64::from(self).acos())
+    }
+
+    pub fn atan(self) -> Self {
+        Float(f64::from(self).atan())
+    }
+
+    pub fn atan2<T>(self, other: T) -> Self
+    where
+        Self: From<T>,
+    {
+        Float(f64::from(self).atan2(f64::from(Self::from(other))))
+    }
+
+    pub fn to_degrees(self) -> Self {
+        Float(f64::from(self).to_degrees())
+    }
+
+    pub fn to_radians(self) -> Self {
+        Float(f64::from(self).to_radians())
+    }
 }
 
 impl FromStr for Num {
