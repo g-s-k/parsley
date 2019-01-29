@@ -1,11 +1,3 @@
-// there are a number of f64 <-> usize casts in this module, and clippy
-// (understandably) isn't a big fan.
-#![allow(
-    clippy::cast_sign_loss,
-    clippy::cast_precision_loss,
-    clippy::cast_possible_truncation
-)]
-
 use super::super::super::proc::utils::*;
 use super::super::super::Error;
 use super::super::super::Primitive::{Number, Symbol, Undefined, Vector};
@@ -38,7 +30,7 @@ impl Context {
             self,
             "make-vector",
             |e| match e {
-                Atom(Number(n)) => Ok(Atom(Vector(vec![Null; n.floor() as usize]))),
+                Atom(Number(n)) => Ok(Atom(Vector(vec![Null; n.into()]))),
                 _ => Err(Error::Type {
                     expected: "number",
                     given: e.type_of().to_string(),
@@ -74,7 +66,7 @@ impl Context {
             self,
             "vector-length",
             |v| match v {
-                Atom(Vector(vec)) => Ok((vec.len() as f64).into()),
+                Atom(Vector(vec)) => Ok(vec.len().into()),
                 _ => Err(Error::Type {
                     expected: "vector",
                     given: v.type_of().to_string(),
@@ -88,9 +80,9 @@ impl Context {
             "vector-ref",
             |v, i| match (v, i) {
                 (Atom(Vector(vec)), Atom(Number(n))) => vec
-                    .get(n as usize)
+                    .get(usize::from(n))
                     .map(ToOwned::to_owned)
-                    .ok_or(Error::Index { i: n as usize }),
+                    .ok_or(Error::Index { i: n.into() }),
                 (Atom(Vector(_)), i) => Err(Error::Type {
                     expected: "number",
                     given: i.type_of().to_string(),
@@ -132,7 +124,7 @@ impl Context {
 
                 match ctx.get(&sym) {
                     Some(Atom(Vector(mut vec))) => {
-                        vec[n as usize] = ctx.eval(head)?;
+                        vec[usize::from(n)] = ctx.eval(head)?;
                         ctx.set(&sym, Atom(Vector(vec))).unwrap();
                         Ok(Atom(Undefined))
                     }
@@ -176,7 +168,7 @@ impl Context {
             "subvector",
             |v, start, end| match (v, start, end) {
                 (Atom(Vector(vec)), Atom(Number(n0)), Atom(Number(n1))) => {
-                    let (i0, i1) = (n0 as usize, n1 as usize);
+                    let (i0, i1) = (n0.into(), n1.into());
                     if i0 >= vec.len() {
                         return Err(Error::Index { i: i0 });
                     }
@@ -207,7 +199,7 @@ impl Context {
             "vector-head",
             |v, end| match (v, end) {
                 (Atom(Vector(vec)), Atom(Number(n1))) => {
-                    let i1 = n1 as usize;
+                    let i1 = n1.into();
                     if i1 >= vec.len() {
                         return Err(Error::Index { i: i1 });
                     }
@@ -231,7 +223,7 @@ impl Context {
             "vector-tail",
             |v, start| match (v, start) {
                 (Atom(Vector(vec)), Atom(Number(n0))) => {
-                    let i0 = n0 as usize;
+                    let i0 = n0.into();
                     if i0 >= vec.len() {
                         return Err(Error::Index { i: i0 });
                     }

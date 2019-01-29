@@ -9,7 +9,10 @@ use self::Primitive::{
     Boolean, Character, Env, Number, Procedure, String, Symbol, Undefined, Vector, Void,
 };
 
+pub use self::num::Num;
+
 mod from;
+mod num;
 
 #[derive(Clone)]
 pub enum Primitive {
@@ -17,7 +20,7 @@ pub enum Primitive {
     Undefined,
     Boolean(bool),
     Character(char),
-    Number(f64),
+    Number(Num),
     String(CoreString),
     Symbol(CoreString),
     Env(Ns),

@@ -4,7 +4,7 @@
 
 use std::rc::Rc;
 
-use super::super::{Error, Func, Proc};
+use super::super::{Error, Func, Num, Proc};
 use super::Primitive::{self, Number};
 use super::SExp::{self, Atom};
 
@@ -28,7 +28,7 @@ use super::SExp::{self, Atom};
 ///     SExp::from(42),
 /// );
 /// ```
-pub fn make_unary_numeric<T>(f: impl Fn(f64) -> T + 'static, name: Option<&str>) -> SExp
+pub fn make_unary_numeric<T>(f: impl Fn(Num) -> T + 'static, name: Option<&str>) -> SExp
 where
     T: Into<SExp>,
 {
@@ -69,7 +69,7 @@ where
 ///     SExp::from(true),
 /// );
 /// ```
-pub fn make_binary_numeric<T>(f: impl Fn(f64, f64) -> T + 'static, name: Option<&str>) -> SExp
+pub fn make_binary_numeric<T>(f: impl Fn(Num, Num) -> T + 'static, name: Option<&str>) -> SExp
 where
     T: Into<SExp>,
 {
@@ -101,9 +101,10 @@ where
 /// ```
 /// use parsley::prelude::*;
 /// use parsley::proc_utils::*;
+/// use parsley::Num;
 ///
 /// let my_adder = |accumulator, current| accumulator + current;
-/// let my_add_proc = make_fold_numeric(0., my_adder, None);
+/// let my_add_proc = make_fold_numeric(Num::from(0), my_adder, None);
 ///
 /// assert_eq!(
 ///     Context::base().eval(
@@ -114,7 +115,7 @@ where
 /// ```
 pub fn make_fold_numeric<F, T>(init: T, f: F, name: Option<&str>) -> SExp
 where
-    F: Fn(T, f64) -> T + 'static,
+    F: Fn(T, Num) -> T + 'static,
     T: Into<SExp> + Clone + 'static,
 {
     SExp::from(Proc::new(
@@ -166,7 +167,7 @@ where
 /// ```
 pub fn make_fold_from0_numeric<F>(f: F, name: Option<&str>) -> SExp
 where
-    F: Fn(f64, f64) -> f64 + 'static,
+    F: Fn(Num, Num) -> Num + 'static,
 {
     SExp::from(Proc::new(
         Func::Pure(Rc::new(move |exp: SExp| {

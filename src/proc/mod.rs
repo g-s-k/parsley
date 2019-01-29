@@ -1,5 +1,3 @@
-#![allow(clippy::cast_precision_loss)]
-
 use std::fmt;
 use std::rc::Rc;
 
@@ -162,9 +160,9 @@ impl From<(usize, usize)> for Arity {
 impl Into<SExp> for Arity {
     fn into(self) -> SExp {
         if let Some(n) = self.max {
-            (self.min as f64, n as f64).into()
+            (self.min, n).into()
         } else {
-            (self.min as f64, false).into()
+            (self.min, false).into()
         }
     }
 }

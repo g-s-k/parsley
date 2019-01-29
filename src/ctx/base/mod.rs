@@ -1,16 +1,10 @@
-#![allow(
-    clippy::cast_possible_truncation,
-    clippy::cast_precision_loss,
-    clippy::cast_sign_loss
-)]
-
 use std::fmt::Write;
 
 use super::super::Primitive::{
     Boolean, Character, Env, Number, Procedure, String as LispString, Symbol, Undefined, Void,
 };
 use super::super::SExp::{self, Atom, Null, Pair};
-use super::super::{Error, Result};
+use super::super::{Error, Num, Result};
 
 use super::super::proc::utils::*;
 use super::Context;
@@ -270,7 +264,7 @@ impl Context {
             make_unary_expr
         );
         let check_proc_arity = |e0, e1| match (e0, e1) {
-            (Atom(Procedure(p)), Atom(Number(n))) => Ok(p.check_arity(n as usize).is_ok().into()),
+            (Atom(Procedure(p)), Atom(Number(n))) => Ok(p.check_arity(n.into()).is_ok().into()),
             (Atom(Procedure(_)), other) => Err(Error::Type {
                 expected: "number",
                 given: other.type_of().to_string(),
@@ -366,35 +360,35 @@ impl Context {
             |e: SExp| Ok((e.car()? == 0.into()).into()),
             1
         );
-        define_with!(self, "add1", |e| e + 1., make_unary_numeric);
-        define_with!(self, "sub1", |e| e - 1., make_unary_numeric);
+        define_with!(self, "add1", |e| e + Num::Int(1), make_unary_numeric);
+        define_with!(self, "sub1", |e| e - Num::Int(1), make_unary_numeric);
 
         define_with!(
             self,
             "=",
-            |l, r| (l - r).abs() < std::f64::EPSILON,
+            |l, r| l == r,
             make_binary_numeric
         );
 
         define_with!(self, "<", |l, r| l < r, make_binary_numeric);
         define_with!(self, ">", |l, r| l > r, make_binary_numeric);
-        define_with!(self, "abs", f64::abs, make_unary_numeric);
+        define_with!(self, "abs", Num::abs, make_unary_numeric);
 
         self.lang.insert(
             "+".to_string(),
-            make_fold_numeric(0., std::ops::Add::add, Some("+")),
+            make_fold_numeric(Num::Int(0), std::ops::Add::add, Some("+")),
         );
 
         define_with!(self, "-", std::ops::Sub::sub, make_fold_from0_numeric);
 
         self.lang.insert(
             "*".to_string(),
-            make_fold_numeric(1., std::ops::Mul::mul, Some("*")),
+            make_fold_numeric(Num::Int(1), std::ops::Mul::mul, Some("*")),
         );
 
         define_with!(self, "/", std::ops::Div::div, make_fold_from0_numeric);
         define_with!(self, "remainder", std::ops::Rem::rem, make_binary_numeric);
-        define_with!(self, "pow", f64::powf, make_binary_numeric);
+        define_with!(self, "pow", Num::pow, make_binary_numeric);
 
         self.lang
             .insert("pi".to_string(), std::f64::consts::PI.into());

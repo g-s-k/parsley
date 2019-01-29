@@ -2,6 +2,7 @@ use std::str::FromStr;
 use std::string::String as CoreString;
 
 use super::super::{utils, Error};
+use super::Num;
 use super::Primitive::{self, Boolean, Character, Number, String, Symbol};
 
 impl FromStr for Primitive {
@@ -14,7 +15,7 @@ impl FromStr for Primitive {
             _ => (),
         }
 
-        if let Ok(num) = s.parse::<f64>() {
+        if let Ok(num) = s.parse::<Num>() {
             return Ok(Number(num));
         }
 
@@ -45,21 +46,12 @@ impl From<bool> for Primitive {
     }
 }
 
-impl From<i32> for Primitive {
-    fn from(n: i32) -> Self {
-        Number(f64::from(n))
-    }
-}
-
-impl From<f32> for Primitive {
-    fn from(n: f32) -> Self {
-        Number(f64::from(n))
-    }
-}
-
-impl From<f64> for Primitive {
-    fn from(n: f64) -> Self {
-        Number(n)
+impl<T> From<T> for Primitive
+where
+    Num: From<T>,
+{
+    fn from(n: T) -> Self {
+        Number(n.into())
     }
 }
 

@@ -6,7 +6,7 @@ use super::{Cont, Env, Ns, Primitive, Proc, Result, SExp};
 
 mod base;
 mod core;
-mod math;
+// mod math;
 mod write;
 
 /// Evaluation context for LISP expressions.
