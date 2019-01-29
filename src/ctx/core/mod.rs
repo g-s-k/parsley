@@ -37,7 +37,7 @@ impl Context {
             tup_ctx_env!("begin", Self::eval_begin, (0,)),
             tup_ctx_env!("case", Self::eval_case, (2,)),
             tup_ctx_env!("cond", Self::eval_cond, (0,)),
-            tup_ctx_env!("do", Self::eval_do, (3,)),
+            tup_ctx_env!("do", Self::eval_do, (2,)),
             tup_ctx_env!("define", Self::eval_define, (1,)),
             tup_ctx_env!("if", Self::eval_if, 3),
             tup_ctx_env!("lambda", |e, c| Self::eval_lambda(e, c, false), (2,)),

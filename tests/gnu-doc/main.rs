@@ -17,5 +17,9 @@ fn r#do() -> Result<(), Error> {
         ctx.run(include_str!("do_1.ss"))?,
         "#(0 1 2 3 4)".parse::<SExp>()?
     );
+    assert_eq!(
+        ctx.run(include_str!("do_2.ss"))?,
+        SExp::from(25)
+    );
     Ok(())
 }
