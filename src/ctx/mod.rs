@@ -85,10 +85,9 @@ impl Context {
     /// This method searches for a definition in the following order:
     ///
     ///   1. The core language
-    ///   2. The current closure overlay (if there is one)
-    ///   3. User definitions, starting from the most recent scope and working
+    ///   2. User definitions, starting from the most recent scope and working
     ///      backward to the top-level
-    ///   4. [Language-level definitions](#structfield.lang)
+    ///   3. [Language-level definitions](#structfield.lang)
     ///
     /// What this means is that definitions populated in the `lang` field can be
     /// overridden inside the runtime (e.g. in a REPL), but special form keywords

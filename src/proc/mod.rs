@@ -7,6 +7,7 @@ use super::{Context, Env, Error, Primitive, Result, SExp};
 
 pub mod utils;
 
+/// A primitive value that wraps a procedure.
 #[derive(Clone)]
 pub struct Proc {
     name: Option<String>,
