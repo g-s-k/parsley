@@ -77,6 +77,7 @@ impl PartialEq for Primitive {
             (Number(n1), Number(n2)) => n1 == n2,
             (String(s1), String(s2)) | (Symbol(s1), Symbol(s2)) => s1 == s2,
             (Env(e1), Env(e2)) => e1 == e2,
+            (Vector(v1), Vector(v2)) => v1 == v2,
             _ => false,
         }
     }

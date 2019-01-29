@@ -9,3 +9,13 @@ fn named_let() -> Result<(), Error> {
     );
     Ok(())
 }
+
+#[test]
+fn r#do() -> Result<(), Error> {
+    let mut ctx = Context::base();
+    assert_eq!(
+        ctx.run(include_str!("do_1.ss"))?,
+        "#(0 1 2 3 4)".parse::<SExp>()?
+    );
+    Ok(())
+}

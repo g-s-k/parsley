@@ -192,11 +192,11 @@ impl Context {
             match var.split_car()? {
                 (Atom(Primitive::Symbol(s)), rest) => match rest.len() {
                     1 => {
-                        var_inits.insert(s, rest.car()?);
+                        var_inits.insert(s, self.eval(rest.car()?)?);
                     }
                     2 => {
                         let (defn, tail) = rest.split_car()?;
-                        var_inits.insert(s.clone(), defn);
+                        var_inits.insert(s.clone(), self.eval(defn)?);
                         var_updates.insert(s, tail.car()?);
                     }
                     0 => {
@@ -224,6 +224,13 @@ impl Context {
         self.cont.borrow().env().extend(var_inits);
 
         let result = 'eval: loop {
+            // check termination condition
+            match self.eval(cond.clone()) {
+                Ok(Atom(Primitive::Boolean(false))) => (),
+                Ok(_) => break 'eval self.eval_begin(return_expr),
+                err => break 'eval err,
+            }
+
             // do each step
             for exp in body.iter() {
                 if let Err(err) = self.eval(exp.to_owned()) {
@@ -231,25 +238,19 @@ impl Context {
                 }
             }
 
-            // check termination condition, update vars if necessary
-            match self.eval(cond.clone()) {
-                Ok(Atom(Primitive::Boolean(false))) => {
-                    // we don't want the new values to be in place while we
-                    // evaluate subsequent step variables, so we hold them in a
-                    // temporary map, then insert them all at once
-                    let mut new_map = HashMap::new();
-                    for (key, upd) in &var_updates {
-                        let new_val = match self.eval(upd.to_owned()) {
-                            Ok(v) => v,
-                            err => break 'eval err,
-                        };
-                        new_map.insert(key.to_string(), new_val);
-                    }
-                    self.cont.borrow().env().extend(new_map);
-                }
-                Ok(_) => break 'eval self.eval_begin(return_expr),
-                err => break 'eval err,
+            // update vars for next iteration:
+            // we don't want the new values to be in place while we
+            // evaluate subsequent step variables, so we hold them in a
+            // temporary map, then insert them all at once
+            let mut new_map = HashMap::new();
+            for (key, upd) in &var_updates {
+                let new_val = match self.eval(upd.to_owned()) {
+                    Ok(v) => v,
+                    err => break 'eval err,
+                };
+                new_map.insert(key.to_string(), new_val);
             }
+            self.cont.borrow().env().extend(new_map);
         };
 
         self.pop();
@@ -420,6 +421,7 @@ impl Context {
 
     fn eval_set(&mut self, expr: SExp) -> Result {
         let (name, tail) = expr.split_car()?;
+        let val = self.eval(tail.car()?)?;
 
         let sym = match name {
             Atom(Primitive::Symbol(sym)) => sym,
@@ -431,7 +433,7 @@ impl Context {
             }
         };
 
-        self.set(&sym, tail.car()?)
+        self.set(&sym, val)
     }
 
     fn do_apply(&mut self, expr: SExp) -> Result {

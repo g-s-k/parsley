@@ -120,7 +120,7 @@ impl Context {
                         });
                     }
                 };
-                let n = match num {
+                let n = match ctx.eval(num)? {
                     Atom(Number(n)) => n,
                     e => {
                         return Err(Error::Type {
@@ -132,7 +132,7 @@ impl Context {
 
                 match ctx.get(&sym) {
                     Some(Atom(Vector(mut vec))) => {
-                        vec[n as usize] = head;
+                        vec[n as usize] = ctx.eval(head)?;
                         ctx.set(&sym, Atom(Vector(vec))).unwrap();
                         Ok(Atom(Undefined))
                     }
