@@ -1,6 +1,7 @@
 # parsley
 
 [![Build Status](https://travis-ci.org/g-s-k/parsley.svg?branch=master)](https://travis-ci.org/g-s-k/parsley)
+[![Crates.io](http://meritbadge.herokuapp.com/parsley)](https://crates.io/crates/parsley)
 
 what if scheme...but rust. still working on a backronym.
 
