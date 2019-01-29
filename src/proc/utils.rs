@@ -4,7 +4,10 @@
 
 use std::rc::Rc;
 
-use super::super::{Error, Func, Primitive, Proc, SExp};
+use super::super::{Error, Func, Proc};
+use super::Primitive::{self, Number};
+use super::SExp::{self, Atom};
+
 
 /// Make a procedure that takes one numeric argument.
 ///
@@ -70,9 +73,6 @@ pub fn make_binary_numeric<T>(f: impl Fn(f64, f64) -> T + 'static, name: Option<
 where
     T: Into<SExp>,
 {
-    use Primitive::Number;
-    use SExp::Atom;
-
     SExp::from(Proc::new(
         Func::Pure(Rc::new(move |expr| {
             let (arg0, tail) = expr.split_car()?;

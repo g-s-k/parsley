@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::ops::Deref;
 use std::rc::Rc;
 
-use super::{Cont, Env, Error, Ns, Primitive, Proc, Result, SExp};
+use super::{Cont, Env, Ns, Primitive, Proc, Result, SExp};
 
 mod base;
 mod core;
@@ -225,10 +225,10 @@ impl Context {
     /// assert_eq!(ctx.eval(exp2).unwrap(), SExp::from(10));
     /// ```
     pub fn eval(&mut self, mut expr: SExp) -> Result {
+        use super::Error::{NotAProcedure, NullList, UndefinedSymbol};
         use super::Func::Tail;
-        use Error::{NotAProcedure, NullList, UndefinedSymbol};
-        use Primitive::{Procedure, Symbol, Undefined};
-        use SExp::{Atom, Null, Pair};
+        use super::Primitive::{Procedure, Symbol, Undefined};
+        use super::SExp::{Atom, Null, Pair};
 
         self.push_cont();
 
