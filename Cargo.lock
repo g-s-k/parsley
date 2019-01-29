@@ -264,7 +264,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "parsley"
-version = "0.8.0"
+version = "0.8.1"
 dependencies = [
  "rustyline 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "structopt 0.2.14 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -595,7 +595,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "www"
 version = "0.1.0"
 dependencies = [
- "parsley 0.8.0",
+ "parsley 0.8.1",
  "stdweb 0.4.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "yew 0.5.0 (git+https://github.com/DenisKolodin/yew)",
 ]
