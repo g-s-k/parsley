@@ -10,8 +10,8 @@ use std::fmt;
 use std::ops::{Add, Div, Mul, Neg, Rem, Sub};
 use std::str::FromStr;
 
-use super::super::Error;
 use self::Num::{Float, Int};
+use super::super::Error;
 
 type IntT = isize;
 
@@ -142,7 +142,7 @@ impl Num {
     pub fn exp2(self) -> Self {
         match self {
             Float(f) => Float(f.exp2()),
-            Int(i) => Int((2 as IntT).pow(i as u32))
+            Int(i) => Int((2 as IntT).pow(i as u32)),
         }
     }
 
@@ -259,9 +259,11 @@ impl PartialEq for Num {
         match (*self, *other) {
             (Int(i0), Int(i1)) => i0 == i1,
             (Float(f), Int(i)) | (Int(i), Float(f)) => (f - (i as f64)).abs() < EPSILON,
-            (Float(f0), Float(f1)) if f0 == INFINITY && f1 == INFINITY => true,
-            (Float(f0), Float(f1)) if f0 == NEG_INFINITY && f1 == NEG_INFINITY => true,
-            (Float(f0), Float(f1)) => (f0 - f1).abs() < EPSILON,
+            (Float(f0), Float(f1)) => {
+                f0 == INFINITY && f1 == INFINITY
+                    || f0 == NEG_INFINITY && f1 == NEG_INFINITY
+                    || (f0 - f1).abs() < EPSILON
+            }
         }
     }
 }
@@ -298,7 +300,10 @@ impl Neg for Num {
 
     fn neg(self) -> Self::Output {
         match self {
-            Int(i) => Int(-i),
+            Int(i) => match i.checked_neg() {
+                Some(i0) => Int(i0),
+                None => Float(-(i as f64)),
+            },
             Float(f) => Float(-f),
         }
     }
@@ -312,7 +317,10 @@ where
 
     fn add(self, other: T) -> Self::Output {
         match (self, other.into()) {
-            (Int(i0), Int(i1)) => Int(i0 + i1),
+            (Int(i0), Int(i1)) => match i0.checked_add(i1) {
+                Some(i) => Int(i),
+                None => Float((i0 as f64) + (i1 as f64)),
+            },
             (Float(f), Int(i)) | (Int(i), Float(f)) => Float(f + (i as f64)),
             (Float(f0), Float(f1)) => Float(f0 + f1),
         }
@@ -327,7 +335,10 @@ where
 
     fn sub(self, other: T) -> Self::Output {
         match (self, other.into()) {
-            (Int(i0), Int(i1)) => Int(i0 - i1),
+            (Int(i0), Int(i1)) => match i0.checked_sub(i1) {
+                Some(i) => Int(i),
+                None => Float((i0 as f64) - (i1 as f64)),
+            },
             (Float(f), Int(i)) => Float(f - (i as f64)),
             (Int(i), Float(f)) => Float((i as f64) - f),
             (Float(f0), Float(f1)) => Float(f0 - f1),
@@ -343,7 +354,10 @@ where
 
     fn mul(self, other: T) -> Self::Output {
         match (self, other.into()) {
-            (Int(i0), Int(i1)) => Int(i0 * i1),
+            (Int(i0), Int(i1)) => match i0.checked_mul(i1) {
+                Some(i) => Int(i),
+                None => Float((i0 as f64) * (i1 as f64)),
+            },
             (Float(f), Int(i)) | (Int(i), Float(f)) => Float(f * (i as f64)),
             (Float(f0), Float(f1)) => Float(f0 * f1),
         }
@@ -358,7 +372,15 @@ where
 
     fn div(self, other: T) -> Self::Output {
         match (self, other.into()) {
-            (Int(i0), Int(i1)) => Float(i0 as f64 / i1 as f64),
+            (Int(i0), Int(i1)) => {
+                if let Some(0) = i0.checked_rem(i1) {
+                    if let Some(i) = i0.checked_div(i1) {
+                        return Int(i);
+                    }
+                }
+
+                Float((i0 as f64) / (i1 as f64))
+            }
             (Float(f), Int(i)) => Float(f / (i as f64)),
             (Int(i), Float(f)) => Float((i as f64) / f),
             (Float(f0), Float(f1)) => Float(f0 / f1),
@@ -368,13 +390,16 @@ where
 
 impl<T> Rem<T> for Num
 where
-    Num: From<T>
+    Num: From<T>,
 {
     type Output = Self;
 
     fn rem(self, other: T) -> Self::Output {
         match (self, other.into()) {
-            (Int(i0), Int(i1)) => Float((i0 % i1) as f64),
+            (Int(i0), Int(i1)) => match i0.checked_rem(i1) {
+                Some(i) => Int(i),
+                None => Float((i0 as f64) % (i1 as f64)),
+            },
             (Float(f), Int(i)) => Float(f % (i as f64)),
             (Int(i), Float(f)) => Float((i as f64) % f),
             (Float(f0), Float(f1)) => Float(f0 % f1),
