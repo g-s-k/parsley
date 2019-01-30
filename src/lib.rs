@@ -44,9 +44,9 @@ use self::env::{Env, Ns};
 pub use self::errors::Error;
 pub use self::primitives::Num;
 use self::primitives::Primitive;
-pub use self::sexp::SExp;
-use self::proc::{Func, Proc};
 pub use self::proc::utils as proc_utils;
+use self::proc::{Func, Proc};
+pub use self::sexp::SExp;
 
 /// A shorthand Result type.
 pub type Result = ::std::result::Result<SExp, Error>;

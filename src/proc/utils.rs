@@ -8,7 +8,6 @@ use super::super::{Error, Func, Num, Proc};
 use super::Primitive::{self, Number};
 use super::SExp::{self, Atom};
 
-
 /// Make a procedure that takes one numeric argument.
 ///
 /// # Note

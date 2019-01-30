@@ -363,12 +363,7 @@ impl Context {
         define_with!(self, "add1", |e| e + Num::Int(1), make_unary_numeric);
         define_with!(self, "sub1", |e| e - Num::Int(1), make_unary_numeric);
 
-        define_with!(
-            self,
-            "=",
-            |l, r| l == r,
-            make_binary_numeric
-        );
+        define_with!(self, "=", |l, r| l == r, make_binary_numeric);
 
         define_with!(self, "<", |l, r| l < r, make_binary_numeric);
         define_with!(self, ">", |l, r| l > r, make_binary_numeric);

@@ -7,8 +7,8 @@ extern crate test;
 
 #[cfg(test)]
 mod tests {
-    use test::{black_box, Bencher};
     use parsley::Num;
+    use test::{black_box, Bencher};
 
     #[bench]
     fn add_int_raw(b: &mut Bencher) {
