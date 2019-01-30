@@ -1,0 +1,17 @@
+[package]
+name = "parsley_scheme"
+description = "A (fast and complete-ish) Scheme engine"
+version = "0.1.0"
+authors = ["George Kaplan <george.kaplan@visionistinc.com>"]
+edition = "2018"
+license = "MIT OR Apache-2.0"
+readme = "../../README.md"
+repository = "https://github.com/g-s-k/parsley"
+
+[lib]
+crate-type = [ "cdylib" ]
+name = "parsley"
+
+[dependencies]
+parsley = { path = "../.." }
+wasm-bindgen = "0.2"
