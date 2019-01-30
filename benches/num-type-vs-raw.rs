@@ -55,6 +55,72 @@ mod tests {
     }
 
     #[bench]
+    fn div_int_raw(b: &mut Bencher) {
+        let three = 3;
+        let five = 5;
+        b.iter(|| {
+            for _ in 0..100 {
+                black_box(three / five);
+            }
+        })
+    }
+
+    #[bench]
+    fn div_int_num(b: &mut Bencher) {
+        let three = Num::from(3);
+        let five = Num::from(5);
+        b.iter(|| {
+            for _ in 0..100 {
+                black_box(three / five);
+            }
+        })
+    }
+
+    #[bench]
+    fn div_float_raw(b: &mut Bencher) {
+        let three = 3.;
+        let five = 5.;
+        b.iter(|| {
+            for _ in 0..100 {
+                black_box(three / five);
+            }
+        })
+    }
+
+    #[bench]
+    fn div_float_num(b: &mut Bencher) {
+        let three = Num::from(3.);
+        let five = Num::from(5.);
+        b.iter(|| {
+            for _ in 0..100 {
+                black_box(three / five);
+            }
+        })
+    }
+
+    #[bench]
+    fn div_int_raw_no_rem(b: &mut Bencher) {
+        let fifteen = 15;
+        let five = 5;
+        b.iter(|| {
+            for _ in 0..100 {
+                black_box(fifteen / five);
+            }
+        })
+    }
+
+    #[bench]
+    fn div_int_num_no_rem(b: &mut Bencher) {
+        let fifteen = Num::from(15);
+        let five = Num::from(5);
+        b.iter(|| {
+            for _ in 0..100 {
+                black_box(fifteen / five);
+            }
+        })
+    }
+
+    #[bench]
     fn hypot_raw(b: &mut Bencher) {
         let three = 3.;
         let five = 5.;

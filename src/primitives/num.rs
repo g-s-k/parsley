@@ -324,10 +324,9 @@ where
 
     fn add(self, other: T) -> Self::Output {
         match (self, other.into()) {
-            (Int(i0), Int(i1)) => match i0.checked_add(i1) {
-                Some(i) => Int(i),
-                None => Float((i0 as f64) + (i1 as f64)),
-            },
+            (Int(i0), Int(i1)) => i0
+                .checked_add(i1)
+                .map_or_else(|| Float((i0 as f64) + (i1 as f64)), Int),
             (Float(f), Int(i)) | (Int(i), Float(f)) => Float(f + (i as f64)),
             (Float(f0), Float(f1)) => Float(f0 + f1),
         }
@@ -342,10 +341,9 @@ where
 
     fn sub(self, other: T) -> Self::Output {
         match (self, other.into()) {
-            (Int(i0), Int(i1)) => match i0.checked_sub(i1) {
-                Some(i) => Int(i),
-                None => Float((i0 as f64) - (i1 as f64)),
-            },
+            (Int(i0), Int(i1)) => i0
+                .checked_sub(i1)
+                .map_or_else(|| Float((i0 as f64) - (i1 as f64)), Int),
             (Float(f), Int(i)) => Float(f - (i as f64)),
             (Int(i), Float(f)) => Float((i as f64) - f),
             (Float(f0), Float(f1)) => Float(f0 - f1),
@@ -361,10 +359,9 @@ where
 
     fn mul(self, other: T) -> Self::Output {
         match (self, other.into()) {
-            (Int(i0), Int(i1)) => match i0.checked_mul(i1) {
-                Some(i) => Int(i),
-                None => Float((i0 as f64) * (i1 as f64)),
-            },
+            (Int(i0), Int(i1)) => i0
+                .checked_mul(i1)
+                .map_or_else(|| Float((i0 as f64) * (i1 as f64)), Int),
             (Float(f), Int(i)) | (Int(i), Float(f)) => Float(f * (i as f64)),
             (Float(f0), Float(f1)) => Float(f0 * f1),
         }
