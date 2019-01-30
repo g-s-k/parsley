@@ -26,7 +26,13 @@ impl Num {
     pub fn abs(self) -> Self {
         match self {
             Float(f) => Float(f.abs()),
-            Int(i) => Int(i.abs()),
+            Int(i) => {
+                if let Some(i0) = i.checked_abs() {
+                    Int(i0)
+                } else {
+                    Float((i as f64).abs())
+                }
+            }
         }
     }
 
@@ -35,6 +41,7 @@ impl Num {
         Self: From<T>,
     {
         match (self, other.into()) {
+            // TODO: use `checked_pow` once it lands in stable
             (Int(i0), Int(i1)) => Int(i0.pow(i1 as u32)),
             (Float(f), Int(i)) => Float(f.powi(i as i32)),
             (Int(i), Float(f)) => Int(i.pow(f as u32)),
