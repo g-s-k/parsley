@@ -13,7 +13,7 @@ name = "parsley"
 path = "src/lib.rs"
 
 [workspace]
-members = [ "examples/npm", "www" ]
+members = [ "examples/npm", "examples/www" ]
 
 # only required for the cli binary, not for WASM
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
