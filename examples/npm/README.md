@@ -10,12 +10,12 @@ A WASM implementation of Scheme. Exposes a class `Context`.
 ```javascript
 const ctx = new Context();
 
-const code = "
+const code = `
 (define (sum-to n)
   (if (= n 0) 0 (+ n (sum-to (sub1 n)))))
 
 (sum-to 5)
-";
+`;
 
 console.log(ctx.run(code));
 // 15
