@@ -10,7 +10,6 @@ repository = "https://github.com/g-s-k/parsley"
 
 [lib]
 crate-type = [ "cdylib" ]
-name = "parsley"
 
 [dependencies]
 parsley = { path = "../.." }
