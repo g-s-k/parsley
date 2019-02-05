@@ -7,4 +7,4 @@ edition = "2018"
 [dependencies]
 parsley = { path = "../.." }
 stdweb = "0.4.12"
-yew = { git = "https://github.com/DenisKolodin/yew" }
+yew = "0.5"
