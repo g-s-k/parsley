@@ -136,6 +136,41 @@ def_test! {
 }
 
 def_test! {
+    quasiquote
+        [EXPR "`(list ,(+ 1 2) 4)", "(list 3 4)"]
+    // FIXME: quote before quasiquote
+        //[EXPR "(let ((name 'a)) `(list ,name ',name))", "(list a 'a)"]
+    // FIXME: unquote-splicing
+        // [EXPR
+        //  "`(a ,(+ 1 2) ,@(map abs '(4 -5 6)) b)",
+        //  "(a 3 4 5 b)"
+        // ]
+    // FIXME: unquote-splicing
+        // [EXPR
+        //  "`((foo ,(- 10 3)) ,@(cdr '(c)) . ,(car '(cons)))",
+        //  "((foo 7) . cons)"
+        // ]
+    // FIXME: unquote-splicing
+        // [EXPR "`#(10 5 ,(sqrt 4) ,@(map sqrt '(16 9)) 8)", "#(10 5 2 4 3 8)"]
+    // FIXME: quasiquote with immediate unquote
+        // ["`,(+ 2 3)", 5]
+
+    // FIXME: nested quasiquote/unquote
+        // [EXPR
+        //  "`(a `(b ,(+ 1 2) ,(foo ,(+ 1 3) d) e) f)",
+        //  "(a `(b ,(+ 1 2) ,(foo 4 d) e) f)"
+        // ]
+    // FIXME: nested quasiquote/unquote
+        // [EXPR
+        //  "(let ((name1 'x) (name2 'y)) `(a `(b ,,name1 ,',name2 d) e))",
+        //  "(a `(b ,x ,'y d) e)"
+        // ]
+
+        [EXPR "(quasiquote (list (unquote (+ 1 2)) 4))", "(list 3 4)"]
+        [EXPR "'(quasiquote (list (unquote (+ 1 2)) 4))", "`(list ,(+ 1 2) 4)"]
+}
+
+def_test! {
     named_let
         [FILE_EXPR "named-let.ss", "((6 1 3) (-5 -2))"]
 }
