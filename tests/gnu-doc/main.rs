@@ -26,6 +26,9 @@ macro_rules! do_test_step {
     ($ctx:ident, [IS_ERR $str:expr]) => {
         assert!($ctx.run($str).is_err())
     };
+    ($ctx:ident, [EXPR $str:expr, $val:expr]) => {
+        assert_eq!(s!($ctx, $str), p!($val))
+    };
     ($ctx:ident, [$str:expr, $val:expr]) => {
         assert_eq!(s!($ctx, $str), SExp::from($val))
     };
@@ -108,6 +111,28 @@ def_test! {
         ["(+ x 1)", 3]
         "(set! x 4)"
         ["(+ x 1)", 5]
+}
+
+def_test! {
+    quote
+        [EXPR "(quote a)", "a"]
+        [EXPR "(quote #(a b c))", "#(a b c)"]
+        [EXPR "(quote (+ 1 2))", "(+ 1 2)"]
+
+        [EXPR "'a", "a"]
+        [EXPR "'#(a b c)", "#(a b c)"]
+        [EXPR "'(+ 1 2)", "(+ 1 2)"]
+        [EXPR "'(quote a)", "(quote a)"]
+        [EXPR "''a", "(quote a)"]
+
+        [EXPR r#" '"abc" "#, r#" "abc" "#]
+        [EXPR r#" "abc" "#, r#" "abc" "#]
+        ["'145932", 145932]
+        ["145932", 145932]
+        ["'#t", true]
+        ["#t", true]
+        ["'#\\a", 'a']
+        ["#\\a", 'a']
 }
 
 def_test! {
