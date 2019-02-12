@@ -1,22 +1,37 @@
 use parsley::{Context, Error, SExp};
 
 macro_rules! def_test {
-    ($name:ident $ctx:ident $body:block) => {
+    ($name:ident $( $assrt:tt )*) => {
         #[test]
         fn $name() -> Result<(), Error> {
-            let mut $ctx = Context::base();
-            $body
+            let mut ctx = Context::base();
+            $(
+                do_test_step!(ctx, $assrt);
+            )*
             Ok(())
         }
     };
 }
 
-macro_rules! a {
-    ($exp:expr, $val:expr) => { assert_eq!($exp, SExp::from($val)) };
-}
-
-macro_rules! ae {
-    ($ctx:ident, $str:expr) => { assert!($ctx.run($str).is_err()) };
+macro_rules! do_test_step {
+    ($ctx:ident, [FILE $file:expr]) => {
+        f!($ctx, $file)
+    };
+    ($ctx:ident, [FILE_EXPR $file:expr, $val:expr]) => {
+        assert_eq!(f!($ctx, $file), p!($val))
+    };
+    ($ctx:ident, [FILE $file:expr, $val:expr]) => {
+        assert_eq!(f!($ctx, $file), SExp::from($val))
+    };
+    ($ctx:ident, [IS_ERR $str:expr]) => {
+        assert!($ctx.run($str).is_err())
+    };
+    ($ctx:ident, [$str:expr, $val:expr]) => {
+        assert_eq!(s!($ctx, $str), SExp::from($val))
+    };
+    ($ctx:ident, $str:expr) => {
+        s!($ctx, $str)
+    };
 }
 
 macro_rules! f {
@@ -38,78 +53,63 @@ macro_rules! s {
 }
 
 def_test! {
-    lambda ctx {
-        s!(ctx, "(lambda (x) (+ x x))");
+    lambda
+        "(lambda (x) (+ x x))"
+        ["((lambda (x) (+ x x)) 4)", 8]
 
-        a!(s!(ctx, "((lambda (x) (+ x x)) 4)"), 8);
-
-        f!(ctx, "lambda.ss");
-        a!(s!(ctx, "(reverse-subtract 7 10)"), 3);
-        a!(s!(ctx, "(foo 6)"), 10);
-    }
+        [FILE "lambda.ss"]
+        ["(reverse-subtract 7 10)", 3]
+        ["(foo 6)", 10]
 }
 
 def_test! {
-    named_lambda ctx {
-        s!(ctx, "(named-lambda (f x) + x x)");
-        a!(s!(ctx, "((named-lambda (f x) (+ x x)) 4)"), 8);
-    }
+    named_lambda
+        "(named-lambda (f x) (+ x x))"
+        ["((named-lambda (f x) (+ x x)) 4)", 8]
 }
 
 def_test! {
-    r#let ctx {
-        a!(s!(ctx, "(let ((x 2) (y 3)) (* x y))"), 6);
-        a!(f!(ctx, "let.ss"), 9);
-    }
+    r#let
+        ["(let ((x 2) (y 3)) (* x y))", 6]
+        [FILE "let.ss", 9]
 }
 
 def_test! {
-    let_star ctx {
-        a!(f!(ctx, "let*.ss"), 70);
-    }
+    let_star
+        [FILE "let*.ss", 70]
 }
 
 def_test! {
-    letrec ctx {
-        a!(f!(ctx, "letrec.ss"), true);
-    }
+    letrec
+        [FILE "letrec.ss", true]
 }
 
 def_test! {
-    define_top_level ctx {
-        s!(ctx, "(define add3 (lambda (x) (+ x 3)))");
-        a!(s!(ctx, "(add3 3)"), 6);
+    define_toplevel
+        "(define add3 (lambda (x) (+ x 3)))"
+        ["(add3 3)", 6]
 
-        s!(ctx, "(define first car)");
-        a!(s!(ctx, "(first '(1 2))"), 1);
+        "(define first car)"
+        ["(first '(1 2))", 1]
 
-        s!(ctx, "(define bar)");
-        ae!(ctx, "bar");
-    }
+        "(define bar)"
+        [IS_ERR "bar"]
 }
 
 def_test! {
-    define_internal ctx {
-        a!(f!(ctx, "define.ss"), 45);
-        a!(f!(ctx, "define_letrec.ss"), 45);
-    }
+    define_internal
+        [FILE "define.ss", 45]
+        [FILE "define_letrec.ss", 45]
+
 }
 
 def_test! {
-    named_let ctx {
-        assert_eq!(
-            f!(ctx, "named-let.ss"),
-            p!("((6 1 3) (-5 -2))")
-        );
-    }
+    named_let
+        [FILE_EXPR "named-let.ss", "((6 1 3) (-5 -2))"]
 }
 
 def_test! {
-    r#do ctx {
-        assert_eq!(
-            f!(ctx, "do_1.ss"),
-            p!("#(0 1 2 3 4)")
-        );
-        a!(f!(ctx, "do_2.ss"), 25);
-    }
+    r#do
+        [FILE_EXPR "do_1.ss", "#(0 1 2 3 4)"]
+        [FILE "do_2.ss", 25]
 }
