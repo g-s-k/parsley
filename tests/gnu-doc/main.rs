@@ -56,6 +56,12 @@ def_test! {
 }
 
 def_test! {
+    let_star ctx {
+        assert_eq!(f!(ctx, "let*.ss"), SExp::from(70));
+    }
+}
+
+def_test! {
     named_let ctx {
         assert_eq!(
             f!(ctx, "named-let.ss"),

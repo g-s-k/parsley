@@ -42,6 +42,7 @@ impl Context {
             tup_ctx_env!("if", Self::eval_if, 3),
             tup_ctx_env!("lambda", |e, c| Self::eval_lambda(e, c, false), (2,)),
             tup_ctx_env!("let", Self::eval_let, (2,)),
+            tup_ctx_env!("let*", Self::eval_let_star, (2,)),
             tup_ctx_env!("named-lambda", |e, c| Self::eval_lambda(e, c, true), (2,)),
             tup_ctx_env!("or", Self::eval_or, (0,)),
             tup_ctx_env!("quasiquote", Self::eval_quasiquote, 1),
@@ -382,6 +383,25 @@ impl Context {
             self.pop();
             result
         }
+    }
+
+    fn eval_let_star(&mut self, expr: SExp) -> Result {
+        let (defn_list, statements) = expr.split_car()?;
+
+        self.push();
+
+        for defn in defn_list {
+            let err = self.eval_define(defn);
+
+            if err.is_err() {
+                self.pop();
+                return err;
+            }
+        }
+
+        let result = self.eval_defer(&statements);
+        self.pop();
+        result
     }
 
     fn eval_or(&mut self, expr: SExp) -> Result {
