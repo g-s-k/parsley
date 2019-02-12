@@ -100,7 +100,14 @@ def_test! {
     define_internal
         [FILE "define.ss", 45]
         [FILE "define_letrec.ss", 45]
+}
 
+def_test! {
+    set
+        "(define x 2)"
+        ["(+ x 1)", 3]
+        "(set! x 4)"
+        ["(+ x 1)", 5]
 }
 
 def_test! {
