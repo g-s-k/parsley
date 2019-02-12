@@ -49,6 +49,13 @@ def_test! {
 }
 
 def_test! {
+    r#let ctx {
+        assert_eq!(s!(ctx, "(let ((x 2) (y 3)) (* x y))"), SExp::from(6));
+        assert_eq!(f!(ctx, "let.ss"), SExp::from(9));
+    }
+}
+
+def_test! {
     named_let ctx {
         assert_eq!(
             f!(ctx, "named-let.ss"),

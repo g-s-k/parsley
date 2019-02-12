@@ -361,19 +361,24 @@ impl Context {
             self.pop();
             result
         } else {
-            self.push();
+            let mut var_inits = Ns::new();
 
             for defn in defn_list {
-                let err = self.eval_define(defn);
-
-                if err.is_err() {
-                    self.pop();
-                    return err;
+                let (name, value) = defn.split_car()?;
+                let value = value.car()?;
+                if let Atom(Primitive::Symbol(n)) = name {
+                    var_inits.insert(n, self.eval(value)?);
+                } else {
+                    return Err(Error::Type {
+                        expected: "symbol",
+                        given: name.type_of().to_string(),
+                    })
                 }
             }
 
+            self.push();
+            self.cont.borrow().env().extend(var_inits);
             let result = self.eval_defer(&statements);
-
             self.pop();
             result
         }
