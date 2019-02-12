@@ -11,6 +11,14 @@ macro_rules! def_test {
     };
 }
 
+macro_rules! a {
+    ($exp:expr, $val:expr) => { assert_eq!($exp, SExp::from($val)) };
+}
+
+macro_rules! ae {
+    ($ctx:ident, $str:expr) => { assert!($ctx.run($str).is_err()) };
+}
+
 macro_rules! f {
     ($ctx:ident, $file:expr) => {
         $ctx.run(include_str!($file))?
@@ -33,31 +41,57 @@ def_test! {
     lambda ctx {
         s!(ctx, "(lambda (x) (+ x x))");
 
-        assert_eq!(s!(ctx, "((lambda (x) (+ x x)) 4)"), SExp::from(8));
+        a!(s!(ctx, "((lambda (x) (+ x x)) 4)"), 8);
 
         f!(ctx, "lambda.ss");
-        assert_eq!(s!(ctx, "(reverse-subtract 7 10)"), SExp::from(3));
-        assert_eq!(s!(ctx, "(foo 6)"), SExp::from(10));
+        a!(s!(ctx, "(reverse-subtract 7 10)"), 3);
+        a!(s!(ctx, "(foo 6)"), 10);
     }
 }
 
 def_test! {
     named_lambda ctx {
         s!(ctx, "(named-lambda (f x) + x x)");
-        assert_eq!(s!(ctx, "((named-lambda (f x) (+ x x)) 4)"), SExp::from(8));
+        a!(s!(ctx, "((named-lambda (f x) (+ x x)) 4)"), 8);
     }
 }
 
 def_test! {
     r#let ctx {
-        assert_eq!(s!(ctx, "(let ((x 2) (y 3)) (* x y))"), SExp::from(6));
-        assert_eq!(f!(ctx, "let.ss"), SExp::from(9));
+        a!(s!(ctx, "(let ((x 2) (y 3)) (* x y))"), 6);
+        a!(f!(ctx, "let.ss"), 9);
     }
 }
 
 def_test! {
     let_star ctx {
-        assert_eq!(f!(ctx, "let*.ss"), SExp::from(70));
+        a!(f!(ctx, "let*.ss"), 70);
+    }
+}
+
+def_test! {
+    letrec ctx {
+        a!(f!(ctx, "letrec.ss"), true);
+    }
+}
+
+def_test! {
+    define_top_level ctx {
+        s!(ctx, "(define add3 (lambda (x) (+ x 3)))");
+        a!(s!(ctx, "(add3 3)"), 6);
+
+        s!(ctx, "(define first car)");
+        a!(s!(ctx, "(first '(1 2))"), 1);
+
+        s!(ctx, "(define bar)");
+        ae!(ctx, "bar");
+    }
+}
+
+def_test! {
+    define_internal ctx {
+        a!(f!(ctx, "define.ss"), 45);
+        a!(f!(ctx, "define_letrec.ss"), 45);
     }
 }
 
@@ -76,6 +110,6 @@ def_test! {
             f!(ctx, "do_1.ss"),
             p!("#(0 1 2 3 4)")
         );
-        assert_eq!(f!(ctx, "do_2.ss"), SExp::from(25));
+        a!(f!(ctx, "do_2.ss"), 25);
     }
 }
