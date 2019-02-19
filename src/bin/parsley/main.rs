@@ -8,11 +8,16 @@ use parsley::prelude::*;
 mod repl;
 
 #[derive(Debug, StructOpt)]
+#[structopt(about = "An interactive Scheme runtime")]
+#[structopt(raw(setting = "structopt::clap::AppSettings::ColoredHelp"))]
 struct Cli {
+    /// Enter interactive REPL after evaluating file or stdin
     #[structopt(short = "i", long = "interactive")]
     force_interactive: bool,
+    /// Read and evaluate code from stdin
     #[structopt(short = "s", long = "stdin")]
     read_stdin: bool,
+    /// Read and evaluate code from file
     #[structopt(parse(from_os_str))]
     file: Option<PathBuf>,
 }
