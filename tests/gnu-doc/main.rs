@@ -181,7 +181,7 @@ def_test! {
     cond
         [FILE_EXPR "cond_1.ss", "greater"]
         [FILE_EXPR "cond_2.ss", "equal"]
-    // FIXME: arrow syntax for cond
+    // FIXME: arrow syntax for cond AND alists
         // ["(cond ((assv 'b '((a 1) (b 2))) => cadr) (else #f))", 2]
 }
 
@@ -190,6 +190,29 @@ def_test! {
         [FILE_EXPR "case_1.ss", "composite"]
         [FILE "case_2.ss"]
         [FILE_EXPR "case_3.ss", "consonant"]
+}
+
+def_test! {
+    and
+        ["(and (= 2 2) (> 2 1))", true]
+        ["(and (= 2 2) (< 2 1))", false]
+        [EXPR "(and 1 2 'c '(f g))", "(f g)"]
+        ["(and)", true]
+}
+
+def_test! {
+    or
+        ["(or (= 2 2) (> 2 1))", true]
+        ["(or (= 2 2) (< 2 1))", true]
+        ["(or #f #f #f)", false]
+    // FIXME: implement memq
+        // [EXPR "(or (memq 'b '(a b c)) (/ 3 0))", "(b c)"]
+}
+
+def_test! {
+    begin
+        [FILE "begin_1.ss", 6]
+        [FILE "begin_2.ss"]
 }
 
 def_test! {
