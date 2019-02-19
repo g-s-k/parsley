@@ -1,4 +1,5 @@
 use parsley::{Context, Error, SExp};
+use pretty_assertions::assert_eq;
 
 macro_rules! def_test {
     ($name:ident $( $assrt:tt )*) => {

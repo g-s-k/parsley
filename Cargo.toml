@@ -19,3 +19,6 @@ members = [ "examples/npm", "examples/www" ]
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 rustyline = "3.0"
 structopt = "0.2"
+
+[dev-dependencies]
+pretty_assertions = "0.5.1"
