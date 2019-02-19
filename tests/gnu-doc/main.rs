@@ -226,3 +226,45 @@ def_test! {
         [FILE_EXPR "do_1.ss", "#(0 1 2 3 4)"]
         [FILE "do_2.ss", 25]
 }
+
+// TODO: structs and macros
+
+def_test! {
+    eqv
+        ["(eqv? 'a 'a)", true]
+        ["(eqv? 'a 'b)", false]
+        ["(eqv? '() '())", true]
+        ["(eqv? 100000000 100000000)", true]
+        ["(eqv? (cons 1 2) (cons 1 2))", false]
+    // FIXME: lambdas with no parameters
+        // ["(eqv? (lambda () 1) (lambda () 2))", false]
+        ["(eqv? #f 'nil)", false]
+    // FIXME: pointer comparisons for procedures
+        // ["(let ((p (lambda (x) x))) (eqv? p p))", true]
+
+        r#" (eqv? "" "") "#
+        "(eqv? '#() '#())"
+        "(eqv? (lambda (x) x) (lambda (x) x))"
+        "(eqv? (lambda (x) x) (lambda (y) y))"
+
+        // [FILE "eqv.ss"]
+        // ["(let ((g (gen-counter))) (eqv? g g))", true]
+        // ["(eqv? (gen-counter) (gen-counter))", false]
+        // ["(let ((g (gen-loser))) (eqv? g g))", true]
+        // "(eqv? (gen-loser) (gen-loser))"
+
+    // FIXME: lambdas with no parameters
+        // "(letrec ((f (lambda () (if (eqv? f g) 'both 'f)))
+        //           (g (lambda () (if (eqv? f g) 'both 'g)))
+        //    (eqv? f g))"
+    // FIXME: lambdas with no parameters
+        // ["(letrec ((f (lambda () (if (eqv? f g) 'f 'both)))
+        //           (g (lambda () (if (eqv? f g) 'g 'both)))
+        //    (eqv? f g))", false]
+
+    // FIXME: pointer comparisons for compound types
+        // ["(let ((x '(a))) (eqv? x x))", true]
+        "(eqv? '(a) '(a))"
+        r#" (eqv? "a" "a") "#
+        "(eqv? '(b) (cdr '(a b)))"
+}
