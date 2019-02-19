@@ -1,0 +1,4 @@
+The following special commands are available:
+.help                display this message
+.clear               clear the global scope
+.exit OR C-c OR C-d  end interactive session
