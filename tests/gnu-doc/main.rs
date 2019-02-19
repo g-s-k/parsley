@@ -288,3 +288,15 @@ def_test! {
     // FIXME: pointer comparisons for procedures
         // ["(let ((p (lambda (x) x))) (eq? p p))", true]
 }
+
+def_test! {
+    equal
+        ["(equal? 'a 'a)", true]
+        ["(equal? '(a) '(a))", true]
+        ["(equal? '(a (b) c) '(a (b) c))", true]
+        [r#" (equal? "abc" "abc") "#, true]
+        ["(equal? 2 2)", true]
+    // FIXME: fill parameter for make-vector
+        // ["(equal? (make-vector 5 'a) (make-vector 5 'a))", true]
+        "(equal? (lambda (x) x) (lambda (y) y))"
+}

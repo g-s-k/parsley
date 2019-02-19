@@ -162,6 +162,7 @@ impl Context {
                 _ => false
             }.into())
         }, make_binary_expr);
+        define!(self, "equal?", |e| Ok((e[0] == e[1]).into()), 2);
 
         define!(self, "null?", |e| Ok((e == ((),).into()).into()), 1);
         self.lang.insert("null".to_string(), Null);
