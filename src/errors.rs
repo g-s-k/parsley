@@ -35,7 +35,7 @@ pub enum Error {
     Index {
         i: usize,
     },
-    IO(::std::fmt::Error),
+    IO(String),
 }
 
 impl ::std::error::Error for Error {}
@@ -69,5 +69,17 @@ impl fmt::Display for Error {
             Error::Index { i } => write!(f, "Tried to access invalid index: [{}]", i),
             Error::IO(err) => write!(f, "I/O error: {}", err),
         }
+    }
+}
+
+impl From<std::fmt::Error> for Error {
+    fn from(e: std::fmt::Error) -> Self {
+        Error::IO(format!("{}", e))
+    }
+}
+
+impl From<std::io::Error> for Error {
+    fn from(e: std::io::Error) -> Self {
+        Error::IO(format!("{}", e))
     }
 }

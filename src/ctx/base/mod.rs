@@ -1,4 +1,5 @@
 use std::fmt::Write;
+use std::fs;
 
 use super::super::Primitive::{
     Boolean, Character, Env, Number, Procedure, String as LispString, Symbol, Undefined, Void,
@@ -245,6 +246,20 @@ impl Context {
         define_ctx!(self, "write", |e, c| Self::do_print(e, c, false, true), 1);
         define_ctx!(self, "writeln", |e, c| Self::do_print(e, c, true, true), 1);
 
+        #[cfg(not(target_arch = "wasm32"))]
+        define_ctx!(
+            self,
+            "require",
+            |c, e| match c.eval(e.car()?)? {
+                Atom(LispString(f_name)) => c.run(&fs::read_to_string(f_name)?),
+                other => Err(Error::Type {
+                    expected: "string",
+                    given: other.type_of().to_string(),
+                }),
+            },
+            1
+        );
+
         // functional goodness
         define_ctx!(self, "map", Self::eval_map, 2);
         define_ctx!(self, "foldl", Self::eval_fold, 3);
@@ -312,10 +327,9 @@ impl Context {
         } else {
             format!("{}{}", hevl, ending)
         });
-        match write!(self, "{}", unescaped) {
-            Ok(()) => Ok(Atom(Undefined)),
-            Err(e) => Err(Error::IO(e)),
-        }
+        write!(self, "{}", unescaped)?;
+
+        Ok(Atom(Undefined))
     }
 
     fn eval_map(&mut self, expr: SExp) -> Result {
