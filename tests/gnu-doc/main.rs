@@ -171,6 +171,28 @@ def_test! {
 }
 
 def_test! {
+    r#if
+        [EXPR "(if (> 3 2) 'yes 'no)", "yes"]
+        [EXPR "(if (> 2 3) 'yes 'no)", "no"]
+        [FILE "if.ss", 1]
+}
+
+def_test! {
+    cond
+        [FILE_EXPR "cond_1.ss", "greater"]
+        [FILE_EXPR "cond_2.ss", "equal"]
+    // FIXME: arrow syntax for cond
+        // ["(cond ((assv 'b '((a 1) (b 2))) => cadr) (else #f))", 2]
+}
+
+def_test! {
+    case
+        [FILE_EXPR "case_1.ss", "composite"]
+        [FILE "case_2.ss"]
+        [FILE_EXPR "case_3.ss", "consonant"]
+}
+
+def_test! {
     named_let
         [FILE_EXPR "named-let.ss", "((6 1 3) (-5 -2))"]
 }
