@@ -268,3 +268,23 @@ def_test! {
         r#" (eqv? "a" "a") "#
         "(eqv? '(b) (cdr '(a b)))"
 }
+
+def_test! {
+    eq
+        ["(eq? 'a 'a)", true]
+        "(eq? '(a) '(a))"
+    // FIXME: pointer comparisons for lists
+        // ["(eq? (list 'a) (list 'a))", false]
+        r#" (eq? "a" "a") "#
+        r#" (eq? "" "") "#
+        ["(eq? '() '())", true]
+        "(eq? 2 2)"
+        "(eq? #\\A #\\A)"
+    // FIXME: pointer comparisons for procedures
+        // ["(eq? car car)", true]
+        "(let ((n (+ 2 3))) (eq? n n))"
+        ["(let ((x '(a))) (eq? x x))", true]
+        ["(let ((x '#())) (eq? x x))", true]
+    // FIXME: pointer comparisons for procedures
+        // ["(let ((p (lambda (x) x))) (eq? p p))", true]
+}
