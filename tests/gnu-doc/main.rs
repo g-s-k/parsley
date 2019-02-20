@@ -238,8 +238,7 @@ def_test! {
         ["(eqv? (cons 1 2) (cons 1 2))", false]
         ["(eqv? (lambda () 1) (lambda () 2))", false]
         ["(eqv? #f 'nil)", false]
-    // FIXME: pointer comparisons for procedures
-        // ["(let ((p (lambda (x) x))) (eqv? p p))", true]
+        ["(let ((p (lambda (x) x))) (eqv? p p))", true]
 
         r#" (eqv? "" "") "#
         "(eqv? '#() '#())"
@@ -247,11 +246,9 @@ def_test! {
         "(eqv? (lambda (x) x) (lambda (y) y))"
 
         [FILE "eqv.ss"]
-    // FIXME: pointer comparisons for procedures
-        // ["(let ((g (gen-counter))) (eqv? g g))", true]
+        ["(let ((g (gen-counter))) (eqv? g g))", true]
         ["(eqv? (gen-counter) (gen-counter))", false]
-    // FIXME: pointer comparisons for procedures
-        // ["(let ((g (gen-loser))) (eqv? g g))", true]
+        ["(let ((g (gen-loser))) (eqv? g g))", true]
         "(eqv? (gen-loser) (gen-loser))"
 
         "(letrec ((f (lambda () (if (eqv? f g) 'both 'f)))
@@ -279,13 +276,11 @@ def_test! {
         ["(eq? '() '())", true]
         "(eq? 2 2)"
         "(eq? #\\A #\\A)"
-    // FIXME: pointer comparisons for procedures
-        // ["(eq? car car)", true]
+        ["(eq? car car)", true]
         "(let ((n (+ 2 3))) (eq? n n))"
         ["(let ((x '(a))) (eq? x x))", true]
         ["(let ((x '#())) (eq? x x))", true]
-    // FIXME: pointer comparisons for procedures
-        // ["(let ((p (lambda (x) x))) (eq? p p))", true]
+        ["(let ((p (lambda (x) x))) (eq? p p))", true]
 }
 
 def_test! {

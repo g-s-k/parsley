@@ -1,4 +1,5 @@
 use std::fmt;
+use std::cmp::PartialEq;
 use std::rc::Rc;
 
 use super::{Context, Env, Error, Primitive, Result, SExp};
@@ -74,6 +75,24 @@ impl Proc {
                 // evaluate each body expression, returning the last as a thunk
                 ctx.eval_defer(body)
             }
+        }
+    }
+}
+
+impl PartialEq for Proc {
+    fn eq(&self, other: &Self) -> bool {
+        match (&self.func, &other.func) {
+            (Func::Ctx(p0), Func::Ctx(p1)) => Rc::ptr_eq(&p0, &p1),
+            (Func::Pure(p0), Func::Pure(p1)) => Rc::ptr_eq(&p0, &p1),
+            (
+                Func::Lambda {
+                    body: b0, envt: e0, ..
+                },
+                Func::Lambda {
+                    body: b1, envt: e1, ..
+                },
+            ) => Rc::ptr_eq(&b0, &b1) && Rc::ptr_eq(&e0, &e1),
+            _ => false,
         }
     }
 }

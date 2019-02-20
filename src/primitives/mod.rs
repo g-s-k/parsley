@@ -14,7 +14,7 @@ pub use self::num::Num;
 mod from;
 mod num;
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub enum Primitive {
     Void,
     Undefined,
@@ -67,21 +67,6 @@ impl fmt::Display for Primitive {
                 "#({})",
                 v.iter().map(SExp::to_string).collect::<Vec<_>>().join(" ")
             ),
-        }
-    }
-}
-
-impl PartialEq for Primitive {
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (Void, Void) | (Undefined, Undefined) => true,
-            (Boolean(b1), Boolean(b2)) => b1 == b2,
-            (Character(c1), Character(c2)) => c1 == c2,
-            (Number(n1), Number(n2)) => n1 == n2,
-            (String(s1), String(s2)) | (Symbol(s1), Symbol(s2)) => s1 == s2,
-            (Env(e1), Env(e2)) => e1 == e2,
-            (Vector(v1), Vector(v2)) => v1 == v2,
-            _ => false,
         }
     }
 }
