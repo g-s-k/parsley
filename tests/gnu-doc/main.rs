@@ -236,8 +236,7 @@ def_test! {
         ["(eqv? '() '())", true]
         ["(eqv? 100000000 100000000)", true]
         ["(eqv? (cons 1 2) (cons 1 2))", false]
-    // FIXME: lambdas with no parameters
-        // ["(eqv? (lambda () 1) (lambda () 2))", false]
+        ["(eqv? (lambda () 1) (lambda () 2))", false]
         ["(eqv? #f 'nil)", false]
     // FIXME: pointer comparisons for procedures
         // ["(let ((p (lambda (x) x))) (eqv? p p))", true]
@@ -247,20 +246,20 @@ def_test! {
         "(eqv? (lambda (x) x) (lambda (x) x))"
         "(eqv? (lambda (x) x) (lambda (y) y))"
 
-        // [FILE "eqv.ss"]
+        [FILE "eqv.ss"]
+    // FIXME: pointer comparisons for procedures
         // ["(let ((g (gen-counter))) (eqv? g g))", true]
-        // ["(eqv? (gen-counter) (gen-counter))", false]
+        ["(eqv? (gen-counter) (gen-counter))", false]
+    // FIXME: pointer comparisons for procedures
         // ["(let ((g (gen-loser))) (eqv? g g))", true]
-        // "(eqv? (gen-loser) (gen-loser))"
+        "(eqv? (gen-loser) (gen-loser))"
 
-    // FIXME: lambdas with no parameters
-        // "(letrec ((f (lambda () (if (eqv? f g) 'both 'f)))
-        //           (g (lambda () (if (eqv? f g) 'both 'g)))
-        //    (eqv? f g))"
-    // FIXME: lambdas with no parameters
-        // ["(letrec ((f (lambda () (if (eqv? f g) 'f 'both)))
-        //           (g (lambda () (if (eqv? f g) 'g 'both)))
-        //    (eqv? f g))", false]
+        "(letrec ((f (lambda () (if (eqv? f g) 'both 'f)))
+                  (g (lambda () (if (eqv? f g) 'both 'g))))
+           (eqv? f g))"
+        ["(letrec ((f (lambda () (if (eqv? f g) 'f 'both)))
+                  (g (lambda () (if (eqv? f g) 'g 'both))))
+           (eqv? f g))", false]
 
     // FIXME: pointer comparisons for compound types
         // ["(let ((x '(a))) (eqv? x x))", true]

@@ -276,7 +276,7 @@ impl Context {
         let (signature, fn_body) = expr.split_car()?;
 
         match signature {
-            Pair { .. } => (),
+            Pair { .. } | Null => (),
             other => {
                 return Err(Error::Type {
                     expected: "list",
