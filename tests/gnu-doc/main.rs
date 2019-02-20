@@ -295,7 +295,6 @@ def_test! {
         ["(equal? '(a (b) c) '(a (b) c))", true]
         [r#" (equal? "abc" "abc") "#, true]
         ["(equal? 2 2)", true]
-    // FIXME: fill parameter for make-vector
-        // ["(equal? (make-vector 5 'a) (make-vector 5 'a))", true]
+        ["(equal? (make-vector 5 'a) (make-vector 5 'a))", true]
         "(equal? (lambda (x) x) (lambda (y) y))"
 }

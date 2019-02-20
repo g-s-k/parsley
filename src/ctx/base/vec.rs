@@ -11,6 +11,19 @@ macro_rules! define_with {
     };
 }
 
+macro_rules! define {
+    ( $ctx:ident, $name:expr, $proc:expr, $arity:expr ) => {
+        $ctx.lang.insert(
+            $name.to_string(),
+            $crate::SExp::from($crate::Proc::new(
+                $crate::Func::Pure(::std::rc::Rc::new($proc)),
+                $arity,
+                Some($name),
+            )),
+        )
+    };
+}
+
 macro_rules! define_ctx {
     ( $ctx:ident, $name:expr, $proc:expr, $arity:expr ) => {
         $ctx.lang.insert(
@@ -26,18 +39,22 @@ macro_rules! define_ctx {
 
 impl Context {
     pub(super) fn vector(&mut self) {
-        define_with!(
-            self,
-            "make-vector",
-            |e| match e {
-                Atom(Number(n)) => Ok(Atom(Vector(vec![Null; n.into()]))),
+        define!(self, "make-vector", |exp| {
+            let (first_arg, rest) = exp.split_car()?;
+            let second_arg = match rest {
+                Null => Null,
+                a @ Atom(_) => a,
+                _ => rest.car()?,
+            };
+
+            match first_arg {
+                Atom(Number(n)) => Ok(Atom(Vector(vec![second_arg; n.into()]))),
                 _ => Err(Error::Type {
                     expected: "number",
-                    given: e.type_of().to_string(),
+                    given: first_arg.type_of().to_string(),
                 }),
-            },
-            make_unary_expr
-        );
+            }
+        }, (1, 2));
 
         define_with!(
             self,
