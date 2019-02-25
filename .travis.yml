@@ -16,8 +16,6 @@ jobs:
   allow_failures:
     - rust: nightly
   include:
-    - stage: test
-      script: cargo test --verbose
     - stage: build_npm
       before_script: which wasm-pack || cargo install wasm-pack
       script: wasm-pack build examples/npm
