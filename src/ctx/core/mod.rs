@@ -374,7 +374,7 @@ impl Context {
                     return Err(Error::Type {
                         expected: "symbol",
                         given: name.type_of().to_string(),
-                    })
+                    });
                 }
             }
 

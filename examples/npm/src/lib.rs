@@ -19,10 +19,13 @@ impl Context {
         self.0.capture();
 
         // put the results in the string
-        buf.extend(match evaled {
-            Ok(exp) => exp.to_string(),
-            Err(error) => error.to_string(),
-        }.chars());
+        buf.extend(
+            match evaled {
+                Ok(exp) => exp.to_string(),
+                Err(error) => error.to_string(),
+            }
+            .chars(),
+        );
 
         // return
         buf

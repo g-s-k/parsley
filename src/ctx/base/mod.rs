@@ -152,8 +152,10 @@ impl Context {
 
     fn std(&mut self) {
         define!(self, "eq?", |e| Ok((e[0] == e[1]).into()), 2);
-        define_with!(self, "eqv?", |e0, e1| {
-            Ok(match (e0, e1) {
+        define_with!(
+            self,
+            "eqv?",
+            |e0, e1| Ok(match (e0, e1) {
                 (Null, Null) => true,
                 (Atom(Boolean(b0)), Atom(Boolean(b1))) => b0 == b1,
                 (Atom(Character(c0)), Atom(Character(c1))) => c0 == c1,
@@ -161,8 +163,10 @@ impl Context {
                 (Atom(Number(n0)), Atom(Number(n1))) => n0 == n1,
                 (Atom(Procedure(p0)), Atom(Procedure(p1))) => p0 == p1,
                 _ => false,
-            }.into())
-        }, make_binary_expr);
+            }
+            .into()),
+            make_binary_expr
+        );
         define!(self, "equal?", |e| Ok((e[0] == e[1]).into()), 2);
 
         define!(self, "null?", |e| Ok((e == ((),).into()).into()), 1);

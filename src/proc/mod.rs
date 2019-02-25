@@ -1,5 +1,5 @@
-use std::fmt;
 use std::cmp::PartialEq;
+use std::fmt;
 use std::rc::Rc;
 
 use super::{Context, Env, Error, Primitive, Result, SExp};

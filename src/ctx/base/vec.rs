@@ -39,22 +39,27 @@ macro_rules! define_ctx {
 
 impl Context {
     pub(super) fn vector(&mut self) {
-        define!(self, "make-vector", |exp| {
-            let (first_arg, rest) = exp.split_car()?;
-            let second_arg = match rest {
-                Null => Null,
-                a @ Atom(_) => a,
-                _ => rest.car()?,
-            };
+        define!(
+            self,
+            "make-vector",
+            |exp| {
+                let (first_arg, rest) = exp.split_car()?;
+                let second_arg = match rest {
+                    Null => Null,
+                    a @ Atom(_) => a,
+                    _ => rest.car()?,
+                };
 
-            match first_arg {
-                Atom(Number(n)) => Ok(Atom(Vector(vec![second_arg; n.into()]))),
-                _ => Err(Error::Type {
-                    expected: "number",
-                    given: first_arg.type_of().to_string(),
-                }),
-            }
-        }, (1, 2));
+                match first_arg {
+                    Atom(Number(n)) => Ok(Atom(Vector(vec![second_arg; n.into()]))),
+                    _ => Err(Error::Type {
+                        expected: "number",
+                        given: first_arg.type_of().to_string(),
+                    }),
+                }
+            },
+            (1, 2)
+        );
 
         define_with!(
             self,
