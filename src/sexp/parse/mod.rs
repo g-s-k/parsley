@@ -10,7 +10,7 @@ fn get_next_token(s: &str) -> std::result::Result<(&str, &str), &str> {
 
     // throw out comments
     if s.starts_with(';') {
-        let next_newline = s.find('\n').unwrap_or(s.len() - 1);
+        let next_newline = s.find('\n').unwrap_or_else(|| s.len());
         s = &s[next_newline..];
     }
 
@@ -44,7 +44,9 @@ fn get_next_token(s: &str) -> std::result::Result<(&str, &str), &str> {
     }
 
     // atom/primitive values
-    let pos = s.find(|c| !utils::is_atom_char(c)).unwrap_or(s.len());
+    let pos = s
+        .find(|c| !utils::is_atom_char(c))
+        .unwrap_or_else(|| s.len());
     Ok((&s[..pos], &s[pos..]))
 }
 
@@ -134,7 +136,7 @@ fn parse_list_tokens(tokens: &[Token]) -> std::result::Result<(Vec<SExp>, &[Toke
         list_out.push(expr);
     }
 
-    return Ok((list_out, &tokens[idx + 1..]));
+    Ok((list_out, &tokens[idx + 1..]))
 }
 
 fn dequote(mut tokens: &[Token]) -> (Vec<SExp>, &[Token]) {
