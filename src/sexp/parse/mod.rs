@@ -5,51 +5,6 @@ use super::{utils, Error, Primitive, Result};
 
 mod tests;
 
-fn get_next_token(s: &str) -> std::result::Result<(&str, &str), &str> {
-    let mut s = s.trim_start();
-
-    // throw out comments
-    if s.starts_with(';') {
-        let next_newline = s.find('\n').unwrap_or_else(|| s.len());
-        s = &s[next_newline..];
-    }
-
-    s = s.trim_start();
-    if s.is_empty() {
-        return Ok(("", ""));
-    }
-
-    // special handling for string literals
-    if s.starts_with('"') {
-        if let Some(pos) = s[1..].find('"') {
-            return Ok((&s[..pos + 2], &s[pos + 2..]));
-        } else {
-            return Err(s);
-        }
-    }
-
-    // paren, quote, quasiquote, unquote
-    if s.starts_with('(')
-        || s.starts_with(')')
-        || s.starts_with('\'')
-        || s.starts_with('`')
-        || s.starts_with(',')
-    {
-        return Ok((&s[..1], &s[1..]));
-    }
-
-    // hash-paren or unquote-splicing
-    if s.starts_with("#(") || s.starts_with(",@") {
-        return Ok((&s[..2], &s[2..]));
-    }
-
-    // atom/primitive values
-    let pos = s
-        .find(|c| !utils::is_atom_char(c))
-        .unwrap_or_else(|| s.len());
-    Ok((&s[..pos], &s[pos..]))
-}
-
 #[derive(Debug, Clone, PartialEq)]
 enum Token {
     OpenParen,
@@ -63,31 +18,79 @@ enum Token {
     Atom(String),
 }
 
+impl Token {
+    fn from_sigil(s: &str) -> Option<Self> {
+        match s {
+            "(" => Some(Token::OpenParen),
+            "#(" => Some(Token::OpenHashParen),
+            ")" => Some(Token::CloseParen),
+            "'" => Some(Token::Quote),
+            "`" => Some(Token::Quasiquote),
+            "," => Some(Token::Unquote),
+            ",@" => Some(Token::UnquoteSplicing),
+            _ => None,
+        }
+    }
+}
+
 impl FromStr for Token {
     type Err = String;
 
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
-        match s {
-            "(" => Ok(Token::OpenParen),
-            "#(" => Ok(Token::OpenHashParen),
-            ")" => Ok(Token::CloseParen),
-            "'" => Ok(Token::Quote),
-            "`" => Ok(Token::Quasiquote),
-            "," => Ok(Token::Unquote),
-            ",@" => Ok(Token::UnquoteSplicing),
-            _ => {
-                if s.starts_with('"') && s.ends_with('"') {
-                    return Ok(Token::StringLiteral(s[1..s.len() - 1].into()));
-                }
+        if let Some(t) = Self::from_sigil(s) {
+            Ok(t)
+        } else {
+            if s.starts_with('"') && s.ends_with('"') {
+                return Ok(Token::StringLiteral(s[1..s.len() - 1].into()));
+            }
 
-                if s.chars().all(utils::is_atom_char) {
-                    return Ok(Token::Atom(s.into()));
-                }
+            if s.chars().all(utils::is_atom_char) {
+                return Ok(Token::Atom(s.into()));
+            }
 
-                Err(s.into())
+            Err(s.into())
+        }
+    }
+}
+
+fn get_next_token(s: &str) -> std::result::Result<(Option<Token>, &str), String> {
+    let mut s = s.trim_start();
+
+    // throw out comments
+    if s.starts_with(';') {
+        let next_newline = s.find('\n').unwrap_or_else(|| s.len());
+        s = &s[next_newline..];
+    }
+
+    s = s.trim_start();
+    if s.is_empty() {
+        return Ok((None, s));
+    }
+
+    // special handling for string literals
+    if s.starts_with('"') {
+        if let Some(pos) = s[1..].find('"') {
+            return Ok((Some(s[..pos + 2].parse()?), &s[pos + 2..]));
+        } else {
+            return Err(s.into());
+        }
+    }
+
+    // sigils - can be 1 or 2 chars
+    for len in 1..3 {
+        if len <= s.len() {
+            let (t, rest) = s.split_at(len);
+            if let Some(tok) = Token::from_sigil(t) {
+                return Ok((Some(tok), rest));
             }
         }
     }
+
+    // atom/primitive values
+    let pos = s
+        .find(|c| !utils::is_atom_char(c))
+        .unwrap_or_else(|| s.len());
+    Ok((Some(s[..pos].parse()?), &s[pos..]))
 }
 
 fn lex(mut s: &str) -> std::result::Result<Vec<Token>, String> {
@@ -96,8 +99,8 @@ fn lex(mut s: &str) -> std::result::Result<Vec<Token>, String> {
     while !s.is_empty() {
         let (tok, new_s) = get_next_token(s).map_err(String::from)?;
         s = new_s;
-        if !tok.is_empty() {
-            tokens.push(tok.parse()?);
+        if let Some(tok) = tok {
+            tokens.push(tok);
         }
     }
 
