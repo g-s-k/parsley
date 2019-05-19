@@ -82,7 +82,7 @@ fn get_next_token(s: &str) -> std::result::Result<(Option<Token>, &str), String>
         if pos == s.len() - 1 && !s.ends_with('"') {
             return Err(s.into());
         } else {
-            return Ok((Some(s[..pos + 1].parse()?), &s[pos + 1..]));
+            return Ok((Some(s[..=pos].parse()?), &s[pos + 1..]));
         }
     }
 
@@ -206,17 +206,16 @@ impl FromStr for SExp {
 
     fn from_str(s: &str) -> Result {
         let token_list = lex(s).map_err(|st| Error::Syntax { exp: st })?;
-
-        let mut exprs = vec![Self::sym("begin")];
-
         let mut tokens = &token_list[..];
 
+        let mut exprs = vec![Self::sym("begin")];
         while !tokens.is_empty() {
             let (expr, remaining) = get_next_sexp(tokens)?;
             tokens = remaining;
             exprs.push(expr);
         }
 
+        // don't need `begin` expression if there's only one inside
         if exprs.len() == 2 {
             return Ok(exprs.remove(1));
         }
