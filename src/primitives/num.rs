@@ -41,10 +41,11 @@ impl Num {
         Self: From<T>,
     {
         match (self, other.into()) {
-            // TODO: use `checked_pow` once it lands in stable
-            (Int(i0), Int(i1)) => Int(i0.pow(i1 as u32)),
+            (Int(i0), Int(i1)) => i0
+                .checked_pow(i1 as u32)
+                .map_or_else(|| Float((i0 as f64).powi(i1 as i32)), Int),
             (Float(f), Int(i)) => Float(f.powi(i as i32)),
-            (Int(i), Float(f)) => Int(i.pow(f as u32)),
+            (Int(i), Float(f)) => Float((i as f64).powf(f)),
             (Float(f0), Float(f1)) => Float(f0.powf(f1)),
         }
     }
