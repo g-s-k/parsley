@@ -1,4 +1,3 @@
-use std::convert::{TryFrom, TryInto};
 use std::str::FromStr;
 
 use super::SExp::{self, Atom, Null};
@@ -89,20 +88,6 @@ impl FromStr for Token {
     }
 }
 
-impl TryFrom<Token> for SExp {
-    type Error = Error;
-
-    fn try_from(token: Token) -> Result {
-        match token {
-            Token::Atom(s) => Ok(Atom(s.parse()?)),
-            Token::StringLiteral(s) => Ok(Atom(Primitive::String(s))),
-            _ => Err(Error::Syntax {
-                exp: format!("{:?}", token),
-            }),
-        }
-    }
-}
-
 fn lex(mut s: &str) -> std::result::Result<Vec<Token>, String> {
     let mut tokens = Vec::new();
 
@@ -152,41 +137,53 @@ fn parse_list_tokens(tokens: &[Token]) -> std::result::Result<(Vec<SExp>, &[Toke
     return Ok((list_out, &tokens[idx + 1..]));
 }
 
-fn get_next_sexp(mut tokens: &[Token]) -> std::result::Result<(SExp, &[Token]), Error> {
-    let prefix = match tokens[0] {
-        Token::Quote => Some("quote"),
-        Token::Quasiquote => Some("quasiquote"),
-        Token::Unquote => Some("unquote"),
-        Token::UnquoteSplicing => Some("unquote-splicing"),
-        _ => None,
-    }
-    .map(SExp::sym);
+fn dequote(mut tokens: &[Token]) -> (Vec<SExp>, &[Token]) {
+    let mut v = Vec::new();
 
-    if prefix.is_some() {
+    while !tokens.is_empty() {
+        let quote = SExp::sym(match tokens[0] {
+            Token::Quote => "quote",
+            Token::Quasiquote => "quasiquote",
+            Token::Unquote => "unquote",
+            Token::UnquoteSplicing => "unquote-splicing",
+            _ => break,
+        });
+
+        v.push(quote);
         tokens = &tokens[1..];
     }
 
-    let quotable = if let Ok(exp) = tokens[0].clone().try_into() {
-        (exp, &tokens[1..])
-    } else if tokens[0] == Token::OpenParen {
-        if tokens[1] == Token::CloseParen {
-            (Null, &tokens[2..])
-        } else {
-            parse_list_tokens(tokens).map(|(v, t)| (v.into(), t))?
+    (v, tokens)
+}
+
+fn get_next_sexp(tokens: &[Token]) -> std::result::Result<(SExp, &[Token]), Error> {
+    let (prefixes, tokens) = dequote(tokens);
+
+    let mut quotable = match tokens.split_first() {
+        Some((Token::Atom(s), rest)) => (Atom(s.parse()?), rest),
+        Some((Token::StringLiteral(s), rest)) => (Atom(Primitive::String(s.to_string())), rest),
+        Some((Token::OpenParen, rest)) => {
+            if let Some((Token::CloseParen, rest)) = rest.split_first() {
+                (Null, rest)
+            } else {
+                parse_list_tokens(tokens).map(|(v, t)| (v.into(), t))?
+            }
         }
-    } else if tokens[0] == Token::OpenHashParen {
-        parse_list_tokens(tokens).map(|(v, t)| (Atom(Primitive::Vector(v)), t))?
-    } else {
-        return Err(Error::Syntax {
-            exp: format!("{:#?}", tokens),
-        });
+        Some((Token::OpenHashParen, _)) => {
+            parse_list_tokens(tokens).map(|(v, t)| (Atom(Primitive::Vector(v)), t))?
+        }
+        _ => {
+            return Err(Error::Syntax {
+                exp: format!("{:#?}", tokens),
+            })
+        }
     };
 
-    if let Some(s) = prefix {
-        Ok((Null.cons(quotable.0).cons(s), quotable.1))
-    } else {
-        Ok(quotable)
+    for prefix in prefixes.into_iter().rev() {
+        quotable.0 = Null.cons(quotable.0).cons(prefix);
     }
+
+    Ok(quotable)
 }
 
 impl FromStr for SExp {
@@ -205,12 +202,10 @@ impl FromStr for SExp {
             exprs.push(expr);
         }
 
-        // TODO figure out if this clone operation is too expensive IRL
         if exprs.len() == 2 {
-            return Ok(exprs[1].clone());
+            return Ok(exprs.remove(1));
         }
 
         Ok(exprs.into())
     }
 }
-
