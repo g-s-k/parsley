@@ -69,10 +69,20 @@ fn get_next_token(s: &str) -> std::result::Result<(Option<Token>, &str), String>
 
     // special handling for string literals
     if s.starts_with('"') {
-        if let Some(pos) = s[1..].find('"') {
-            return Ok((Some(s[..pos + 2].parse()?), &s[pos + 2..]));
-        } else {
+        let mut pos = 1;
+        let mut esc = false;
+        for c in s[1..].chars() {
+            match c {
+                '\\' => esc = !esc,
+                '"' if !esc => break,
+                _ => esc = false,
+            }
+            pos += 1;
+        }
+        if pos == s.len() - 1 && !s.ends_with('"') {
             return Err(s.into());
+        } else {
+            return Ok((Some(s[..pos + 1].parse()?), &s[pos + 1..]));
         }
     }
 
