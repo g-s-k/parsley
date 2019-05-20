@@ -42,6 +42,7 @@ use self::cont::Cont;
 pub use self::ctx::Context;
 use self::env::{Env, Ns};
 pub use self::errors::Error;
+use self::errors::SyntaxError;
 pub use self::primitives::Num;
 use self::primitives::Primitive;
 pub use self::proc::utils as proc_utils;

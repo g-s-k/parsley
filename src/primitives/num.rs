@@ -11,7 +11,7 @@ use std::ops::{Add, Div, Mul, Neg, Rem, Sub};
 use std::str::FromStr;
 
 use self::Num::{Float, Int};
-use super::super::Error;
+use super::super::SyntaxError;
 
 type IntT = isize;
 
@@ -217,7 +217,7 @@ impl Num {
 }
 
 impl FromStr for Num {
-    type Err = Error;
+    type Err = SyntaxError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if let Ok(num) = s.parse::<IntT>() {
@@ -228,7 +228,7 @@ impl FromStr for Num {
             return Ok(Float(num));
         }
 
-        Err(Error::Syntax { exp: s.to_string() })
+        Err(SyntaxError::NotANumber(s.to_string()))
     }
 }
 

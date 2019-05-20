@@ -1,7 +1,11 @@
+use std::fmt;
 use std::str::FromStr;
 
-use super::SExp::{self, Atom, Null};
-use super::{utils, Error, Primitive, Result};
+use super::{
+    utils, Error, Primitive, Result,
+    SExp::{self, Atom, Null},
+    SyntaxError,
+};
 
 mod tests;
 
@@ -10,6 +14,22 @@ enum Paren {
     Round,
     Square,
     Curly,
+}
+
+impl fmt::Display for Paren {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", char::from(self))
+    }
+}
+
+impl From<&Paren> for char {
+    fn from(p: &Paren) -> Self {
+        match p {
+            Paren::Round => ')',
+            Paren::Square => ']',
+            Paren::Curly => '}',
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -47,7 +67,7 @@ impl Token {
 }
 
 impl FromStr for Token {
-    type Err = String;
+    type Err = SyntaxError;
 
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         if let Some(t) = Self::from_sigil(s) {
@@ -61,12 +81,12 @@ impl FromStr for Token {
                 return Ok(Token::Atom(s.into()));
             }
 
-            Err(s.into())
+            Err(SyntaxError::NotAToken(s.into()))
         }
     }
 }
 
-fn get_next_token(s: &str) -> std::result::Result<(Option<Token>, &str), String> {
+fn get_next_token(s: &str) -> std::result::Result<(Option<Token>, &str), SyntaxError> {
     let mut s = s.trim_start();
 
     // throw out comments
@@ -93,7 +113,7 @@ fn get_next_token(s: &str) -> std::result::Result<(Option<Token>, &str), String>
             pos += 1;
         }
         if pos == s.len() - 1 && !s.ends_with('"') {
-            return Err(s.into());
+            return Err(SyntaxError::UnmatchedQuote(s.into()));
         } else {
             return Ok((Some(s[..=pos].parse()?), &s[pos + 1..]));
         }
@@ -116,11 +136,11 @@ fn get_next_token(s: &str) -> std::result::Result<(Option<Token>, &str), String>
     Ok((Some(s[..pos].parse()?), &s[pos..]))
 }
 
-fn lex(mut s: &str) -> std::result::Result<Vec<Token>, String> {
+fn lex(mut s: &str) -> std::result::Result<Vec<Token>, SyntaxError> {
     let mut tokens = Vec::new();
 
     while !s.is_empty() {
-        let (tok, new_s) = get_next_token(s).map_err(String::from)?;
+        let (tok, new_s) = get_next_token(s)?;
         s = new_s;
         if let Some(tok) = tok {
             tokens.push(tok);
@@ -130,17 +150,24 @@ fn lex(mut s: &str) -> std::result::Result<Vec<Token>, String> {
     Ok(tokens)
 }
 
-fn parse_list_tokens<'a, 'b>(
+fn parse_list_tokens<'a>(
     tokens: &'a [Token],
-    paren_type: &'b Paren,
-) -> std::result::Result<(Vec<SExp>, &'a [Token]), Error> {
+    paren_type: Paren,
+) -> std::result::Result<(Vec<SExp>, &'a [Token]), SyntaxError> {
     let mut idx = 1;
-    let mut n = 1;
+    let mut n = 0;
 
     for tok in &tokens[1..] {
         match *tok {
             Token::OpenParen(_) | Token::OpenHashParen(_) => n += 1,
-            Token::CloseParen(p) if n == 1 && p == *paren_type => break,
+            Token::CloseParen(p) if n == 0 && p == paren_type => break,
+            Token::CloseParen(ref p) if n == 0 => {
+                return Err(SyntaxError::UnmatchedParen {
+                    exp: format!("{:?}", tokens),
+                    expected: (&paren_type).into(),
+                    given: Some(p.into()),
+                });
+            }
             Token::CloseParen(_) => n -= 1,
             _ => (),
         }
@@ -148,8 +175,10 @@ fn parse_list_tokens<'a, 'b>(
     }
 
     if n != 0 {
-        return Err(Error::Syntax {
-            exp: format!("unmatched paren(s) in {:?}", tokens),
+        return Err(SyntaxError::UnmatchedParen {
+            exp: format!("{:?}", tokens),
+            expected: (&paren_type).into(),
+            given: None,
         });
     }
 
@@ -184,7 +213,7 @@ fn dequote(mut tokens: &[Token]) -> (Vec<SExp>, &[Token]) {
     (v, tokens)
 }
 
-fn get_next_sexp(tokens: &[Token]) -> std::result::Result<(SExp, &[Token]), Error> {
+fn get_next_sexp(tokens: &[Token]) -> std::result::Result<(SExp, &[Token]), SyntaxError> {
     let (prefixes, tokens) = dequote(tokens);
 
     let mut quotable = match tokens.split_first() {
@@ -192,16 +221,12 @@ fn get_next_sexp(tokens: &[Token]) -> std::result::Result<(SExp, &[Token]), Erro
         Some((Token::StringLiteral(s), rest)) => (Atom(Primitive::String(s.to_string())), rest),
         Some((Token::OpenParen(paren_type), rest)) => match rest.split_first() {
             Some((Token::CloseParen(p), rest)) if p == paren_type => (Null, rest),
-            _ => parse_list_tokens(tokens, paren_type).map(|(v, t)| (v.into(), t))?,
+            _ => parse_list_tokens(tokens, *paren_type).map(|(v, t)| (v.into(), t))?,
         },
         Some((Token::OpenHashParen(paren_type), _)) => {
-            parse_list_tokens(tokens, paren_type).map(|(v, t)| (Atom(Primitive::Vector(v)), t))?
+            parse_list_tokens(tokens, *paren_type).map(|(v, t)| (Atom(Primitive::Vector(v)), t))?
         }
-        _ => {
-            return Err(Error::Syntax {
-                exp: format!("{:#?}", tokens),
-            })
-        }
+        _ => unreachable!("`get_next_sexp` should only be called with a non-empty list of tokens."),
     };
 
     for prefix in prefixes.into_iter().rev() {
@@ -215,7 +240,7 @@ impl FromStr for SExp {
     type Err = Error;
 
     fn from_str(s: &str) -> Result {
-        let token_list = lex(s).map_err(|st| Error::Syntax { exp: st })?;
+        let token_list = lex(s)?;
         let mut tokens = &token_list[..];
 
         let mut exprs = vec![Self::sym("begin")];

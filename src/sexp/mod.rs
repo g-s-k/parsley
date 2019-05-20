@@ -6,7 +6,7 @@ mod eval;
 mod iter;
 mod parse;
 
-use super::{utils, Error, Primitive, Result};
+use super::{utils, Error, Primitive, Result, SyntaxError};
 
 use self::SExp::{Atom, Null, Pair};
 

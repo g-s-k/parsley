@@ -1,11 +1,53 @@
 use std::fmt;
 
+use super::SExp;
+
+#[derive(Debug)]
+pub enum SyntaxError {
+    UnmatchedQuote(String),
+    UnmatchedParen {
+        exp: String,
+        expected: char,
+        given: Option<char>,
+    },
+    InvalidCond(SExp),
+    NotANumber(String),
+    NotAPrimitive(String),
+    NotAToken(String),
+}
+
+impl fmt::Display for SyntaxError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            SyntaxError::UnmatchedQuote(s) => write!(f, "Unmatched quote: {}", s),
+            SyntaxError::UnmatchedParen {
+                exp,
+                expected,
+                given: Some(g),
+            } => write!(
+                f,
+                "Paren mismatch: expected {}, given {} in expression {}",
+                expected, g, exp
+            ),
+            SyntaxError::UnmatchedParen { exp, expected, .. } => write!(
+                f,
+                "Paren mismatch: expected {} and no match found in expression {}",
+                expected, exp
+            ),
+            SyntaxError::InvalidCond(e) => write!(f, "Invalid `cond` clause: {}", e),
+            SyntaxError::NotANumber(s) => write!(f, "Could not parse as a number: {}", s),
+            SyntaxError::NotAPrimitive(s) => {
+                write!(f, "Could not parse as a primitive value: {}", s)
+            }
+            SyntaxError::NotAToken(s) => write!(f, "Unrecognized token: {}", s),
+        }
+    }
+}
+
 /// Multipurpose error type.
 #[derive(Debug)]
 pub enum Error {
-    Syntax {
-        exp: String,
-    },
+    Syntax(SyntaxError),
     Type {
         expected: &'static str,
         given: String,
@@ -43,7 +85,7 @@ impl ::std::error::Error for Error {}
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Error::Syntax { exp } => write!(f, "Could not parse expression: {}", exp),
+            Error::Syntax(err) => write!(f, "{}", err),
             Error::Type { expected, given } => {
                 write!(f, "Type error: expected {}, got {}", expected, given)
             }
@@ -69,6 +111,12 @@ impl fmt::Display for Error {
             Error::Index { i } => write!(f, "Tried to access invalid index: [{}]", i),
             Error::IO(err) => write!(f, "I/O error: {}", err),
         }
+    }
+}
+
+impl From<SyntaxError> for Error {
+    fn from(e: SyntaxError) -> Self {
+        Error::Syntax(e)
     }
 }
 

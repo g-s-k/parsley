@@ -1,12 +1,14 @@
 use std::str::FromStr;
 use std::string::String as CoreString;
 
-use super::super::{utils, Error};
-use super::Num;
-use super::Primitive::{self, Boolean, Character, Number, String, Symbol};
+use super::{
+    super::{utils, SyntaxError},
+    Num,
+    Primitive::{self, Boolean, Character, Number, String, Symbol},
+};
 
 impl FromStr for Primitive {
-    type Err = Error;
+    type Err = SyntaxError;
 
     fn from_str(s: &str) -> ::std::result::Result<Self, Self::Err> {
         match s {
@@ -36,7 +38,7 @@ impl FromStr for Primitive {
             return Ok(Symbol(s.to_string()));
         }
 
-        Err(Error::Syntax { exp: s.to_string() })
+        Err(SyntaxError::NotAPrimitive(s.to_string()))
     }
 }
 

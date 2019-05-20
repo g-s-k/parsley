@@ -3,7 +3,7 @@ use std::rc::Rc;
 
 use super::super::proc::{Func, Proc};
 use super::super::SExp::{self, Atom, Null, Pair};
-use super::super::{Error, Ns, Primitive, Result};
+use super::super::{Error, Ns, Primitive, Result, SyntaxError};
 use super::Context;
 
 mod tests;
@@ -127,9 +127,7 @@ impl Context {
                     }
                 }
                 exp => {
-                    return Err(Error::Syntax {
-                        exp: exp.to_string(),
-                    });
+                    return Err(SyntaxError::InvalidCond(exp).into());
                 }
             }
         }

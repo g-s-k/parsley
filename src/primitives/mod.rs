@@ -1,9 +1,7 @@
 use std::fmt;
 use std::string::String as CoreString;
 
-use super::proc::Proc;
-use super::Ns;
-use super::SExp;
+use super::{proc::Proc, Ns, SExp};
 
 use self::Primitive::{
     Boolean, Character, Env, Number, Procedure, String, Symbol, Undefined, Vector, Void,
