@@ -130,3 +130,56 @@ fn quasiquote_syntax() {
         .cons(SExp::sym("quasiquote")),
     );
 }
+
+mod parens {
+    use super::{do_parse_and_assert, Null, SExp};
+
+    macro_rules! try_parse {
+        ( $e:expr ) => {
+            $e.parse::<SExp>().unwrap()
+        };
+    }
+
+    #[test]
+    #[should_panic]
+    fn unmatched_null() {
+        try_parse!("'(]");
+    }
+
+    #[test]
+    #[should_panic]
+    fn unmatched_list() {
+        try_parse!("'[a b }");
+    }
+
+    #[test]
+    #[should_panic]
+    fn unbalanced() {
+        try_parse!("(a b (c d) e [ f (g h ) )])");
+    }
+
+    #[test]
+    fn types() {
+        do_parse_and_assert(
+            "(a b c d)",
+            Null.cons(SExp::sym("d"))
+                .cons(SExp::sym("c"))
+                .cons(SExp::sym("b"))
+                .cons(SExp::sym("a")),
+        );
+        do_parse_and_assert(
+            "[a b c d]",
+            Null.cons(SExp::sym("d"))
+                .cons(SExp::sym("c"))
+                .cons(SExp::sym("b"))
+                .cons(SExp::sym("a")),
+        );
+        do_parse_and_assert(
+            "{ a b c d }",
+            Null.cons(SExp::sym("d"))
+                .cons(SExp::sym("c"))
+                .cons(SExp::sym("b"))
+                .cons(SExp::sym("a")),
+        );
+    }
+}

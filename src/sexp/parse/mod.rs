@@ -5,11 +5,18 @@ use super::{utils, Error, Primitive, Result};
 
 mod tests;
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum Paren {
+    Round,
+    Square,
+    Curly,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 enum Token {
-    OpenParen,
-    OpenHashParen,
-    CloseParen,
+    OpenParen(Paren),
+    OpenHashParen(Paren),
+    CloseParen(Paren),
     Quote,
     Quasiquote,
     Unquote,
@@ -21,9 +28,15 @@ enum Token {
 impl Token {
     fn from_sigil(s: &str) -> Option<Self> {
         match s {
-            "(" => Some(Token::OpenParen),
-            "#(" => Some(Token::OpenHashParen),
-            ")" => Some(Token::CloseParen),
+            "(" => Some(Token::OpenParen(Paren::Round)),
+            "[" => Some(Token::OpenParen(Paren::Square)),
+            "{" => Some(Token::OpenParen(Paren::Curly)),
+            "#(" => Some(Token::OpenHashParen(Paren::Round)),
+            "#[" => Some(Token::OpenHashParen(Paren::Square)),
+            "#{" => Some(Token::OpenHashParen(Paren::Curly)),
+            ")" => Some(Token::CloseParen(Paren::Round)),
+            "]" => Some(Token::CloseParen(Paren::Square)),
+            "}" => Some(Token::CloseParen(Paren::Curly)),
             "'" => Some(Token::Quote),
             "`" => Some(Token::Quasiquote),
             "," => Some(Token::Unquote),
@@ -117,19 +130,19 @@ fn lex(mut s: &str) -> std::result::Result<Vec<Token>, String> {
     Ok(tokens)
 }
 
-fn parse_list_tokens(tokens: &[Token]) -> std::result::Result<(Vec<SExp>, &[Token]), Error> {
+fn parse_list_tokens<'a, 'b>(
+    tokens: &'a [Token],
+    paren_type: &'b Paren,
+) -> std::result::Result<(Vec<SExp>, &'a [Token]), Error> {
     let mut idx = 1;
     let mut n = 1;
 
     for tok in &tokens[1..] {
         match *tok {
-            Token::OpenParen | Token::OpenHashParen => n += 1,
-            Token::CloseParen => n -= 1,
+            Token::OpenParen(_) | Token::OpenHashParen(_) => n += 1,
+            Token::CloseParen(p) if n == 1 && p == *paren_type => break,
+            Token::CloseParen(_) => n -= 1,
             _ => (),
-        }
-
-        if n == 0 {
-            break;
         }
         idx += 1;
     }
@@ -177,15 +190,12 @@ fn get_next_sexp(tokens: &[Token]) -> std::result::Result<(SExp, &[Token]), Erro
     let mut quotable = match tokens.split_first() {
         Some((Token::Atom(s), rest)) => (Atom(s.parse()?), rest),
         Some((Token::StringLiteral(s), rest)) => (Atom(Primitive::String(s.to_string())), rest),
-        Some((Token::OpenParen, rest)) => {
-            if let Some((Token::CloseParen, rest)) = rest.split_first() {
-                (Null, rest)
-            } else {
-                parse_list_tokens(tokens).map(|(v, t)| (v.into(), t))?
-            }
-        }
-        Some((Token::OpenHashParen, _)) => {
-            parse_list_tokens(tokens).map(|(v, t)| (Atom(Primitive::Vector(v)), t))?
+        Some((Token::OpenParen(paren_type), rest)) => match rest.split_first() {
+            Some((Token::CloseParen(p), rest)) if p == paren_type => (Null, rest),
+            _ => parse_list_tokens(tokens, paren_type).map(|(v, t)| (v.into(), t))?,
+        },
+        Some((Token::OpenHashParen(paren_type), _)) => {
+            parse_list_tokens(tokens, paren_type).map(|(v, t)| (Atom(Primitive::Vector(v)), t))?
         }
         _ => {
             return Err(Error::Syntax {

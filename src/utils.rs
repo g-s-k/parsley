@@ -1,5 +1,12 @@
 pub fn is_atom_char(c: char) -> bool {
-    !c.is_whitespace() && !c.is_control() && c != '(' && c != ')'
+    !c.is_whitespace()
+        && !c.is_control()
+        && c != '('
+        && c != ')'
+        && c != '['
+        && c != ']'
+        && c != '{'
+        && c != '}'
 }
 
 pub fn is_symbol_char(c: char) -> bool {
