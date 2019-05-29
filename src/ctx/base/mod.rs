@@ -1,4 +1,5 @@
 use std::fmt::Write;
+#[cfg(not(target_arch = "wasm32"))]
 use std::fs;
 
 use super::super::Primitive::{
