@@ -1,6 +1,5 @@
 use std::cmp::PartialEq;
 use std::fmt;
-use std::ptr;
 use std::rc::Rc;
 
 use super::{Context, Env, Error, Primitive, Result, SExp};
@@ -80,11 +79,12 @@ impl Proc {
     }
 }
 
+#[allow(clippy::vtable_address_comparisons)]
 impl PartialEq for Proc {
     fn eq(&self, other: &Self) -> bool {
         match (&self.func, &other.func) {
-            (Func::Ctx(p0), Func::Ctx(p1)) => ptr::eq(&*p0, &*p1),
-            (Func::Pure(p0), Func::Pure(p1)) => ptr::eq(&*p0, &*p1),
+            (Func::Ctx(p0), Func::Ctx(p1)) => Rc::ptr_eq(&p0, &p1),
+            (Func::Pure(p0), Func::Pure(p1)) => Rc::ptr_eq(&p0, &p1),
             (
                 Func::Lambda {
                     body: b0, envt: e0, ..
