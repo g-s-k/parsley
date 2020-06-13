@@ -188,8 +188,8 @@ impl Into<SExp> for Arity {
 
 #[derive(Clone)]
 pub enum Func {
-    Ctx(Rc<Fn(&mut Context, SExp) -> Result>),
-    Pure(Rc<Fn(SExp) -> Result>),
+    Ctx(Rc<dyn Fn(&mut Context, SExp) -> Result>),
+    Pure(Rc<dyn Fn(SExp) -> Result>),
     Lambda {
         body: Rc<SExp>,
         envt: Rc<Env>,

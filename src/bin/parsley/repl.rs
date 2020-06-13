@@ -18,18 +18,15 @@ pub fn repl(ctx: &mut Context) -> Result<String, ReadlineError> {
     );
 
     let mut rl = Editor::<()>::new();
-    let exit = Ok(REPL_EXIT_MSG.to_string());
 
     loop {
-        let readline = rl.readline(REPL_PROMPT);
-
-        match readline {
+        match rl.readline(REPL_PROMPT) {
             Ok(line) => {
-                rl.add_history_entry(line.as_ref());
+                rl.add_history_entry(line.as_str());
                 // check for empty line/special commands
                 match line.trim() {
                     "" => continue,
-                    ".exit" => break exit,
+                    ".exit" => break Ok(REPL_EXIT_MSG.to_string()),
                     ".clear" => {
                         rl.clear_history();
                         ctx.pop();
@@ -49,7 +46,7 @@ pub fn repl(ctx: &mut Context) -> Result<String, ReadlineError> {
                 }
             }
             Err(ReadlineError::Eof) | Err(ReadlineError::Interrupted) => {
-                break exit;
+                break Ok(REPL_EXIT_MSG.to_string());
             }
             Err(error) => break Err(error),
         }
