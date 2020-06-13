@@ -1,4 +1,4 @@
-use super::super::proc::utils::*;
+use super::super::proc::utils::{make_binary_numeric, make_unary_numeric};
 use super::super::Num;
 use super::Context;
 
@@ -26,6 +26,7 @@ impl Context {
     /// asrt("(recip 100)", "0.01");
     /// asrt("(log (exp 7))", "7");
     /// ```
+    #[must_use]
     pub fn math(mut self) -> Self {
         // identification
         define_with!(self, "is-nan", Num::is_nan, make_unary_numeric);

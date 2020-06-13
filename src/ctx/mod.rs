@@ -46,7 +46,7 @@ impl Default for Context {
 impl Context {
     /// Add a new, nested scope.
     ///
-    /// See [Context::pop](#method.pop) for a usage example.
+    /// See [`Context::pop`](#method.pop) for a usage example.
     pub fn push(&mut self) {
         self.cont.borrow_mut().push();
     }
@@ -106,6 +106,7 @@ impl Context {
     /// ctx.define("x", SExp::from(3));
     /// assert_eq!(ctx.get("x"), Some(SExp::from(3)));
     /// ```
+    #[must_use]
     pub fn get(&self, key: &str) -> Option<SExp> {
         // first check core (reserved keywords)
         if let Some(exp) = self.core.get(key) {
@@ -128,6 +129,7 @@ impl Context {
 
     /// Re-bind an existing definition to a new value.
     ///
+    /// # Errors
     /// Returns `Ok` if an existing definition was found and updated. Returns
     /// `Err` if no definition exists.
     ///
@@ -187,6 +189,9 @@ impl Context {
 
     /// Run a code snippet in an existing `Context`.
     ///
+    /// # Errors
+    /// Returns `Err` if a parsing or runtime error occurs.
+    ///
     /// # Example
     /// ```
     /// use parsley::prelude::*;
@@ -204,6 +209,10 @@ impl Context {
     ///
     /// The context will retain any definitions bound during evaluation
     /// (e.g. `define`, `set!`).
+    ///
+    /// # Errors
+    /// An `Err` will be returned if an undefined symbol is referenced, the empty list is
+    /// evaluated, a non-procedure value is called, or a procedure returns an error.
     ///
     /// # Examples
     /// ```

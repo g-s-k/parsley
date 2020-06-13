@@ -1,5 +1,6 @@
 use std::cmp::PartialEq;
 use std::fmt;
+use std::ptr;
 use std::rc::Rc;
 
 use super::{Context, Env, Error, Primitive, Result, SExp};
@@ -82,8 +83,8 @@ impl Proc {
 impl PartialEq for Proc {
     fn eq(&self, other: &Self) -> bool {
         match (&self.func, &other.func) {
-            (Func::Ctx(p0), Func::Ctx(p1)) => Rc::ptr_eq(&p0, &p1),
-            (Func::Pure(p0), Func::Pure(p1)) => Rc::ptr_eq(&p0, &p1),
+            (Func::Ctx(p0), Func::Ctx(p1)) => ptr::eq(&*p0, &*p1),
+            (Func::Pure(p0), Func::Pure(p1)) => ptr::eq(&*p0, &*p1),
             (
                 Func::Lambda {
                     body: b0, envt: e0, ..
@@ -186,10 +187,13 @@ impl Into<SExp> for Arity {
     }
 }
 
+type CtxFn = dyn Fn(&mut Context, SExp) -> Result;
+type PureFn = dyn Fn(SExp) -> Result;
+
 #[derive(Clone)]
 pub enum Func {
-    Ctx(Rc<dyn Fn(&mut Context, SExp) -> Result>),
-    Pure(Rc<dyn Fn(SExp) -> Result>),
+    Ctx(Rc<CtxFn>),
+    Pure(Rc<PureFn>),
     Lambda {
         body: Rc<SExp>,
         envt: Rc<Env>,
@@ -201,14 +205,14 @@ pub enum Func {
     },
 }
 
-impl From<Rc<dyn Fn(&mut Context, SExp) -> Result>> for Func {
-    fn from(f: Rc<dyn Fn(&mut Context, SExp) -> Result>) -> Self {
+impl From<Rc<CtxFn>> for Func {
+    fn from(f: Rc<CtxFn>) -> Self {
         Func::Ctx(f)
     }
 }
 
-impl From<Rc<dyn Fn(SExp) -> Result>> for Func {
-    fn from(f: Rc<dyn Fn(SExp) -> Result>) -> Self {
+impl From<Rc<PureFn>> for Func {
+    fn from(f: Rc<PureFn>) -> Self {
         Func::Pure(f)
     }
 }

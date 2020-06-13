@@ -88,6 +88,7 @@ impl SExp {
     ///
     /// assert_eq!(macro_list, cons_list);
     /// ```
+    #[must_use]
     pub fn cons(self, exp: Self) -> Self {
         Pair {
             head: Box::new(exp),
@@ -109,6 +110,7 @@ impl SExp {
     /// let result = ctx.run("null").unwrap();
     /// assert_eq!(result, SExp::Null);
     /// ```
+    #[must_use]
     pub fn sym(sym: &str) -> Self {
         Atom(Primitive::Symbol(sym.to_string()))
     }
@@ -124,6 +126,7 @@ impl SExp {
     /// assert_eq!(SExp::from(true).type_of(), "bool");
     /// assert_eq!(SExp::from((5,)).type_of(), "list");
     /// ```
+    #[must_use]
     pub fn type_of(&self) -> &str {
         match self {
             Null => "null",

@@ -23,6 +23,7 @@ pub enum Num {
 }
 
 impl Num {
+    #[must_use]
     pub fn abs(self) -> Self {
         match self {
             Float(f) => Float(f.abs()),
@@ -36,6 +37,7 @@ impl Num {
         }
     }
 
+    #[must_use]
     pub fn pow<T>(self, other: T) -> Self
     where
         Self: From<T>,
@@ -50,6 +52,7 @@ impl Num {
         }
     }
 
+    #[must_use]
     pub fn is_nan(self) -> bool {
         match self {
             Float(f) => f.is_nan(),
@@ -57,6 +60,7 @@ impl Num {
         }
     }
 
+    #[must_use]
     pub fn is_infinite(self) -> bool {
         match self {
             Float(f) => f.is_infinite(),
@@ -64,6 +68,7 @@ impl Num {
         }
     }
 
+    #[must_use]
     pub fn is_finite(self) -> bool {
         match self {
             Float(f) => f.is_finite(),
@@ -71,6 +76,7 @@ impl Num {
         }
     }
 
+    #[must_use]
     pub fn is_sign_positive(self) -> bool {
         match self {
             Float(f) => f.is_sign_positive(),
@@ -78,6 +84,7 @@ impl Num {
         }
     }
 
+    #[must_use]
     pub fn is_sign_negative(self) -> bool {
         match self {
             Float(f) => f.is_sign_negative(),
@@ -85,6 +92,7 @@ impl Num {
         }
     }
 
+    #[must_use]
     pub fn floor(self) -> Self {
         match self {
             Float(f) => Int(f.floor() as IntT),
@@ -92,6 +100,7 @@ impl Num {
         }
     }
 
+    #[must_use]
     pub fn ceil(self) -> Self {
         match self {
             Float(f) => Int(f.ceil() as IntT),
@@ -99,6 +108,7 @@ impl Num {
         }
     }
 
+    #[must_use]
     pub fn round(self) -> Self {
         match self {
             Float(f) => Int(f.round() as IntT),
@@ -106,6 +116,7 @@ impl Num {
         }
     }
 
+    #[must_use]
     pub fn trunc(self) -> Self {
         match self {
             Float(f) => Int(f.trunc() as IntT),
@@ -113,6 +124,7 @@ impl Num {
         }
     }
 
+    #[must_use]
     pub fn fract(self) -> Self {
         match self {
             Float(f) => Float(f.fract()),
@@ -120,6 +132,7 @@ impl Num {
         }
     }
 
+    #[must_use]
     pub fn signum(self) -> Self {
         match self {
             Float(f) => Int(f.signum() as IntT),
@@ -127,26 +140,32 @@ impl Num {
         }
     }
 
+    #[must_use]
     pub fn recip(self) -> Self {
         Float(f64::from(self).recip())
     }
 
+    #[must_use]
     pub fn sqrt(self) -> Self {
         Float(f64::from(self).sqrt())
     }
 
+    #[must_use]
     pub fn cbrt(self) -> Self {
         Float(f64::from(self).cbrt())
     }
 
+    #[must_use]
     pub fn exp(self) -> Self {
         Float(f64::from(self).exp())
     }
 
+    #[must_use]
     pub fn ln(self) -> Self {
         Float(f64::from(self).ln())
     }
 
+    #[must_use]
     pub fn exp2(self) -> Self {
         match self {
             Float(f) => Float(f.exp2()),
@@ -154,14 +173,17 @@ impl Num {
         }
     }
 
+    #[must_use]
     pub fn log2(self) -> Self {
         Float(f64::from(self).log2())
     }
 
+    #[must_use]
     pub fn log10(self) -> Self {
         Float(f64::from(self).log10())
     }
 
+    #[must_use]
     pub fn log<T>(self, other: T) -> Self
     where
         Self: From<T>,
@@ -169,6 +191,7 @@ impl Num {
         Float(f64::from(self).log(f64::from(Self::from(other))))
     }
 
+    #[must_use]
     pub fn hypot<T>(self, other: T) -> Self
     where
         Self: From<T>,
@@ -176,30 +199,37 @@ impl Num {
         Float(f64::from(self).hypot(f64::from(Self::from(other))))
     }
 
+    #[must_use]
     pub fn sin(self) -> Self {
         Float(f64::from(self).sin())
     }
 
+    #[must_use]
     pub fn cos(self) -> Self {
         Float(f64::from(self).cos())
     }
 
+    #[must_use]
     pub fn tan(self) -> Self {
         Float(f64::from(self).tan())
     }
 
+    #[must_use]
     pub fn asin(self) -> Self {
         Float(f64::from(self).asin())
     }
 
+    #[must_use]
     pub fn acos(self) -> Self {
         Float(f64::from(self).acos())
     }
 
+    #[must_use]
     pub fn atan(self) -> Self {
         Float(f64::from(self).atan())
     }
 
+    #[must_use]
     pub fn atan2<T>(self, other: T) -> Self
     where
         Self: From<T>,
@@ -207,10 +237,12 @@ impl Num {
         Float(f64::from(self).atan2(f64::from(Self::from(other))))
     }
 
+    #[must_use]
     pub fn to_degrees(self) -> Self {
         Float(f64::from(self).to_degrees())
     }
 
+    #[must_use]
     pub fn to_radians(self) -> Self {
         Float(f64::from(self).to_radians())
     }

@@ -432,6 +432,7 @@ impl Context {
         }
     }
 
+    #[allow(clippy::unused_self)]
     fn eval_quote(&mut self, expr: SExp) -> Result {
         match expr {
             Pair { .. } => Ok(expr.car()?),

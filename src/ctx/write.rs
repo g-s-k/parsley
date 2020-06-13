@@ -11,6 +11,7 @@ impl Context {
     }
 
     /// Capture `display` and `write` statement output in a buffer.
+    #[must_use]
     pub fn capturing(mut self) -> Self {
         self.capture();
         self

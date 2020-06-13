@@ -8,7 +8,10 @@ use super::super::Primitive::{
 use super::super::SExp::{self, Atom, Null, Pair};
 use super::super::{Error, Num, Result};
 
-use super::super::proc::utils::*;
+use super::super::proc::utils::{
+    make_binary_expr, make_binary_numeric, make_fold_from0_numeric, make_fold_numeric,
+    make_unary_expr, make_unary_numeric,
+};
 use super::Context;
 
 mod tests;
@@ -75,6 +78,7 @@ impl Context {
     /// println!("{}", ctx.get("eq?").unwrap());   // "#<procedure>"
     /// println!("{}", ctx.get("+").unwrap());     // "#<procedure>"
     /// ```
+    #[must_use]
     pub fn base() -> Self {
         let mut ret = Self::default();
         ret.std();
@@ -151,6 +155,7 @@ impl Context {
         ret
     }
 
+    #[allow(clippy::too_many_lines)]
     fn std(&mut self) {
         define!(self, "eq?", |e| Ok((e[0] == e[1]).into()), 2);
         define_with!(

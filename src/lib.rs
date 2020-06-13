@@ -62,6 +62,9 @@ pub type Result = ::std::result::Result<SExp, Error>;
 /// assert!(run("null").is_ok());
 /// assert_eq!(run("null").unwrap(), SExp::Null);
 /// ```
+///
+/// # Errors
+/// An error will be returned if the provided program is invalid or cannot terminate.
 pub fn run(code: &str) -> Result {
     Context::base().run(code)
 }
