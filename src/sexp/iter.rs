@@ -12,7 +12,7 @@ impl Iterator for SExpIterator {
     type Item = SExp;
 
     fn next(&mut self) -> Option<Self::Item> {
-        match self.exp.to_owned() {
+        match self.exp.clone() {
             Pair { head, tail } => {
                 self.exp = *tail;
                 Some(*head)
@@ -50,7 +50,7 @@ impl<'a> Iterator for SExpRefIterator<'a> {
             }
             a @ Atom(_) => {
                 self.exp = &Null;
-                Some(&a)
+                Some(a)
             }
             Null => None,
         }
@@ -70,17 +70,13 @@ impl SExp {
     /// ```
     #[must_use]
     pub fn iter(&self) -> SExpRefIterator {
-        SExpRefIterator { exp: &self }
+        SExpRefIterator { exp: self }
     }
 
     /// Easy way to check for `Null` if you're planning on iterating
     #[must_use]
     pub fn is_empty(&self) -> bool {
-        if let Null = self {
-            true
-        } else {
-            false
-        }
+        matches!(self, Null)
     }
 
     /// Get the length of an S-Expression (vector or list)
@@ -129,7 +125,7 @@ impl FromIterator<SExp> for SExp {
                     *tail = Box::new(new_val);
                     last = tail;
                 }
-                _ => (),
+                Atom(_) => (),
             }
         }
 

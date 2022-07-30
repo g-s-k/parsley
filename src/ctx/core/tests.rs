@@ -26,7 +26,7 @@ fn null_list() {
 #[test]
 fn atom() {
     assert!(eval(s("test")).is_err());
-    assert_eval_eq!(sexp![s("quote"), s("test")], s("test"))
+    assert_eval_eq!(sexp![s("quote"), s("test")], s("test"));
 }
 
 #[test]

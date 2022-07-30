@@ -54,25 +54,28 @@ impl Num {
 
     #[must_use]
     pub fn is_nan(self) -> bool {
-        match self {
-            Float(f) => f.is_nan(),
-            _ => false,
+        if let Float(f) = self {
+            f.is_nan()
+        } else {
+            false
         }
     }
 
     #[must_use]
     pub fn is_infinite(self) -> bool {
-        match self {
-            Float(f) => f.is_infinite(),
-            _ => false,
+        if let Float(f) = self {
+            f.is_infinite()
+        } else {
+            false
         }
     }
 
     #[must_use]
     pub fn is_finite(self) -> bool {
-        match self {
-            Float(f) => f.is_finite(),
-            _ => false,
+        if let Float(f) = self {
+            f.is_finite()
+        } else {
+            true
         }
     }
 
@@ -94,41 +97,46 @@ impl Num {
 
     #[must_use]
     pub fn floor(self) -> Self {
-        match self {
-            Float(f) => Int(f.floor() as IntT),
-            _ => self,
+        if let Float(f) = self {
+            Int(f.floor() as IntT)
+        } else {
+            self
         }
     }
 
     #[must_use]
     pub fn ceil(self) -> Self {
-        match self {
-            Float(f) => Int(f.ceil() as IntT),
-            _ => self,
+        if let Float(f) = self {
+            Int(f.ceil() as IntT)
+        } else {
+            self
         }
     }
 
     #[must_use]
     pub fn round(self) -> Self {
-        match self {
-            Float(f) => Int(f.round() as IntT),
-            _ => self,
+        if let Float(f) = self {
+            Int(f.round() as IntT)
+        } else {
+            self
         }
     }
 
     #[must_use]
     pub fn trunc(self) -> Self {
-        match self {
-            Float(f) => Int(f.trunc() as IntT),
-            _ => self,
+        if let Float(f) = self {
+            Int(f.trunc() as IntT)
+        } else {
+            self
         }
     }
 
     #[must_use]
     pub fn fract(self) -> Self {
-        match self {
-            Float(f) => Float(f.fract()),
-            _ => Int(0),
+        if let Float(f) = self {
+            Float(f.fract())
+        } else {
+            Int(0)
         }
     }
 

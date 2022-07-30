@@ -41,19 +41,11 @@ impl Proc {
     }
 
     pub(crate) fn defer_eval(&self) -> bool {
-        if let Func::Ctx(_) = self.func {
-            true
-        } else {
-            false
-        }
+        matches!(self.func, Func::Ctx(_))
     }
 
     pub(crate) fn is_tail(&self) -> bool {
-        if let Func::Tail { .. } = self.func {
-            true
-        } else {
-            false
-        }
+        matches!(self.func, Func::Tail { .. })
     }
 
     pub fn apply(&self, args: SExp, ctx: &mut Context) -> Result {
@@ -62,7 +54,7 @@ impl Proc {
         match &self.func {
             Func::Ctx(f) => f(ctx, args),
             Func::Pure(f) => f(args),
-            Func::Tail { .. } => Ok(self.to_owned().into()),
+            Func::Tail { .. } => Ok(self.clone().into()),
             Func::Lambda { body, envt, params } => {
                 // start new scope and bind args to parameters
                 ctx.use_env(envt.clone());
@@ -83,8 +75,8 @@ impl Proc {
 impl PartialEq for Proc {
     fn eq(&self, other: &Self) -> bool {
         match (&self.func, &other.func) {
-            (Func::Ctx(p0), Func::Ctx(p1)) => Rc::ptr_eq(&p0, &p1),
-            (Func::Pure(p0), Func::Pure(p1)) => Rc::ptr_eq(&p0, &p1),
+            (Func::Ctx(p0), Func::Ctx(p1)) => Rc::ptr_eq(p0, p1),
+            (Func::Pure(p0), Func::Pure(p1)) => Rc::ptr_eq(p0, p1),
             (
                 Func::Lambda {
                     body: b0, envt: e0, ..
@@ -92,7 +84,7 @@ impl PartialEq for Proc {
                 Func::Lambda {
                     body: b1, envt: e1, ..
                 },
-            ) => Rc::ptr_eq(&b0, &b1) && Rc::ptr_eq(&e0, &e1),
+            ) => Rc::ptr_eq(b0, b1) && Rc::ptr_eq(e0, e1),
             _ => false,
         }
     }
@@ -177,12 +169,12 @@ impl From<(usize, usize)> for Arity {
     }
 }
 
-impl Into<SExp> for Arity {
-    fn into(self) -> SExp {
-        if let Some(n) = self.max {
-            (self.min, n).into()
+impl From<Arity> for SExp {
+    fn from(arity: Arity) -> Self {
+        if let Some(n) = arity.max {
+            (arity.min, n).into()
         } else {
-            (self.min, false).into()
+            (arity.min, false).into()
         }
     }
 }

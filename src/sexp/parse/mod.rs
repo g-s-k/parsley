@@ -91,7 +91,7 @@ fn get_next_token(s: &str) -> std::result::Result<(Option<Token>, &str), SyntaxE
 
     // throw out comments
     if s.starts_with(';') {
-        let next_newline = s.find('\n').unwrap_or_else(|| s.len());
+        let next_newline = s.find('\n').unwrap_or(s.len());
         s = &s[next_newline..];
     }
 
@@ -104,7 +104,7 @@ fn get_next_token(s: &str) -> std::result::Result<(Option<Token>, &str), SyntaxE
     if s.starts_with('"') {
         let mut pos = 1;
         let mut esc = false;
-        for c in s[1..].chars() {
+        for c in s.chars().skip(1) {
             match c {
                 '\\' => esc = !esc,
                 '"' if !esc => break,
@@ -112,11 +112,12 @@ fn get_next_token(s: &str) -> std::result::Result<(Option<Token>, &str), SyntaxE
             }
             pos += 1;
         }
+
         if pos == s.len() - 1 && !s.ends_with('"') {
             return Err(SyntaxError::UnmatchedQuote(s.into()));
-        } else {
-            return Ok((Some(s[..=pos].parse()?), &s[pos + 1..]));
         }
+
+        return Ok((Some(s[..=pos].parse()?), &s[pos + 1..]));
     }
 
     // sigils - can be 1 or 2 chars
@@ -130,9 +131,7 @@ fn get_next_token(s: &str) -> std::result::Result<(Option<Token>, &str), SyntaxE
     }
 
     // atom/primitive values
-    let pos = s
-        .find(|c| !utils::is_atom_char(c))
-        .unwrap_or_else(|| s.len());
+    let pos = s.find(|c| !utils::is_atom_char(c)).unwrap_or(s.len());
     Ok((Some(s[..pos].parse()?), &s[pos..]))
 }
 
@@ -150,10 +149,10 @@ fn lex(mut s: &str) -> std::result::Result<Vec<Token>, SyntaxError> {
     Ok(tokens)
 }
 
-fn parse_list_tokens<'a>(
-    tokens: &'a [Token],
+fn parse_list_tokens(
+    tokens: &[Token],
     paren_type: Paren,
-) -> std::result::Result<(Vec<SExp>, &'a [Token]), SyntaxError> {
+) -> std::result::Result<(Vec<SExp>, &[Token]), SyntaxError> {
     let mut idx = 1;
     let mut n = 0;
 

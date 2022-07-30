@@ -17,7 +17,7 @@ pub fn repl(ctx: &mut Context) -> Result<String, ReadlineError> {
         line_2 = "Enter `.help` to list special commands."
     );
 
-    let mut rl = Editor::<()>::new();
+    let mut rl = Editor::<()>::new()?;
 
     loop {
         match rl.readline(REPL_PROMPT) {

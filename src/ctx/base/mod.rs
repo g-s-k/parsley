@@ -156,6 +156,7 @@ impl Context {
     }
 
     #[allow(clippy::too_many_lines)]
+    #[allow(clippy::similar_names)]
     fn std(&mut self) {
         define!(self, "eq?", |e| Ok((e[0] == e[1]).into()), 2);
         define_with!(
@@ -358,7 +359,7 @@ impl Context {
         let (head, tail) = expr.split_car()?;
         self.eval(tail.car()?)?
             .into_iter()
-            .map(|e| self.eval(Null.cons(e).cons(head.to_owned())))
+            .map(|e| self.eval(Null.cons(e).cons(head.clone())))
             .collect()
     }
 
@@ -369,7 +370,7 @@ impl Context {
         self.eval(tail.car()?)?
             .into_iter()
             .fold(Ok(init), |a, e| match a {
-                Ok(acc) => self.eval(Null.cons(e).cons(acc).cons(head.to_owned())),
+                Ok(acc) => self.eval(Null.cons(e).cons(acc).cons(head.clone())),
                 err => err,
             })
     }
@@ -380,7 +381,7 @@ impl Context {
         self.eval(tail.car()?)?
             .into_iter()
             .filter_map(
-                |e| match self.eval(Null.cons(e.clone()).cons(predicate.to_owned())) {
+                |e| match self.eval(Null.cons(e.clone()).cons(predicate.clone())) {
                     Ok(Atom(Boolean(false))) => None,
                     Ok(_) => Some(Ok(e)),
                     err => Some(err),

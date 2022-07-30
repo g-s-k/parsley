@@ -18,8 +18,7 @@ impl fmt::Debug for SExp {
                         Atom(a) => write!(f, " . {:?}", a)?,
                         null_or_pair => null_or_pair
                             .iter()
-                            .map(|item| write!(f, " {:?}", item))
-                            .collect::<fmt::Result>()?,
+                            .try_for_each(|item| write!(f, " {:?}", item))?,
                     }
                     write!(f, ")")
                 }
@@ -44,8 +43,7 @@ impl fmt::Display for SExp {
                         Atom(a) => write!(f, " . {}", a)?,
                         null_or_pair => null_or_pair
                             .iter()
-                            .map(|item| write!(f, " {}", item))
-                            .collect::<fmt::Result>()?,
+                            .try_for_each(|item| write!(f, " {}", item))?,
                     }
                     write!(f, ")")
                 }

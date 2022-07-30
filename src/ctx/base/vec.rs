@@ -65,6 +65,7 @@ fn vector_copy(v: SExp) -> Result<SExp, Error> {
 }
 
 #[allow(clippy::needless_pass_by_value)]
+#[allow(clippy::unnecessary_wraps)]
 fn is_vector(e: SExp) -> Result<SExp, Error> {
     match e {
         Atom(Vector(_)) => Ok(true.into()),

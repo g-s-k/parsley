@@ -143,7 +143,7 @@ impl Context {
             // procedure
             Pair { head, tail } => {
                 let sym = match *head {
-                    Atom(Primitive::Symbol(ref sym)) => sym.to_owned(),
+                    Atom(Primitive::Symbol(ref sym)) => sym.clone(),
                     other => {
                         return Err(Error::Type {
                             expected: "symbol",
@@ -233,7 +233,7 @@ impl Context {
 
             // do each step
             for exp in body.iter() {
-                if let Err(err) = self.eval(exp.to_owned()) {
+                if let Err(err) = self.eval(exp.clone()) {
                     break 'eval Err(err);
                 }
             }
@@ -244,7 +244,7 @@ impl Context {
             // temporary map, then insert them all at once
             let mut new_map = HashMap::new();
             for (key, upd) in &var_updates {
-                let new_val = match self.eval(upd.to_owned()) {
+                let new_val = match self.eval(upd.clone()) {
                     Ok(v) => v,
                     err => break 'eval err,
                 };
@@ -273,14 +273,11 @@ impl Context {
     fn eval_lambda(&mut self, expr: SExp, is_named: bool) -> Result {
         let (signature, fn_body) = expr.split_car()?;
 
-        match signature {
-            Pair { .. } | Null => (),
-            other => {
-                return Err(Error::Type {
-                    expected: "list",
-                    given: other.type_of().to_string(),
-                });
-            }
+        if let other @ Atom(_) = signature {
+            return Err(Error::Type {
+                expected: "list",
+                given: other.type_of().to_string(),
+            });
         }
 
         let str_sig = signature
@@ -440,7 +437,7 @@ impl Context {
                 expected: "list",
                 given: expr.type_of().to_string(),
             }),
-            _ => Ok(expr),
+            Atom(_) => Ok(expr),
         }
     }
 

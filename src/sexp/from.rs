@@ -48,12 +48,13 @@ where
 
 impl<T, U> From<(T, U)> for SExp
 where
-    SExp: From<T> + From<U>,
+    T: Into<SExp>,
+    U: Into<SExp>,
 {
     fn from((v1, v2): (T, U)) -> Self {
         Pair {
-            head: Box::new(Self::from(v1)),
-            tail: Box::new(Self::from(v2)),
+            head: Box::new(v1.into()),
+            tail: Box::new(v2.into()),
         }
     }
 }

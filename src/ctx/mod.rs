@@ -74,7 +74,7 @@ impl Context {
 
     /// Create a new definition in the current scope.
     pub fn define(&mut self, key: &str, value: SExp) {
-        self.cont.borrow().env().define(key, value)
+        self.cont.borrow().env().define(key, value);
     }
 
     /// Get the definition for a symbol in the execution environment.
@@ -175,9 +175,9 @@ impl Context {
 
         while let Some(expr) = i.next() {
             if i.peek().is_some() {
-                result = self.eval(expr.to_owned());
+                result = self.eval(expr.clone());
             } else {
-                result = Ok(self.defer(expr.to_owned()))
+                result = Ok(self.defer(expr.clone()));
             }
 
             if result.is_err() {
@@ -257,7 +257,7 @@ impl Context {
                     ..
                 })) => {
                     self.cont.borrow_mut().set_env(envt);
-                    expr = body.deref().to_owned();
+                    expr = body.deref().clone();
                     continue;
                 }
                 // cannot reduce further

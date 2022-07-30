@@ -87,7 +87,7 @@ impl<'a> Iterator for Iter<'a> {
 
         if let Some(rc) = ret {
             if let Some(p) = &rc.parent {
-                self.0 = Some(&p);
+                self.0 = Some(p);
             }
         }
 

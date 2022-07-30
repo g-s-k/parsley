@@ -1,5 +1,5 @@
 use std::fmt::Write;
-use std::mem::replace;
+use std::mem::take;
 
 use parsley::prelude::*;
 use stdweb::*;
@@ -74,7 +74,7 @@ impl Component for Terminal {
                 // evaluate
                 let evaled = self.context.run(&self.value);
                 // print side effects
-                let side_effects = self.context.get_output().unwrap_or_else(String::new);
+                let side_effects = self.context.get_output().unwrap_or_default();
                 if !side_effects.is_empty() {
                     self.history.push_str(&side_effects);
                 }
@@ -95,8 +95,7 @@ impl Component for Terminal {
                 }
                 // save command and create buffer for new one
                 self.cmd_tmp = None;
-                self.cmd_history
-                    .push(replace(&mut self.value, String::new()));
+                self.cmd_history.push(take(&mut self.value));
                 self.cmd_idx = self.cmd_history.len();
                 true
             }

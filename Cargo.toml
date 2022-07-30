@@ -17,8 +17,8 @@ members = [ "examples/npm", "examples/www" ]
 
 # only required for the cli binary, not for WASM
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-rustyline = "6.2.0"
-structopt = "0.2"
+rustyline = "10.0.0"
+clap = { version = "3.2", features = ["derive"] }
 
 [dev-dependencies]
 pretty_assertions = "0.5.1"

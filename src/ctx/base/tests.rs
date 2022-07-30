@@ -121,28 +121,28 @@ fn cons() {
 fn car() {
     let car = || SExp::sym("car");
 
-    assert!(eval(SExp::from(Null.cons(Null).cons(car()))).is_err());
+    assert!(eval(Null.cons(Null).cons(car())).is_err());
 
-    assert!(eval(SExp::from(Null.cons("test".into()).cons(car()))).is_err());
+    assert!(eval(Null.cons("test".into()).cons(car())).is_err());
 
     assert_eq!(
         eval(sexp![car(), sexp![SExp::sym("list"), 3, 5]]).unwrap(),
         SExp::from(3)
-    )
+    );
 }
 
 #[test]
 fn cdr() {
     let cdr = || SExp::sym("cdr");
 
-    assert!(eval(SExp::from(Null.cons(Null).cons(cdr()))).is_err());
+    assert!(eval(Null.cons(Null).cons(cdr())).is_err());
 
-    assert!(eval(SExp::from(Null.cons("test".into()).cons(cdr()))).is_err());
+    assert!(eval(Null.cons("test".into()).cons(cdr())).is_err());
 
     assert_eq!(
         eval(sexp![cdr(), sexp![SExp::sym("list"), 3, 5]]).unwrap(),
         SExp::from((5,))
-    )
+    );
 }
 
 #[test]

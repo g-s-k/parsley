@@ -2,6 +2,7 @@
 
 use super::SExp::{self, Null};
 
+#[allow(clippy::needless_pass_by_value)]
 fn do_parse_and_assert(test_val: &str, expected_val: SExp) {
     let test_parsed = test_val.parse::<SExp>().unwrap();
     assert_eq!(test_parsed, expected_val);

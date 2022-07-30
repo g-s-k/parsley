@@ -1,8 +1,10 @@
+use std::fmt::Write;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 pub struct Context(parsley::Context);
 
+#[allow(clippy::new_without_default)]
 #[wasm_bindgen]
 impl Context {
     #[wasm_bindgen(constructor)]
@@ -19,13 +21,10 @@ impl Context {
         self.0.capture();
 
         // put the results in the string
-        buf.extend(
-            match evaled {
-                Ok(exp) => exp.to_string(),
-                Err(error) => error.to_string(),
-            }
-            .chars(),
-        );
+        let _ = match evaled {
+            Ok(exp) => buf.write_fmt(format_args!("{}", exp)),
+            Err(error) => buf.write_fmt(format_args!("{}", error)),
+        };
 
         // return
         buf
