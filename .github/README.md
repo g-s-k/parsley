@@ -29,8 +29,8 @@ what if scheme...but rust. still working on a backronym.
 - The source for the main library is in `src`.
 - The source for the `cargo install`-able binary is in `src/bin/parsley`.
 - The source for the (`gh-pages`) homepage is in `examples/www`.
-  - To run (`start`) or compile (`deploy`) it, use `cargo-web` with the option
-  `--package www`. Its output will be placed in `target/deploy`.
+  - To run (`serve`) or compile (`build`) it, `cd` into that directory and use
+    `trunk`. Its output will be placed in `./examples/www/dist`.
 - The source for the `npm` package is in `examples/npm`.
   - To compile it, use `wasm-pack`. Its output will be placed in `examples/npm/pkg`.
 
