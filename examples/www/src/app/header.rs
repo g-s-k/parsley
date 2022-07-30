@@ -5,7 +5,7 @@ pub struct Header {
     pub subtitle: String,
 }
 
-#[derive(Clone, Default, PartialEq)]
+#[derive(Clone, Default, PartialEq, Properties)]
 pub struct Props {
     pub title: String,
     pub subtitle: String,
@@ -15,35 +15,33 @@ impl Component for Header {
     type Message = ();
     type Properties = Props;
 
-    fn create(props: Self::Properties, _: ComponentLink<Self>) -> Self {
+    fn create(ctx: &Context<Self>) -> Self {
         Header {
-            title: props.title,
-            subtitle: props.subtitle,
+            title: ctx.props().title.clone(),
+            subtitle: ctx.props().subtitle.clone(),
         }
     }
 
-    fn update(&mut self, _msg: Self::Message) -> ShouldRender {
+    fn update(&mut self, _: &Context<Self>, _msg: Self::Message) -> bool {
         false
     }
 
-    fn change(&mut self, props: Self::Properties) -> ShouldRender {
-        self.title = props.title;
-        self.subtitle = props.subtitle;
+    fn changed(&mut self, ctx: &Context<Self>) -> bool {
+        self.title = ctx.props().title.clone();
+        self.subtitle = ctx.props().subtitle.clone();
         true
     }
-}
 
-impl Renderable<Header> for Header {
-    fn view(&self) -> Html<Self> {
+    fn view(&self, _: &Context<Self>) -> Html {
         html! {
-            <header class="Banner",>
-                <h1 class="PageTitle",>
+            <header class="Banner">
+                <h1 class="PageTitle">
                     { &self.title }
                 </h1>
                 <p>
                     { &self.subtitle }
                 </p>
-                </header>
+            </header>
         }
     }
 }

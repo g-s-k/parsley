@@ -6,21 +6,19 @@ impl Component for Footer {
     type Message = ();
     type Properties = ();
 
-    fn create(_: Self::Properties, _: ComponentLink<Self>) -> Self {
+    fn create(_: &Context<Self>) -> Self {
         Footer
     }
 
-    fn update(&mut self, _: Self::Message) -> ShouldRender {
+    fn update(&mut self, _: &Context<Self>, _: Self::Message) -> bool {
         false
     }
-}
 
-impl Renderable<Footer> for Footer {
-    fn view(&self) -> Html<Self> {
+    fn view(&self, _: &Context<Self>) -> Html {
         html! {
-            <footer class="Footer",>
+            <footer class="Footer">
             { "The source for this site is available " }
-            <a href="https://github.com/g-s-k/parsley",>{ "here" }</a>
+            <a href="https://github.com/g-s-k/parsley">{ "here" }</a>
             { "." }
             </footer>
         }

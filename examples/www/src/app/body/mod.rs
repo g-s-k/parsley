@@ -8,20 +8,18 @@ impl Component for Body {
     type Message = ();
     type Properties = ();
 
-    fn create(_: Self::Properties, _: ComponentLink<Self>) -> Self {
+    fn create(_: &Context<Self>) -> Self {
         Body
     }
 
-    fn update(&mut self, _: Self::Message) -> ShouldRender {
+    fn update(&mut self, _: &Context<Self>, _: Self::Message) -> bool {
         false
     }
-}
 
-impl Renderable<Body> for Body {
-    fn view(&self) -> Html<Self> {
+    fn view(&self, _: &Context<Self>) -> Html {
         html! {
-            <div class="PageBody",>
-                <terminal::Terminal: />
+            <div class="PageBody">
+                <terminal::Terminal />
             </div>
         }
     }

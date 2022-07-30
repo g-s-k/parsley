@@ -1,7 +1,6 @@
 use std::fmt::Write;
 use std::mem::take;
 
-use parsley::prelude::*;
 use stdweb::*;
 use yew::prelude::*;
 
@@ -9,7 +8,7 @@ pub struct Terminal {
     cmd_history: Vec<String>,
     cmd_idx: usize,
     cmd_tmp: Option<String>,
-    context: Context,
+    context: parsley::Context,
     history: String,
     value: String,
 }
@@ -24,18 +23,18 @@ impl Component for Terminal {
     type Message = Msg;
     type Properties = ();
 
-    fn create(_: Self::Properties, _: ComponentLink<Self>) -> Self {
+    fn create(_: &Context<Self>) -> Self {
         Terminal {
             cmd_history: Vec::new(),
             cmd_idx: 0,
             cmd_tmp: None,
-            context: Context::base().capturing(),
+            context: parsley::Context::base().capturing(),
             history: String::with_capacity(99999),
             value: String::new(),
         }
     }
 
-    fn update(&mut self, msg: Self::Message) -> ShouldRender {
+    fn update(&mut self, _ctx: &Context<Self>, msg: Self::Message) -> bool {
         let hist_len = self.cmd_history.len();
         let at_end_of_hist = self.cmd_idx == hist_len;
 
@@ -106,23 +105,21 @@ impl Component for Terminal {
             _ => false,
         }
     }
-}
 
-impl Renderable<Terminal> for Terminal {
-    fn view(&self) -> Html<Self> {
+    fn view(&self, ctx: &Context<Self>) -> Html {
         html! {
-            <div class="Terminal", onclick=|_| Msg::Clicked, >
-                <div class="History", >
+            <div class="Terminal" onclick={ctx.link().callback(|_| Msg::Clicked)} >
+                <div class="History" >
                     { &self.history }
                 </div>
-                <div class="InputLine", >
+                <div class="InputLine" >
                     { "> " }
                     <input
-                        id="theTerminalInput",
-                        placeholder="Enter an expression...",
-                        oninput=|e| Msg::GotInput(e.value),
-                        onkeyup=|e| Msg::KeyUp(e.code()),
-                        value=&self.value,
+                        id="theTerminalInput"
+                        placeholder="Enter an expression..."
+                        oninput={ctx.link().callback(|e: InputEvent| Msg::GotInput(e.data().unwrap_or_default()))}
+                        onkeyup={ctx.link().callback(|e: KeyboardEvent| Msg::KeyUp(e.code()))}
+                        value={ self.value.clone() }
                     />
                 </div>
             </div>

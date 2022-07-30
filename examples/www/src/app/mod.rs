@@ -14,23 +14,21 @@ impl Component for App {
     type Message = ();
     type Properties = ();
 
-    fn create(_: Self::Properties, _: ComponentLink<Self>) -> Self {
+    fn create(_: &Context<Self>) -> Self {
         App
     }
 
-    fn update(&mut self, _: Self::Message) -> ShouldRender {
+    fn update(&mut self, _: &Context<Self>, _: Self::Message) -> bool {
         false
     }
-}
 
-impl Renderable<App> for App {
-    fn view(&self) -> Html<Self> {
+    fn view(&self, _: &Context<Self>) -> Html {
         html! {
             <>
-                <Header: title="PARSLEY Scheme", subtitle="a Scheme implementation in Rust", />
-                <Body: />
-                <Footer: />
-                </>
+                <Header title="PARSLEY Scheme" subtitle="a Scheme implementation in Rust" />
+                <Body />
+                <Footer />
+            </>
         }
     }
 }
