@@ -6,5 +6,5 @@ edition = "2018"
 
 [dependencies]
 parsley = { path = "../.." }
-stdweb = "0.4.20"
+web-sys = "0.3.59"
 yew = "0.19.3"

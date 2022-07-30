@@ -1,7 +1,6 @@
 use std::fmt::Write;
 use std::mem::take;
 
-use stdweb::*;
 use yew::prelude::*;
 
 pub struct Terminal {
@@ -11,10 +10,11 @@ pub struct Terminal {
     context: parsley::Context,
     history: String,
     value: String,
+    input_ref: NodeRef,
 }
 
 pub enum Msg {
-    GotInput(String),
+    GotInput,
     KeyUp(String),
     Clicked,
 }
@@ -31,6 +31,7 @@ impl Component for Terminal {
             context: parsley::Context::base().capturing(),
             history: String::with_capacity(99999),
             value: String::new(),
+            input_ref: Default::default(),
         }
     }
 
@@ -40,8 +41,8 @@ impl Component for Terminal {
 
         match msg {
             Msg::Clicked => {
-                js! {
-                    document.getElementById("theTerminalInput").focus();
+                if let Some(input) = self.input_ref.cast::<web_sys::HtmlInputElement>() {
+                    let _dont_care_if_it_fails = input.focus();
                 }
                 false
             }
@@ -98,8 +99,10 @@ impl Component for Terminal {
                 self.cmd_idx = self.cmd_history.len();
                 true
             }
-            Msg::GotInput(s) => {
-                self.value = s;
+            Msg::GotInput => {
+                if let Some(input) = self.input_ref.cast::<web_sys::HtmlInputElement>() {
+                    self.value = input.value();
+                }
                 true
             }
             _ => false,
@@ -115,9 +118,9 @@ impl Component for Terminal {
                 <div class="InputLine" >
                     { "> " }
                     <input
-                        id="theTerminalInput"
+                    	ref={self.input_ref.clone()}
                         placeholder="Enter an expression..."
-                        oninput={ctx.link().callback(|e: InputEvent| Msg::GotInput(e.data().unwrap_or_default()))}
+                        oninput={ctx.link().callback(|_| Msg::GotInput)}
                         onkeyup={ctx.link().callback(|e: KeyboardEvent| Msg::KeyUp(e.code()))}
                         value={ self.value.clone() }
                     />
