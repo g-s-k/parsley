@@ -28,6 +28,12 @@ jobs:
         crate: trunk
         version: latest
         use-tool-cache: true
+    - name: Install WASM target
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        target: wasm32-unknown-unknown
+        profile: minimal
     - name: Build
       run: cd ./examples/www && trunk build
     - name: Deploy
