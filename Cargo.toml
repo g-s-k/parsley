@@ -1,6 +1,6 @@
 [package]
 name = "parsley"
-version = "0.9.0"
+version = "0.10.0"
 authors = ["George Kaplan <george@georgekaplan.xyz>"]
 edition = "2018"
 description = "An implementation of Scheme"

@@ -80,7 +80,7 @@ def_test! {
 
 def_test! {
     let_star
-        [FILE "let*.ss", 70]
+        [FILE "let_.ss", 70]
 }
 
 def_test! {
